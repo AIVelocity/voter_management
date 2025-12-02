@@ -8,7 +8,8 @@ def index(request):
         "status": True,
         "message":"Application running"
     })
-    
+
+# all voters list 
 def voters_info(request):
 
     voters = VoterList.objects.select_related("tag_id").all()[:100]   # limit for safety
@@ -34,5 +35,39 @@ def voters_info(request):
     return JsonResponse({
         "status": True,
         "count": len(data),
+        "data": data
+    })
+
+# single voter info page
+def single_voters_info(request, voter_list_id):
+
+    try:
+        voter = VoterList.objects.select_related("tag_id").get(
+            voter_list_id=voter_list_id
+        )
+
+    except VoterList.DoesNotExist:
+        return JsonResponse({
+            "status": False,
+            "message": "Voter not found"
+        }, status=404)
+
+    data = {
+        "voter_list_id": voter.voter_list_id,
+        "sr_no": voter.sr_no,
+        "voter_id": voter.voter_id,
+        "voter_name_marathi": voter.voter_name_marathi,
+        "voter_name_eng": voter.voter_name_eng,
+        "kramank": voter.kramank,
+        "address": voter.address,
+        "age": voter.age,
+        "gender": voter.gender,
+        "image_name": voter.image_name,
+        "ward_id": voter.ward_id,
+        "tag": voter.tag_id.tag_name if voter.tag_id else None
+    }
+
+    return JsonResponse({
+        "status": True,
         "data": data
     })
