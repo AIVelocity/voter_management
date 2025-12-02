@@ -1,5 +1,3 @@
-from django.shortcuts import render
-from django.shortcuts import render,HttpResponse
 from django.http import JsonResponse
 from .models import VoterList
 
@@ -25,9 +23,11 @@ def voters_info(request):
             "voter_name_eng": v.voter_name_eng,
             "kramank": v.kramank,
             "address": v.address,
-            "age": v.age,
-            "gender": v.gender,
-            "image_name": v.image_name,
+            # "age": v.age,
+            # "gender": v.gender,
+            "age":v.age_eng,
+            "gender":v.gender_eng,
+            # "image_name": v.image_name,
             "ward_id": v.ward_id,
             "tag": v.tag_id.tag_name if v.tag_id else None
         })
@@ -60,9 +60,11 @@ def single_voters_info(request, voter_list_id):
         "voter_name_eng": voter.voter_name_eng,
         "kramank": voter.kramank,
         "address": voter.address,
-        "age": voter.age,
-        "gender": voter.gender,
-        "image_name": voter.image_name,
+        # "age": voter.age,
+        # "gender": voter.gender,
+        "age":voter.age_eng,
+        "gender":voter.gender_eng,
+        # "image_name": voter.image_name,
         "ward_id": voter.ward_id,
         "tag": voter.tag_id.tag_name if voter.tag_id else None
     }
