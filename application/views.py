@@ -32,7 +32,7 @@ def voters_info(request):
             "age":v.age_eng,
             "gender":v.gender_eng,
             # "image_name": v.image_name,
-            "ward_id": v.ward_id,
+            "ward_id": v.ward_no,
             "tag": v.tag_id.tag_name if v.tag_id else None
         })
 
@@ -70,7 +70,7 @@ def single_voters_info(request, voter_list_id):
         "age":voter.age_eng,
         "gender":voter.gender_eng,
         # "image_name": voter.image_name,
-        "ward_id": voter.ward_id,
+        "ward_id": voter.ward_no,
         "tag": voter.tag_id.tag_name if voter.tag_id else None
     }
 
@@ -92,7 +92,7 @@ def add_voter(request):
         # Required fields
         voter_id = body.get("voter_id")
         kramank = body.get("kramank")
-        ward_id = body.get("ward_id")
+        ward_no = body.get("ward_id")
 
         if not voter_id:
             return JsonResponse({"status": False, "message": "voter_id is required"}, status=400)
@@ -100,10 +100,10 @@ def add_voter(request):
         if not kramank:
             return JsonResponse({"status": False, "message": "kramank is required"}, status=400)
 
-        if not ward_id:
+        if not ward_no:
             return JsonResponse({"status": False, "message": "ward_id is required"}, status=400)
 
-        if ward_id not in [37,36]:
+        if ward_no not in [37,36]:
             return JsonResponse({"status":False,"message":"ward id must be 36 or 37"})
         #  DUPLICATE CHECKS 
 
@@ -147,11 +147,12 @@ def add_voter(request):
             age_eng=body.get("age"),
             # gender=body.get("gender"),
             gender_eng=body.get("gender"),
-            ward_id=ward_id,
+            ward_no=ward_no,
             tag_id=tag
             # image_name=body.get("image_name")
         )
 
+        voter.refresh_from_db()
         return JsonResponse({
             "status": True,
             "message": "Voter added successfully",
@@ -206,12 +207,12 @@ def update_voter(request, voter_list_id):
         # -------------------
         voter_id = body.get("voter_id")
         kramank = body.get("kramank")
-        ward_id = body.get("ward_id")
+        ward_no = body.get("ward_id")
 
         # -------------------
         # BASIC VALIDATION
         # -------------------
-        if ward_id and ward_id not in [36, 37]:
+        if ward_no and ward_no not in [36, 37]:
             return JsonResponse({
                 "status": False,
                 "message": "ward_id must be 36 or 37"
@@ -261,12 +262,12 @@ def update_voter(request, voter_list_id):
         if kramank:
             voter.kramank = kramank
 
-        if ward_id:
-            voter.ward_id = ward_id
+        if ward_no:
+            voter.ward_no = ward_no
 
         # voter.voter_name_marathi = body.get("voter_name_marathi", voter.voter_name_marathi)
         voter.voter_name_eng = body.get("voter_name_eng", voter.voter_name_eng)
-        voter.current_address = body.get("current_address", voter.address)
+        voter.current_address = body.get("current_address", voter.current_address)
         voter.permanent_address =  body.get("permanent_address",voter.permanent_address)
         voter.age_eng = body.get("age", voter.age)
         voter.gender_eng = body.get("gender", voter.gender)
