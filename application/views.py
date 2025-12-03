@@ -1,5 +1,8 @@
 from django.http import JsonResponse
-from .models import VoterList
+from .models import VoterList,VoterTag
+from django.views.decorators.csrf import csrf_exempt
+import json
+from django.db import IntegrityError
 
 def index(request):
     return JsonResponse ({
@@ -73,3 +76,226 @@ def single_voters_info(request, voter_list_id):
         "status": True,
         "data": data
     })
+
+# add a new voter
+@csrf_exempt
+def add_voter(request):
+
+    if request.method != "POST":
+        return JsonResponse({"status": False, "message": "POST method required"}, status=405)
+
+    try:
+        body = json.loads(request.body)
+
+        # Required fields
+        voter_id = body.get("voter_id")
+        kramank = body.get("kramank")
+        ward_id = body.get("ward_id")
+
+        if not voter_id:
+            return JsonResponse({"status": False, "message": "voter_id is required"}, status=400)
+
+        if not kramank:
+            return JsonResponse({"status": False, "message": "kramank is required"}, status=400)
+
+        if not ward_id:
+            return JsonResponse({"status": False, "message": "ward_id is required"}, status=400)
+
+        if ward_id not in [37,36]:
+            return JsonResponse({"status":False,"message":"ward id must be 36 or 37"})
+        #  DUPLICATE CHECKS 
+
+        if VoterList.objects.filter(voter_id=voter_id).exists():
+            return JsonResponse({
+                "status": False,
+                "message": f"Duplicate voter_id found: {voter_id}"
+            }, status=409)
+
+        if VoterList.objects.filter(kramank=kramank).exists():
+            return JsonResponse({
+                "status": False,
+                "message": f"Duplicate kramank found: {kramank}"
+            }, status=409)
+
+
+        # TAG VALIDATION
+        tag = None
+        tag_id = body.get("tag_id")
+
+        if tag_id:
+            try:
+                tag = VoterTag.objects.get(tag_id=tag_id)
+            except VoterTag.DoesNotExist:
+                return JsonResponse({
+                    "status": False,
+                    "message": "Invalid tag_id"
+                }, status=400)
+
+
+        # CREATE VOTER
+        # (sr_no is NOT provided — trigger inserts it!)
+        voter = VoterList.objects.create(
+            voter_id=voter_id,
+            voter_name_marathi=body.get("voter_name_marathi"),
+            voter_name_eng=body.get("voter_name_eng"),
+            kramank=kramank,
+            address=body.get("address"),
+            # age=body.get("age"),
+            age_eng=body.get("age"),
+            # gender=body.get("gender"),
+            gender_eng=body.get("gender"),
+            ward_id=ward_id,
+            tag_id=tag
+            # image_name=body.get("image_name")
+        )
+
+        return JsonResponse({
+            "status": True,
+            "message": "Voter added successfully",
+            "voter_list_id": voter.voter_list_id,
+            "sr_no": voter.sr_no      # send back generated sr_no
+        })
+
+
+    except IntegrityError:
+        # Safety net if DB unique constraint fails
+        return JsonResponse({
+            "status": False,
+            "message": "Duplicate entry detected"
+        }, status=409)
+
+    except json.JSONDecodeError:
+        return JsonResponse({
+            "status": False,
+            "message": "Invalid JSON body"
+        }, status=400)
+
+    except Exception as e:
+        return JsonResponse({
+            "status": False,
+            "error": str(e)
+        }, status=500)
+
+# update voter
+
+@csrf_exempt
+def update_voter(request, voter_list_id):
+
+    if request.method != "PUT":
+        return JsonResponse({"status": False, "message": "PUT method required"}, status=405)
+
+    try:
+        body = json.loads(request.body)
+
+        # -------------------
+        # GET EXISTING RECORD
+        # -------------------
+        try:
+            voter = VoterList.objects.get(voter_list_id=voter_list_id)
+        except VoterList.DoesNotExist:
+            return JsonResponse({
+                "status": False,
+                "message": "Voter not found"
+            }, status=404)
+
+        # -------------------
+        # INPUT VALUES
+        # -------------------
+        voter_id = body.get("voter_id")
+        kramank = body.get("kramank")
+        ward_id = body.get("ward_id")
+
+        # -------------------
+        # BASIC VALIDATION
+        # -------------------
+        if ward_id and ward_id not in [36, 37]:
+            return JsonResponse({
+                "status": False,
+                "message": "ward_id must be 36 or 37"
+            }, status=400)
+
+        # -------------------
+        # DUPLICATE CHECKS
+        # exclude current row
+        # -------------------
+        if voter_id:
+            if VoterList.objects.filter(voter_id=voter_id).exclude(voter_list_id=voter_list_id).exists():
+                return JsonResponse({
+                    "status": False,
+                    "message": f"Duplicate voter_id: {voter_id}"
+                }, status=409)
+
+        if kramank:
+            if VoterList.objects.filter(kramank=kramank).exclude(voter_list_id=voter_list_id).exists():
+                return JsonResponse({
+                    "status": False,
+                    "message": f"Duplicate kramank: {kramank}"
+                }, status=409)
+
+        # -------------------
+        # TAG VALIDATION
+        # -------------------
+        tag = None
+        tag_id = body.get("tag_id")
+
+        if tag_id:
+            try:
+                tag = VoterTag.objects.get(tag_id=tag_id)
+            except VoterTag.DoesNotExist:
+                return JsonResponse({
+                    "status": False,
+                    "message": "Invalid tag_id"
+                }, status=400)
+
+        # -------------------
+        # UPDATE FIELDS
+        # -------------------
+        # Only update fields provided in body
+
+        if voter_id:
+            voter.voter_id = voter_id
+
+        if kramank:
+            voter.kramank = kramank
+
+        if ward_id:
+            voter.ward_id = ward_id
+
+        # voter.voter_name_marathi = body.get("voter_name_marathi", voter.voter_name_marathi)
+        voter.voter_name_eng = body.get("voter_name_eng", voter.voter_name_eng)
+        voter.address = body.get("address", voter.address)
+        voter.age_eng = body.get("age", voter.age)
+        voter.gender_eng = body.get("gender", voter.gender)
+
+        if tag_id:
+            voter.tag_id = tag
+
+        # -------------------
+        # SAVE
+        # -------------------
+        voter.save()
+
+        return JsonResponse({
+            "status": True,
+            "message": "Voter updated successfully",
+            "voter_list_id": voter.voter_list_id,
+            "sr_no": voter.sr_no
+        })
+
+    except IntegrityError:
+        return JsonResponse({
+            "status": False,
+            "message": "Duplicate entry detected"
+        }, status=409)
+
+    except json.JSONDecodeError:
+        return JsonResponse({
+            "status": False,
+            "message": "Invalid JSON body"
+        }, status=400)
+
+    except Exception as e:
+        return JsonResponse({
+            "status": False,
+            "error": str(e)
+        }, status=500)
