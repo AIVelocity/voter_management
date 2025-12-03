@@ -11,6 +11,9 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 from pathlib import Path
+from dotenv import load_dotenv
+import os
+load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -25,7 +28,7 @@ SECRET_KEY = 'django-insecure-w^w75v0)bmgunxwhmmagl0bp*1rf$p^u9q-ca$2!%+q%(8f7=&
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["127.0.0.1", "localhost", "172.20.1.155"]
+ALLOWED_HOSTS = ["127.0.0.1", "localhost", "172.20.1.155", ".ngrok-free.app", ".ngrok-free.dev",]
 
 
 
@@ -38,7 +41,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'application'
+    'application',
+    'whatsapp_service'
 ]
 
 MIDDLEWARE = [
@@ -85,6 +89,11 @@ DATABASES = {
         "PORT": "5432",
     }
 }
+
+VERIFY_TOKEN = os.getenv("WP_VERIFY_TOKEN")
+MESSAGE_URL = os.getenv("MESSAGE_URL")
+UPLOAD_URL = os.getenv("UPLOAD_URL")
+ACCESS_TOKEN = os.getenv("WP_ACCESS_TOKEN")
 
 
 
