@@ -25,7 +25,8 @@ def voters_info(request):
             "voter_name_marathi": v.voter_name_marathi,
             "voter_name_eng": v.voter_name_eng,
             "kramank": v.kramank,
-            "address": v.address,
+            "permanent_address": v.permanent_address,
+            "current_address":v.current_address,
             # "age": v.age,
             # "gender": v.gender,
             "age":v.age_eng,
@@ -62,7 +63,8 @@ def single_voters_info(request, voter_list_id):
         "voter_name_marathi": voter.voter_name_marathi,
         "voter_name_eng": voter.voter_name_eng,
         "kramank": voter.kramank,
-        "address": voter.address,
+        "permanent_address": voter.permanent_address,
+        "current_address":voter.current_address,
         # "age": voter.age,
         # "gender": voter.gender,
         "age":voter.age_eng,
@@ -139,7 +141,8 @@ def add_voter(request):
             voter_name_marathi=body.get("voter_name_marathi"),
             voter_name_eng=body.get("voter_name_eng"),
             kramank=kramank,
-            address=body.get("address"),
+            permanent_address=body.get("permanent_address"),
+            current_address = body.get("current_address"),
             # age=body.get("age"),
             age_eng=body.get("age"),
             # gender=body.get("gender"),
@@ -263,7 +266,8 @@ def update_voter(request, voter_list_id):
 
         # voter.voter_name_marathi = body.get("voter_name_marathi", voter.voter_name_marathi)
         voter.voter_name_eng = body.get("voter_name_eng", voter.voter_name_eng)
-        voter.address = body.get("address", voter.address)
+        voter.current_address = body.get("current_address", voter.address)
+        voter.permanent_address =  body.get("permanent_address",voter.permanent_address)
         voter.age_eng = body.get("age", voter.age)
         voter.gender_eng = body.get("gender", voter.gender)
 

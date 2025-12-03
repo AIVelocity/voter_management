@@ -35,7 +35,8 @@ class VoterList(models.Model):
     voter_name_eng = models.TextField(null=True, blank=True)
 
     kramank = models.CharField(max_length=20, null=True, blank=True)
-    address = models.TextField(null=True, blank=True)
+    permanent_address = models.TextField(null=True, blank=True)
+    current_address = models.TextField(null=True,blank=True)
 
     age = models.CharField(max_length=10, null=True, blank=True)
     gender = models.TextField(null=True, blank=True)
