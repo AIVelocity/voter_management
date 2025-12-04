@@ -35,22 +35,33 @@ class VoterList(models.Model):
     voter_name_marathi = models.TextField(null=True, blank=True)
     voter_name_eng = models.TextField(null=True, blank=True)
 
-    surname = models.TextField(null=True, blank=True)
+    initial_full_name = models.TextField(null=True, blank=True)
+
+    last_name = models.TextField(null=True, blank=True)
     first_name = models.TextField(null=True, blank=True)
-    father_or_husband_name = models.TextField(null=True, blank=True)
+    middle_name = models.TextField(null=True, blank=True)
 
     kramank = models.CharField(max_length=20, null=True, blank=True)
 
     current_address = models.TextField(null=True, blank=True)
     permanent_address = models.TextField(null=True, blank=True)
 
+    address_line1 = models.TextField(null=True, blank=True)
+    address_line2 = models.TextField(null=True, blank=True)
+    address_line3 = models.TextField(null=True, blank=True)
+
     age = models.CharField(max_length=10, null=True, blank=True)
-    age_eng = models.IntegerField(null=True, blank=True)
+
+    age_eng = models.TextField(null=True, blank=True)
 
     gender = models.TextField(null=True, blank=True)
     gender_eng = models.CharField(max_length=10, null=True, blank=True)
 
     image_name = models.CharField(max_length=255, null=True, blank=True)
+
+    mobile_no = models.CharField(max_length=10, null=True, blank=True)
+    alternate_mobile1 = models.CharField(max_length=10, null=True, blank=True)
+    alternate_mobile2 = models.CharField(max_length=10, null=True, blank=True)
 
     tag_id = models.ForeignKey(
         VoterTag,
