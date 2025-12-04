@@ -4,29 +4,45 @@ from django.views.decorators.csrf import csrf_exempt
 import json
 from django.db import IntegrityError
 
+from django.db.models import Q
+
 def index(request):
     return JsonResponse ({
         "status": True,
         "message":"Application running"
     })
-
+    
+# tags api
+def tags(request):
+    tags = VoterTag.objects.all().order_by("tag_id")
+    data = []
+    for tag in tags:
+        data.append({
+            "tag_id":tag.tag_id,
+            "tag_name":tag.tag_name,
+        })
+    return JsonResponse({
+        "status":True,
+        "data":data
+    })
+   
 # all voters list 
 def voters_info(request):
 
-    voters = VoterList.objects.select_related("tag_id").all()[:100]   # limit for safety
+    voters = VoterList.objects.select_related("tag_id").all().order_by("ward_no", "voter_list_id")[:100]   # limit for safety
 
     data = []
 
     for v in voters:
         data.append({
             "voter_list_id": v.voter_list_id,
-            "sr_no": v.sr_no,
+            # "sr_no": v.sr_no,
             "voter_id": v.voter_id,
             "voter_name_marathi": v.voter_name_marathi,
             "voter_name_eng": v.voter_name_eng,
             "kramank": v.kramank,
-            "permanent_address": v.permanent_address,
-            "current_address":v.current_address,
+            # "permanent_address": v.permanent_address,
+            # "current_address":v.current_address,
             # "age": v.age,
             # "gender": v.gender,
             "age":v.age_eng,
@@ -42,42 +58,225 @@ def voters_info(request):
         "data": data
     })
 
-# single voter info page
+
+
+
+# single voter info
 def single_voters_info(request, voter_list_id):
 
     try:
         voter = VoterList.objects.select_related("tag_id").get(
             voter_list_id=voter_list_id
         )
-
     except VoterList.DoesNotExist:
         return JsonResponse({
             "status": False,
             "message": "Voter not found"
         }, status=404)
 
+
+    # ---------------- HELPERS ----------------
+
+    def safe_age(v):
+        val = str(v or "").lower().strip()
+        try:
+            return int(val, 16) if val.startswith("0x") else int(val)
+        except:
+            return None
+
+    def parse_kramank(value):
+        try:
+            return int(str(value).split("/")[-1])
+        except:
+            return 0
+
+
+    # ---------------- COMPUTE ----------------
+
+    age = safe_age(voter.age_eng)
+    kramank = parse_kramank(voter.kramank)
+
+    address = (voter.address_line1 or "") + \
+              (voter.address_line2 or "") + \
+              (voter.address_line3 or "")
+
+    fname = voter.first_name
+    parent_name = voter.middle_name
+    surname = voter.last_name
+
+
+    # ---------------- RELATIVES (IN PYTHON) ----------------
+
+    relatives = [
+        r for r in VoterList.objects.filter(last_name=surname)
+        if abs(parse_kramank(r.kramank) - kramank) <= 10
+    ]
+
+
+    # ---------------- FATHER ----------------
+
+    father = next(
+        (
+            r for r in relatives
+            if r.first_name == parent_name and r.gender_eng == "Male"
+        ),
+        None
+    )
+
+    father_name = f"{father.first_name} {father.last_name}" if father else ""
+
+
+    # ---------------- CHILDREN ----------------
+
+    children_qs = [
+        r for r in relatives
+        if r.middle_name == fname
+    ]
+
+    children = [
+        f"{c.first_name} {c.last_name}"
+        for c in children_qs
+    ]
+
+
+    # ---------------- BROTHERS ----------------
+
+    brothers = [
+        f"{b.first_name} {b.last_name}"
+        for b in relatives
+        if b.middle_name == parent_name
+        and b.gender_eng == "Male"
+        and b.first_name != fname
+    ]
+
+
+    # ---------------- MOTHER (HEURISTIC) ----------------
+
+    mother_name = ""
+
+    if children_qs:
+
+        kids_ages = [
+            safe_age(c.age_eng)
+            for c in children_qs
+            if safe_age(c.age_eng) is not None
+        ]
+
+        if kids_ages:
+
+            avg_child_age = sum(kids_ages) / len(kids_ages)
+
+            females = [
+                r for r in relatives
+                if r.gender_eng == "Female"
+                and safe_age(r.age_eng)
+                and 20 <= (safe_age(r.age_eng) - avg_child_age) <= 45
+            ]
+
+            if females:
+                best = min(
+                    females,
+                    key=lambda r: abs((safe_age(r.age_eng) - avg_child_age) - 30)
+                )
+                mother_name = f"{best.first_name} {best.last_name}"
+
+
+    # ---------------- RESPONSE ----------------
+
     data = {
         "voter_list_id": voter.voter_list_id,
         "sr_no": voter.sr_no,
         "voter_id": voter.voter_id,
-        "voter_name_marathi": voter.voter_name_marathi,
-        "voter_name_eng": voter.voter_name_eng,
+        "first_name": voter.first_name,
+        "middle_name": voter.middle_name,
+        "last_name": voter.last_name,
+
         "kramank": voter.kramank,
-        "permanent_address": voter.permanent_address,
-        "current_address":voter.current_address,
-        # "age": voter.age,
-        # "gender": voter.gender,
-        "age":voter.age_eng,
-        "gender":voter.gender_eng,
-        # "image_name": voter.image_name,
+        "address": address,
+
+        "mobile_no": voter.mobile_no,
+        "alternate_mobile_no1": voter.alternate_mobile1,
+        "alternate_mobile_no2": voter.alternate_mobile2,
+
+        "age": age,
+        "gender": voter.gender_eng,
         "ward_id": voter.ward_no,
-        "tag": voter.tag_id.tag_name if voter.tag_id else None
+        "tag": voter.tag_id.tag_name if voter.tag_id else None,
+
+        "mother_name": mother_name,
+        "father_name": father_name,
+        "children": children,
+        "brothers": brothers
     }
 
-    return JsonResponse({
-        "status": True,
-        "data": data
-    })
+    return JsonResponse({"status": True, "data": data})
+
+# single voter info page
+# def single_voters_info(request, voter_list_id):
+
+#     try:
+#         voter = VoterList.objects.select_related("tag_id").get(
+#             voter_list_id=voter_list_id
+#         )
+
+#     except VoterList.DoesNotExist:
+#         return JsonResponse({
+#             "status": False,
+#             "message": "Voter not found"
+#         }, status=404)
+        
+#     address = (
+#     (voter.address_line1 or "") +
+#     (voter.address_line2 or "") +
+#     (voter.address_line3 or "")
+# )
+
+#     data = {
+#     "voter_list_id": voter.voter_list_id,
+#     "sr_no": voter.sr_no,
+#     "voter_id": voter.voter_id,
+
+#     "first_name": voter.first_name,
+#     "middle_name": voter.middle_name,
+#     "last_name": voter.last_name,
+
+#     "kramank": voter.kramank,
+
+#     # "permanent_address": voter.permanent_address,
+#     # "current_address": voter.current_address,
+#     "address":address,
+
+#     "mobile_no": voter.mobile_no,
+#     "alternate_mobile_no1": voter.alternate_mobile1,
+#     "alternate_mobile_no2": voter.alternate_mobile2,
+
+#     # safely handle hex or empty age_eng
+#     "age": (
+#         int(voter.age_eng, 16)
+#         if voter.age_eng and str(voter.age_eng).lower().startswith("0x")
+#         else int(voter.age_eng)
+#         if voter.age_eng and str(voter.age_eng).isdigit()
+#         else None
+#     ),
+
+#     "gender": voter.gender_eng,
+
+#     "ward_id": voter.ward_no,
+
+#     # safe FK access
+#     "tag": voter.tag_id.tag_name if voter.tag_id else None,
+
+#     # extra optional fields
+#     "mother_name": "",
+#     "father_name": "",
+#     "children": [],
+#     "brothers": [],
+# }
+
+#     return JsonResponse({
+#         "status": True,
+#         "data": data
+#     })
 
 # add a new voter
 @csrf_exempt
@@ -113,10 +312,10 @@ def add_voter(request):
                 "message": f"Duplicate voter_id found: {voter_id}"
             }, status=409)
 
-        if VoterList.objects.filter(kramank=kramank).exists():
+        if VoterList.objects.filter(kramank=kramank, ward_no=ward_no).exists():
             return JsonResponse({
                 "status": False,
-                "message": f"Duplicate kramank found: {kramank}"
+                "message": f"Duplicate kramank found in ward {ward_no}: {kramank}"
             }, status=409)
 
 
@@ -138,8 +337,11 @@ def add_voter(request):
         # (sr_no is NOT provided — trigger inserts it!)
         voter = VoterList.objects.create(
             voter_id=voter_id,
-            voter_name_marathi=body.get("voter_name_marathi"),
-            voter_name_eng=body.get("voter_name_eng"),
+            # voter_name_marathi=body.get("voter_name_marathi"),
+            # voter_name_eng=body.get("voter_name_eng"),
+            middle_name=body.get("middle_name"),
+            first_name=body.get("first_name"),
+            last_name=body.get("last_name"),
             kramank=kramank,
             permanent_address=body.get("permanent_address"),
             current_address = body.get("current_address"),
@@ -181,7 +383,6 @@ def add_voter(request):
         }, status=500)
 
 # update voter
-
 @csrf_exempt
 def update_voter(request, voter_list_id):
 
@@ -230,11 +431,18 @@ def update_voter(request, voter_list_id):
                 }, status=409)
 
         if kramank:
-            if VoterList.objects.filter(kramank=kramank).exclude(voter_list_id=voter_list_id).exists():
+            check_ward = ward_no if ward_no else voter.ward_no
+        
+            if VoterList.objects.filter(
+                    kramank=kramank,
+                    ward_no=check_ward
+                ).exclude(voter_list_id=voter_list_id).exists():
+        
                 return JsonResponse({
                     "status": False,
-                    "message": f"Duplicate kramank: {kramank}"
+                    "message": f"Duplicate kramank '{kramank}' in ward {check_ward}"
                 }, status=409)
+
 
         # -------------------
         # TAG VALIDATION
@@ -266,7 +474,10 @@ def update_voter(request, voter_list_id):
             voter.ward_no = ward_no
 
         # voter.voter_name_marathi = body.get("voter_name_marathi", voter.voter_name_marathi)
-        voter.voter_name_eng = body.get("voter_name_eng", voter.voter_name_eng)
+        # voter.voter_name_eng = body.get("voter_name_eng", voter.voter_name_eng)
+        voter.last_name=body.get("last_name",voter.last_name)
+        voter.middle_name=body.get("middle_name",voter.middle_name)
+        voter.first_name=body.get("first_name",voter.first_name)
         voter.current_address = body.get("current_address", voter.current_address)
         voter.permanent_address =  body.get("permanent_address",voter.permanent_address)
         voter.age_eng = body.get("age", voter.age)
