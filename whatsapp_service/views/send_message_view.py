@@ -5,21 +5,28 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 
 
+url = settings.MESSAGE_URL
+token = settings.ACCESS_TOKEN
+
 @csrf_exempt
 def send_template(request):
     if request.method != "POST":
         return JsonResponse({"status": False, "message": "Only POST allowed"}, status=405)
 
-    url = settings.MESSAGE_URL
-    token = settings.ACCESS_TOKEN
+    try:
+        data = json.loads(request.body)
+    except:
+        data = request.POST
 
-    voter_number = "91" + "6306453375"
-    template_name = "hello_world"
+    voter_number = data.get("phone_number")
+    template_name = data.get("template_name")
+    if not voter_number or not template_name:
+        return JsonResponse({"status": False, "message": "number and template_name required"}, status=400)
 
     payload = {
         "messaging_product": "whatsapp",
         "recipient_type": "individual",
-        "to": voter_number,
+        "to": "91" + voter_number,
         "type": "template",
         "template": {
             "name": template_name,
@@ -39,17 +46,22 @@ def send_template(request):
 def send_text(request):
     if request.method != "POST":
         return JsonResponse({"status": False, "message": "Only POST allowed"}, status=405)
+    try:
+        data = json.loads(request.body)
+    except:
+        data = request.POST
 
-    url = settings.MESSAGE_URL
-    token = settings.ACCESS_TOKEN
+    voter_number = data.get("phone_number")  
+    message = data.get("message")  
 
-    voter_number = "91" + "6306453375"
-    message = "Hello from Django"
+    if not voter_number or not message:
+        return JsonResponse({"status": False, "message": "number and message required"}, status=400)
+
 
     payload = {
         "messaging_product": "whatsapp",
         "recipient_type": "individual",
-        "to": voter_number,
+        "to": "91" + voter_number,
         "type": "text",
         "text": {"body": message}
     }
