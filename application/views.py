@@ -327,9 +327,9 @@ def single_voters_info(request, voter_list_id):
         "father_name": father_name,
         "mother_name": mother_name,
         "wife_name":wife_name,
-        "husband_name": husband_name
-        # "siblings": siblings,
-        # "children": children
+        "husband_name": husband_name,
+        "siblings": siblings,
+        "children": children
         # "other_family_members": other_relatives,
 
         # "other_family_members": other_relatives
