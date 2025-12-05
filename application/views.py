@@ -49,7 +49,9 @@ def voters_info(request):
             "gender":v.gender_eng,
             # "image_name": v.image_name,
             "ward_id": v.ward_no,
-            "tag": v.tag_id.tag_name if v.tag_id else None
+            "tag": v.tag_id.tag_name if v.tag_id else None,
+            "badge":v.badge,
+            "location":v.location
         })
 
     return JsonResponse({
@@ -114,74 +116,11 @@ def single_voters_info(request, voter_list_id):
 
 
     # ---------------- FATHER ----------------
+    father_name = " ".join(filter(None, [
+    voter.middle_name,
+    voter.last_name
+    ]))
 
-    father = next(
-        (
-            r for r in relatives
-            if r.first_name == parent_name and r.gender_eng == "Male"
-        ),
-        None
-    )
-
-    father_name = f"{father.first_name} {father.last_name}" if father else ""
-
-
-    # ---------------- CHILDREN ----------------
-
-    children_qs = [
-        r for r in relatives
-        if r.middle_name == fname
-    ]
-
-    children = [
-        f"{c.first_name} {c.last_name}"
-        for c in children_qs
-    ]
-
-
-    # ---------------- BROTHERS ----------------
-
-    brothers = [
-        f"{b.first_name} {b.last_name}"
-        for b in relatives
-        if b.middle_name == parent_name
-        and b.gender_eng == "Male"
-        and b.first_name != fname
-    ]
-
-
-    # ---------------- MOTHER (HEURISTIC) ----------------
-
-    mother_name = ""
-
-    if children_qs:
-
-        kids_ages = [
-            safe_age(c.age_eng)
-            for c in children_qs
-            if safe_age(c.age_eng) is not None
-        ]
-
-        if kids_ages:
-
-            avg_child_age = sum(kids_ages) / len(kids_ages)
-
-            females = [
-                r for r in relatives
-                if r.gender_eng == "Female"
-                and safe_age(r.age_eng)
-                and 20 <= (safe_age(r.age_eng) - avg_child_age) <= 45
-            ]
-
-            if females:
-                best = min(
-                    females,
-                    key=lambda r: abs((safe_age(r.age_eng) - avg_child_age) - 30)
-                )
-                mother_name = f"{best.first_name} {best.last_name}"
-
-
-    # ---------------- RESPONSE ----------------
 
     data = {
         "voter_list_id": voter.voter_list_id,
@@ -203,10 +142,11 @@ def single_voters_info(request, voter_list_id):
         "ward_id": voter.ward_no,
         "tag": voter.tag_id.tag_name if voter.tag_id else None,
 
-        "mother_name": mother_name,
+        # "mother_name": mother_name,
         "father_name": father_name,
-        "children": children,
-        "brothers": brothers
+        # "children": children,
+        # "siblings": [brothers + ["sisters"]],
+        "other_family_members":""
     }
 
     return JsonResponse({"status": True, "data": data})
@@ -339,20 +279,30 @@ def add_voter(request):
             voter_id=voter_id,
             # voter_name_marathi=body.get("voter_name_marathi"),
             # voter_name_eng=body.get("voter_name_eng"),
-            middle_name=body.get("middle_name"),
             first_name=body.get("first_name"),
+            middle_name=body.get("middle_name"),
             last_name=body.get("last_name"),
+
             kramank=kramank,
-            permanent_address=body.get("permanent_address"),
-            current_address = body.get("current_address"),
-            # age=body.get("age"),
+
+            # permanent_address=body.get("address"),
+            # current_address=body.get("address"),
+            address_line1 = body.get("address_line1"),
+            address_line2 = body.get("address_line2"),
+            address_line3 = body.get("address_line3"),
+
+            mobile_no=body.get("mobile_no"),
+            alternate_mobile1=body.get("alternate_mobile_no1"),
+            alternate_mobile2=body.get("alternate_mobile_no2"),
+
             age_eng=body.get("age"),
-            # gender=body.get("gender"),
             gender_eng=body.get("gender"),
+
             ward_no=ward_no,
             tag_id=tag
-            # image_name=body.get("image_name")
         )
+# image_name=body.get("image_name")
+        
 
         voter.refresh_from_db()
         return JsonResponse({
