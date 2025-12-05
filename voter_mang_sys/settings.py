@@ -28,9 +28,11 @@ SECRET_KEY = 'django-insecure-w^w75v0)bmgunxwhmmagl0bp*1rf$p^u9q-ca$2!%+q%(8f7=&
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["59.95.99.182","127.0.0.1", "localhost", "172.20.1.155", ".ngrok-free.app", ".ngrok-free.dev",]
-
-
+ALLOWED_HOSTS = eval(os.getenv("ALLOWED_HOSTS"))
+print(ALLOWED_HOSTS)
+print(type(ALLOWED_HOSTS))
+# ALLOWED_HOSTS = list(ALLOWED_HOSTS)
+ALLOWED_HOSTS = ALLOWED_HOSTS
 
 # Application definition
 
@@ -79,14 +81,21 @@ WSGI_APPLICATION = 'voter_mang_sys.wsgi.application'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
 
+DB_NAME = os.getenv("DB_NAME")
+DB_USER = os.getenv("DB_USER")
+DB_PASSWORD = os.getenv("DB_PASSWORD")
+DB_HOST = os.getenv("DB_HOST")
+DB_PORT = os.getenv("DB_PORT")
+
+
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": "whatsapp_db",      # your DB name
-        "USER": "postgres",        # your username
-        "PASSWORD": "postgres",
-        "HOST": "172.20.1.155",       # or 172.20.1.155
-        "PORT": "5432",
+        "NAME": DB_NAME,      # your DB name
+        "USER": DB_USER,        # your username
+        "PASSWORD": DB_PASSWORD,
+        "HOST": DB_HOST,       # or 172.20.1.155
+        "PORT": DB_PORT,
     }
 }
 
