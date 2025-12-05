@@ -529,10 +529,9 @@ def update_voter(request, voter_list_id):
                     "message": "Invalid tag_id"
                 }, status=400)
 
-        # -------------------
+       # -------------------
         # UPDATE FIELDS
         # -------------------
-        # Only update fields provided in body
 
         if voter_id:
             voter.voter_id = voter_id
@@ -543,15 +542,35 @@ def update_voter(request, voter_list_id):
         if ward_no:
             voter.ward_no = ward_no
 
-        # voter.voter_name_marathi = body.get("voter_name_marathi", voter.voter_name_marathi)
-        # voter.voter_name_eng = body.get("voter_name_eng", voter.voter_name_eng)
-        voter.last_name=body.get("last_name",voter.last_name)
-        voter.middle_name=body.get("middle_name",voter.middle_name)
-        voter.first_name=body.get("first_name",voter.first_name)
-        voter.current_address = body.get("current_address", voter.current_address)
-        voter.permanent_address =  body.get("permanent_address",voter.permanent_address)
-        voter.age_eng = body.get("age", voter.age)
-        voter.gender_eng = body.get("gender", voter.gender)
+        # NAME FIELDS
+        voter.first_name  = body.get("first_name", voter.first_name)
+        voter.middle_name = body.get("middle_name", voter.middle_name)
+        voter.last_name   = body.get("last_name", voter.last_name)
+
+        # ADDRESS FIELDS
+        voter.address_line1 = body.get("address", voter.address_line1)
+        # voter.address_line2 = body.get("address_line2", voter.address_line2)
+        # voter.address_line3 = body.get("address_line3", voter.address_line3)
+        # voter.current_address = body.get("current_address",voter.current_address)
+
+        # CONTACT FIELDS
+        voter.mobile_no        = body.get("mobile_no", voter.mobile_no)
+        voter.alternate_mobile1 = body.get("alternate_mobile_no1", voter.alternate_mobile1)
+        voter.alternate_mobile2 = body.get("alternate_mobile_no2", voter.alternate_mobile2)
+
+        # OCCUPATION & OTHER INFO
+        voter.occupation  = body.get("occupation", voter.occupation)
+        voter.cast        = body.get("cast", voter.cast)
+        voter.organisation = body.get("organisation", voter.organisation)
+
+        # AGE & GENDER
+        voter.age_eng    = body.get("age", voter.age_eng)
+        voter.gender_eng = body.get("gender", voter.gender_eng)
+
+        # TAG
+        if tag_id:
+            voter.tag_id = tag
+
 
         if tag_id:
             voter.tag_id = tag
