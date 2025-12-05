@@ -110,6 +110,7 @@ def single_voters_info(request, voter_list_id):
     father_name = None
     husband = None
     husband_name = None
+    BloodRelatedFam = []
     
     # ---------------- MALE VOTER ----------------
     if is_male:
@@ -126,6 +127,7 @@ def single_voters_info(request, voter_list_id):
                 voter.middle_name,
                 voter.last_name
             ]))
+            
     
     # ---------------- FEMALE VOTER ----------------
     else:
@@ -277,6 +279,24 @@ def single_voters_info(request, voter_list_id):
         sib for sib in siblings
         if sib["name"] not in child_names
     ]
+    BloodRelatedFam = []
+
+    BloodRelatedFam.extend(
+        ([{"relation": "Father", "name": father_name}] if father_name else []) +
+        ([{"relation": "Mother", "name": mother_name}] if mother_name else []) +
+        ([{"relation": "Wife", "name": wife_name}] if wife_name else []) +
+        ([{"relation": "Husband", "name": husband_name}] if husband_name else []) +
+        ([{"relation": "Child", "name": c["name"]} for c in children]) +
+        ([{
+            "relation": (
+                "Brother" if s.get("gender","").lower() == "male"
+                else "Sister" if s.get("gender","").lower() == "female"
+                else "Sibling"
+            ),
+            "name": s["name"]
+        } for s in siblings])
+    )
+
     
     data = {
         "voter_list_id": voter.voter_list_id,
@@ -300,13 +320,13 @@ def single_voters_info(request, voter_list_id):
         "occupation":voter.occupation,
         "cast":voter.cast,
         "organisation":voter.organisation,
-
-        "father_name": father_name,
-        "mother_name": mother_name,
-        "wife_name":wife_name,
-        "husband_name": husband_name,
-        "siblings": siblings,
-        "children": children
+        "BloodRelatedFam": BloodRelatedFam
+        # "father_name": father_name,
+        # "mother_name": mother_name,
+        # "wife_name":wife_name,
+        # "husband_name": husband_name,
+        # "siblings": siblings,
+        # "children": children
         # "other_family_members": other_relatives,
 
         # "other_family_members": other_relatives
