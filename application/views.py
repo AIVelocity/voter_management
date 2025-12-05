@@ -49,7 +49,9 @@ def voters_info(request):
             "gender":v.gender_eng,
             # "image_name": v.image_name,
             "ward_id": v.ward_no,
-            "tag": v.tag_id.tag_name if v.tag_id else None
+            "tag": v.tag_id.tag_name if v.tag_id else None,
+            "badge":v.badge,
+            "location":v.location
         })
 
     return JsonResponse({
@@ -57,8 +59,6 @@ def voters_info(request):
         "count": len(data),
         "data": data
     })
-
-
 
 
 # single voter info
@@ -90,7 +90,6 @@ def single_voters_info(request, voter_list_id):
         except:
             return 0
 
-
     # ---------------- COMPUTE ----------------
 
     age = safe_age(voter.age_eng)
@@ -100,89 +99,205 @@ def single_voters_info(request, voter_list_id):
               (voter.address_line2 or "") + \
               (voter.address_line3 or "")
 
-    fname = voter.first_name
-    parent_name = voter.middle_name
-    surname = voter.last_name
-
-
-    # ---------------- RELATIVES (IN PYTHON) ----------------
-
-    relatives = [
-        r for r in VoterList.objects.filter(last_name=surname)
-        if abs(parse_kramank(r.kramank) - kramank) <= 10
-    ]
-
-
     # ---------------- FATHER ----------------
+    is_male = voter.gender_eng.lower() == "male"
+    
+    # =====================================================
+    # MALE VOTER  ---> FIND FATHER + MOTHER + SIBLINGS
+    # =====================================================
+    
+    father = None
+    father_name = None
+    husband = None
+    husband_name = None
+    BloodRelatedFam = []
+    
+    # ---------------- MALE VOTER ----------------
+    if is_male:
+        father = VoterList.objects.filter(
+            first_name=voter.middle_name,
+            last_name=voter.last_name,
+            gender_eng__iexact="male"
+        ).first()
+    
+        if father:
+            father_name = f"{father.first_name} {father.middle_name} {father.last_name}"
+        else:
+            father_name = " ".join(filter(None, [
+                voter.middle_name,
+                voter.last_name
+            ]))
+            
+    
+    # ---------------- FEMALE VOTER ----------------
+    else:
+        male_match = VoterList.objects.filter(
+            first_name=voter.middle_name,
+            last_name=voter.last_name,
+            gender_eng__iexact="male"
+        ).first()
+    
+        voter_age = safe_age(voter.age_eng)
+        male_age = safe_age(male_match.age_eng) if male_match else None
+    
+        if male_match and voter_age and male_age:
+        
+            age_gap = male_age - voter_age
+    
+            #  FATHER CASE
+            if age_gap >= 18:
+                father = male_match
+                father_name = f"{father.first_name} {father.middle_name} {father.last_name}"
+    
+            #  HUSBAND CASE
+            else:
+                husband = male_match
+                husband_name = f"{husband.first_name} {husband.middle_name} {husband.last_name}"
 
-    father = next(
-        (
-            r for r in relatives
-            if r.first_name == parent_name and r.gender_eng == "Male"
-        ),
-        None
-    )
+    # ---------------- MOTHER ----------------
+    
+    mother = None
+    mother_name = None
+    
+    if father and is_male:
+        mother = VoterList.objects.filter(
+            middle_name=father.first_name,
+            last_name=father.last_name,
+            gender_eng__iexact="female"
+        ).first()
+    
+        if mother:
+            mother_name = f"{mother.first_name} {mother.middle_name} {mother.last_name}"
 
-    father_name = f"{father.first_name} {father.last_name}" if father else ""
+    # ---------------- SIBLINGS + RELATIVES ----------------
 
+    siblings = []
+    other_relatives = []
+
+    # Determine father-name source for siblings
+    father_first_name_for_siblings = None
+
+    if is_male and father:
+        father_first_name_for_siblings = father.first_name
+
+    elif not is_male:
+        father_first_name_for_siblings = voter.middle_name   # female → maiden father name
+
+
+    if father_first_name_for_siblings and age and kramank:
+
+        family_members = VoterList.objects.filter(
+            last_name=voter.last_name
+        ).exclude(voter_list_id=voter.voter_list_id)
+
+        voter_age = age
+        voter_kramank = kramank
+
+        for p in family_members:
+
+            p_age = safe_age(p.age_eng)
+            p_kramank = parse_kramank(p.kramank)
+
+            member = {
+                "name": f"{p.first_name} {p.middle_name} {p.last_name}"
+            }
+
+            #  FINAL SIBLING CHECK
+            if (
+                p.middle_name == father_first_name_for_siblings and
+                p_age is not None and
+                voter_age is not None and
+                abs(p_age - voter_age) <= 18 and
+                p_kramank and
+                abs(p_kramank - voter_kramank) <= 5
+            ):
+                siblings.append(member)
+
+            else:
+                other_relatives.append(member)
+
+    # ---------------- WIFE ----------------
+
+    wife = None
+    wife_name = None
+
+    if is_male:
+        wife = VoterList.objects.filter(
+            middle_name=voter.first_name,
+            last_name=voter.last_name,
+            gender_eng__iexact="female"
+        ).first()
+
+        if wife:
+            wife_name = f"{wife.first_name} {wife.middle_name} {wife.last_name}"
 
     # ---------------- CHILDREN ----------------
 
-    children_qs = [
-        r for r in relatives
-        if r.middle_name == fname
+    children = []
+
+    parent_age = age
+    parent_kramank = kramank 
+    # Determine which name should match child's middle_name
+    parent_firstname_for_child = None
+
+    if is_male:
+        parent_firstname_for_child = voter.first_name
+
+    elif not is_male and husband:
+        parent_firstname_for_child = husband.first_name
+
+    if parent_firstname_for_child and parent_age and parent_kramank:
+
+        kids = VoterList.objects.filter(
+            middle_name=parent_firstname_for_child,
+            last_name=voter.last_name
+        ).exclude(voter_list_id=voter.voter_list_id)
+
+        for kid in kids:
+
+            kid_age = safe_age(kid.age_eng)
+            kid_kramank = parse_kramank(kid.kramank)
+
+            #  FINAL VALID CHILD CHECK
+            if (
+                kid_age is not None
+                and parent_age - kid_age >= 15
+                and abs(kid_kramank - parent_kramank) <= 5   # 👍 KEY FIX
+            ):
+                children.append({
+                    "name": f"{kid.first_name} {kid.middle_name} {kid.last_name}",
+                    # "age": kid_age,
+                    # "gender": kid.gender_eng,
+                    # "kramank": kid.kramank,
+                })
+
+    # ---------------- REMOVE SIBLINGS WHO ARE CHILDREN ----------------
+
+    child_names = {child["name"] for child in children}
+
+    siblings = [
+        sib for sib in siblings
+        if sib["name"] not in child_names
     ]
+    BloodRelatedFam = []
 
-    children = [
-        f"{c.first_name} {c.last_name}"
-        for c in children_qs
-    ]
+    BloodRelatedFam.extend(
+        ([{"relation": "Father", "name": father_name}] if father_name else []) +
+        ([{"relation": "Mother", "name": mother_name}] if mother_name else []) +
+        ([{"relation": "Wife", "name": wife_name}] if wife_name else []) +
+        ([{"relation": "Husband", "name": husband_name}] if husband_name else []) +
+        ([{"relation": "Child", "name": c["name"]} for c in children]) +
+        ([{
+            "relation": (
+                "Brother" if s.get("gender","").lower() == "male"
+                else "Sister" if s.get("gender","").lower() == "female"
+                else "Sibling"
+            ),
+            "name": s["name"]
+        } for s in siblings])
+    )
 
-
-    # ---------------- BROTHERS ----------------
-
-    brothers = [
-        f"{b.first_name} {b.last_name}"
-        for b in relatives
-        if b.middle_name == parent_name
-        and b.gender_eng == "Male"
-        and b.first_name != fname
-    ]
-
-
-    # ---------------- MOTHER (HEURISTIC) ----------------
-
-    mother_name = ""
-
-    if children_qs:
-
-        kids_ages = [
-            safe_age(c.age_eng)
-            for c in children_qs
-            if safe_age(c.age_eng) is not None
-        ]
-
-        if kids_ages:
-
-            avg_child_age = sum(kids_ages) / len(kids_ages)
-
-            females = [
-                r for r in relatives
-                if r.gender_eng == "Female"
-                and safe_age(r.age_eng)
-                and 20 <= (safe_age(r.age_eng) - avg_child_age) <= 45
-            ]
-
-            if females:
-                best = min(
-                    females,
-                    key=lambda r: abs((safe_age(r.age_eng) - avg_child_age) - 30)
-                )
-                mother_name = f"{best.first_name} {best.last_name}"
-
-
-    # ---------------- RESPONSE ----------------
-
+    
     data = {
         "voter_list_id": voter.voter_list_id,
         "sr_no": voter.sr_no,
@@ -202,81 +317,24 @@ def single_voters_info(request, voter_list_id):
         "gender": voter.gender_eng,
         "ward_id": voter.ward_no,
         "tag": voter.tag_id.tag_name if voter.tag_id else None,
+        "occupation":voter.occupation,
+        "cast":voter.cast,
+        "organisation":voter.organisation,
+        "BloodRelatedFam": BloodRelatedFam
+        # "father_name": father_name,
+        # "mother_name": mother_name,
+        # "wife_name":wife_name,
+        # "husband_name": husband_name,
+        # "siblings": siblings,
+        # "children": children
+        # "other_family_members": other_relatives,
 
-        "mother_name": mother_name,
-        "father_name": father_name,
-        "children": children,
-        "brothers": brothers
+        # "other_family_members": other_relatives
     }
 
     return JsonResponse({"status": True, "data": data})
 
-# single voter info page
-# def single_voters_info(request, voter_list_id):
 
-#     try:
-#         voter = VoterList.objects.select_related("tag_id").get(
-#             voter_list_id=voter_list_id
-#         )
-
-#     except VoterList.DoesNotExist:
-#         return JsonResponse({
-#             "status": False,
-#             "message": "Voter not found"
-#         }, status=404)
-        
-#     address = (
-#     (voter.address_line1 or "") +
-#     (voter.address_line2 or "") +
-#     (voter.address_line3 or "")
-# )
-
-#     data = {
-#     "voter_list_id": voter.voter_list_id,
-#     "sr_no": voter.sr_no,
-#     "voter_id": voter.voter_id,
-
-#     "first_name": voter.first_name,
-#     "middle_name": voter.middle_name,
-#     "last_name": voter.last_name,
-
-#     "kramank": voter.kramank,
-
-#     # "permanent_address": voter.permanent_address,
-#     # "current_address": voter.current_address,
-#     "address":address,
-
-#     "mobile_no": voter.mobile_no,
-#     "alternate_mobile_no1": voter.alternate_mobile1,
-#     "alternate_mobile_no2": voter.alternate_mobile2,
-
-#     # safely handle hex or empty age_eng
-#     "age": (
-#         int(voter.age_eng, 16)
-#         if voter.age_eng and str(voter.age_eng).lower().startswith("0x")
-#         else int(voter.age_eng)
-#         if voter.age_eng and str(voter.age_eng).isdigit()
-#         else None
-#     ),
-
-#     "gender": voter.gender_eng,
-
-#     "ward_id": voter.ward_no,
-
-#     # safe FK access
-#     "tag": voter.tag_id.tag_name if voter.tag_id else None,
-
-#     # extra optional fields
-#     "mother_name": "",
-#     "father_name": "",
-#     "children": [],
-#     "brothers": [],
-# }
-
-#     return JsonResponse({
-#         "status": True,
-#         "data": data
-#     })
 
 # add a new voter
 @csrf_exempt
@@ -339,19 +397,31 @@ def add_voter(request):
             voter_id=voter_id,
             # voter_name_marathi=body.get("voter_name_marathi"),
             # voter_name_eng=body.get("voter_name_eng"),
-            middle_name=body.get("middle_name"),
             first_name=body.get("first_name"),
+            middle_name=body.get("middle_name"),
             last_name=body.get("last_name"),
+
             kramank=kramank,
-            permanent_address=body.get("permanent_address"),
-            current_address = body.get("current_address"),
-            # age=body.get("age"),
+            # tag_id = tag_id,
+            
+            # permanent_address=body.get("address"),
+            # current_address=body.get("address"),
+            address_line1 = body.get("address_line1"),
+            address_line2 = body.get("address_line2"),
+            address_line3 = body.get("address_line3"),
+
+            mobile_no=body.get("mobile_no"),
+            alternate_mobile1=body.get("alternate_mobile_no1"),
+            alternate_mobile2=body.get("alternate_mobile_no2"),
+            occupation = body.get("occupation"),
+            cast = body.get("cast"),
+            organisation = body.get("organisation"),
+
             age_eng=body.get("age"),
-            # gender=body.get("gender"),
             gender_eng=body.get("gender"),
+
             ward_no=ward_no,
             tag_id=tag
-            # image_name=body.get("image_name")
         )
 
         voter.refresh_from_db()
@@ -515,3 +585,70 @@ def update_voter(request, voter_list_id):
             "status": False,
             "error": str(e)
         }, status=500)
+        
+# single voter info page
+# def single_voters_info(request, voter_list_id):
+
+#     try:
+#         voter = VoterList.objects.select_related("tag_id").get(
+#             voter_list_id=voter_list_id
+#         )
+
+#     except VoterList.DoesNotExist:
+#         return JsonResponse({
+#             "status": False,
+#             "message": "Voter not found"
+#         }, status=404)
+        
+#     address = (
+#     (voter.address_line1 or "") +
+#     (voter.address_line2 or "") +
+#     (voter.address_line3 or "")
+# )
+
+#     data = {
+#     "voter_list_id": voter.voter_list_id,
+#     "sr_no": voter.sr_no,
+#     "voter_id": voter.voter_id,
+
+#     "first_name": voter.first_name,
+#     "middle_name": voter.middle_name,
+#     "last_name": voter.last_name,
+
+#     "kramank": voter.kramank,
+
+#     # "permanent_address": voter.permanent_address,
+#     # "current_address": voter.current_address,
+#     "address":address,
+
+#     "mobile_no": voter.mobile_no,
+#     "alternate_mobile_no1": voter.alternate_mobile1,
+#     "alternate_mobile_no2": voter.alternate_mobile2,
+
+#     # safely handle hex or empty age_eng
+#     "age": (
+#         int(voter.age_eng, 16)
+#         if voter.age_eng and str(voter.age_eng).lower().startswith("0x")
+#         else int(voter.age_eng)
+#         if voter.age_eng and str(voter.age_eng).isdigit()
+#         else None
+#     ),
+
+#     "gender": voter.gender_eng,
+
+#     "ward_id": voter.ward_no,
+
+#     # safe FK access
+#     "tag": voter.tag_id.tag_name if voter.tag_id else None,
+
+#     # extra optional fields
+#     "mother_name": "",
+#     "father_name": "",
+#     "children": [],
+#     "brothers": [],
+# }
+
+#     return JsonResponse({
+#         "status": True,
+#         "data": data
+#     })
