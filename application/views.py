@@ -560,7 +560,8 @@ def update_voter(request, voter_list_id):
         voter.mobile_no        = body.get("mobile_no", voter.mobile_no)
         voter.alternate_mobile1 = body.get("alternate_mobile_no1", voter.alternate_mobile1)
         voter.alternate_mobile2 = body.get("alternate_mobile_no2", voter.alternate_mobile2)
-
+        voter.badge = body.get("badge",voter.badge)
+        voter.location = body.get("location",voter.location)
         # OCCUPATION & OTHER INFO
         voter.occupation  = body.get("occupation", voter.occupation)
         voter.cast        = body.get("cast", voter.cast)
