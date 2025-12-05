@@ -282,10 +282,10 @@ def single_voters_info(request, voter_list_id):
     BloodRelatedFam = []
 
     BloodRelatedFam.extend(
-        ([{"relation": "Father", "name": father_name}] if father_name else []) +
-        ([{"relation": "Mother", "name": mother_name}] if mother_name else []) +
-        ([{"relation": "Wife", "name": wife_name}] if wife_name else []) +
-        ([{"relation": "Husband", "name": husband_name}] if husband_name else []) +
+        ([{"relation": "Father", "name": father_name}] if father_name else [{"relation": "Father", "name": ""}]) +
+        ([{"relation": "Mother", "name": mother_name}] if mother_name else [{"relation": "Mother", "name": ""}]) +
+        ([{"relation": "Wife", "name": wife_name}] if wife_name else [{"relation": "Wife", "name": ""}]) +
+        ([{"relation": "Husband", "name": husband_name}] if husband_name else [{"relation": "Husband", "name":""}]) +
         ([{"relation": "Child", "name": c["name"]} for c in children]) +
         ([{
             "relation": (
@@ -323,11 +323,11 @@ def single_voters_info(request, voter_list_id):
         "organisation":voter.organisation,
         "badge":voter.badge,
         "location":voter.location,
-        "BloodRelatedFam": BloodRelatedFam
-        # "father_name": father_name,
-        # "mother_name": mother_name,
-        # "wife_name":wife_name,
-        # "husband_name": husband_name,
+        "BloodRelatedFam": BloodRelatedFam,
+        "father_name": father_name,
+        "mother_name": mother_name,
+        "wife_name":wife_name,
+        "husband_name": husband_name
         # "siblings": siblings,
         # "children": children
         # "other_family_members": other_relatives,
