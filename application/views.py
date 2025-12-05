@@ -382,7 +382,8 @@ def add_voter(request):
             last_name=body.get("last_name"),
 
             kramank=kramank,
-
+            # tag_id = tag_id,
+            
             # permanent_address=body.get("address"),
             # current_address=body.get("address"),
             address_line1 = body.get("address_line1"),
@@ -392,6 +393,9 @@ def add_voter(request):
             mobile_no=body.get("mobile_no"),
             alternate_mobile1=body.get("alternate_mobile_no1"),
             alternate_mobile2=body.get("alternate_mobile_no2"),
+            occupation = body.get("occupation"),
+            cast = body.get("cast"),
+            organisation = body.get("organisation"),
 
             age_eng=body.get("age"),
             gender_eng=body.get("gender"),
@@ -399,8 +403,6 @@ def add_voter(request):
             ward_no=ward_no,
             tag_id=tag
         )
-# image_name=body.get("image_name")
-        
 
         voter.refresh_from_db()
         return JsonResponse({
