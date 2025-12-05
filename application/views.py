@@ -297,16 +297,19 @@ def single_voters_info(request, voter_list_id):
         "gender": voter.gender_eng,
         "ward_id": voter.ward_no,
         "tag": voter.tag_id.tag_name if voter.tag_id else None,
+        "occupation":voter.occupation,
+        "cast":voter.cast,
+        "organisation":voter.organisation,
 
         "father_name": father_name,
         "mother_name": mother_name,
         "wife_name":wife_name,
         "husband_name": husband_name,
         "siblings": siblings,
+        "children": children
         # "other_family_members": other_relatives,
 
         # "other_family_members": other_relatives
-        "children": children
     }
 
     return JsonResponse({"status": True, "data": data})

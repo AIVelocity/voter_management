@@ -64,6 +64,9 @@ class VoterList(models.Model):
     alternate_mobile2 = models.CharField(max_length=10, null=True, blank=True)
     badge = models.TextField(null=True, blank=True)
     location = models.TextField(null=True, blank=True)
+    occupation = models.TextField(null=True,blank=True)
+    cast = models.TextField(null=True,blank=True)
+    organisation = models.TextField(null=True,blank=True)
 
     tag_id = models.ForeignKey(
         VoterTag,
