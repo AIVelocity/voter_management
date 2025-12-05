@@ -300,6 +300,7 @@ def single_voters_info(request, voter_list_id):
     
     data = {
         "voter_list_id": voter.voter_list_id,
+        "voter_name_eng": voter.voter_name_eng,
         "sr_no": voter.sr_no,
         "voter_id": voter.voter_id,
         "first_name": voter.first_name,
@@ -320,6 +321,8 @@ def single_voters_info(request, voter_list_id):
         "occupation":voter.occupation,
         "cast":voter.cast,
         "organisation":voter.organisation,
+        "badge":voter.badge,
+        "location":voter.location,
         "BloodRelatedFam": BloodRelatedFam
         # "father_name": father_name,
         # "mother_name": mother_name,
@@ -566,11 +569,6 @@ def update_voter(request, voter_list_id):
         # AGE & GENDER
         voter.age_eng    = body.get("age", voter.age_eng)
         voter.gender_eng = body.get("gender", voter.gender_eng)
-
-        # TAG
-        if tag_id:
-            voter.tag_id = tag
-
 
         if tag_id:
             voter.tag_id = tag
