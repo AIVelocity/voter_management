@@ -5,6 +5,7 @@ import json
 from django.db import IntegrityError
 
 from django.db.models import Q
+from django.core.paginator import Paginator
 
 def index(request):
     return JsonResponse ({
@@ -500,6 +501,57 @@ def add_voter(request):
             "status": False,
             "error": str(e)
         }, status=500)
+
+
+# voter search
+def voters_search(request):
+
+    search = request.GET.get("q", "").strip()
+    page = int(request.GET.get("page", 1))
+    size = int(request.GET.get("size", 30))   # smaller for live search
+
+    if not search:
+        return JsonResponse({
+            "status": True,
+            "page": page,
+            "data": [],
+            "total_records": 0
+        })
+
+    tokens = [t.lower() for t in search.split()]
+
+    q = Q()
+    for token in tokens:
+        q &= Q(voter_name_eng__icontains=token)
+
+    qs = VoterList.objects \
+            .select_related("tag_id") \
+            .filter(q) \
+            .order_by("voter_list_id")
+
+    paginator = Paginator(qs, size)
+    page_obj = paginator.get_page(page)
+
+    data = []
+    for v in page_obj:
+        data.append({
+            "voter_list_id": v.voter_list_id,
+            "voter_name_eng": v.voter_name_eng,
+            "age": v.age_eng,
+            "gender": v.gender_eng,
+            "ward_id": v.ward_no,
+            "badge": v.badge
+        })
+
+    return JsonResponse({
+        "status": True,
+        "query": search,
+        "page": page,
+        "page_size": size,
+        "total_pages": paginator.num_pages,
+        "total_records": paginator.count,
+        "results": data
+    })
 
 # update voter
 @csrf_exempt
