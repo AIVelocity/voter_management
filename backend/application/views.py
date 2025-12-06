@@ -502,32 +502,23 @@ def add_voter(request):
             "error": str(e)
         }, status=500)
 
-
-# voter search
 def voters_search(request):
 
     search = request.GET.get("q", "").strip()
     page = int(request.GET.get("page", 1))
-    size = int(request.GET.get("size", 30))   # smaller for live search
+    size = int(request.GET.get("size", 30))
 
-    if not search:
-        return JsonResponse({
-            "status": True,
-            "page": page,
-            "data": [],
-            "total_records": 0
-        })
+    qs = VoterList.objects.select_related("tag_id")
 
-    tokens = [t.lower() for t in search.split()]
+    if search:
+        tokens = [t.lower() for t in search.split() if len(t) >= 2]
 
-    q = Q()
-    for token in tokens:
-        q &= Q(voter_name_eng__icontains=token)
+        for token in tokens:
+            qs = qs.filter(
+                Q(voter_name_eng__iregex=rf"(^|\s){token}")
+            )
 
-    qs = VoterList.objects \
-            .select_related("tag_id") \
-            .filter(q) \
-            .order_by("voter_list_id")
+    qs = qs.order_by("voter_list_id")
 
     paginator = Paginator(qs, size)
     page_obj = paginator.get_page(page)
@@ -550,8 +541,9 @@ def voters_search(request):
         "page_size": size,
         "total_pages": paginator.num_pages,
         "total_records": paginator.count,
-        "results": data
+        "data": data
     })
+
 
 # update voter
 @csrf_exempt
