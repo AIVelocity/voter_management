@@ -108,8 +108,10 @@ def single_voters_info(request, voter_list_id):
     
     father = None
     father_name = None
+    father_id = None
     husband = None
     husband_name = None
+    husband_id = None
     BloodRelatedFam = []
     
     # ---------------- MALE VOTER ----------------
@@ -122,6 +124,7 @@ def single_voters_info(request, voter_list_id):
     
         if father:
             father_name = f"{father.first_name} {father.middle_name} {father.last_name}"
+            father_id = father.voter_list_id
         else:
             father_name = " ".join(filter(None, [
                 voter.middle_name,
@@ -148,16 +151,19 @@ def single_voters_info(request, voter_list_id):
             if age_gap >= 18:
                 father = male_match
                 father_name = f"{father.first_name} {father.middle_name} {father.last_name}"
+                father_id = father.voter_list_id
     
             #  HUSBAND CASE
             else:
                 husband = male_match
                 husband_name = f"{husband.first_name} {husband.middle_name} {husband.last_name}"
+                husband_id = husband.voter_list_id
 
     # ---------------- MOTHER ----------------
     
     mother = None
     mother_name = None
+    mother_id = None
     
     if father and is_male:
         mother = VoterList.objects.filter(
@@ -168,6 +174,7 @@ def single_voters_info(request, voter_list_id):
     
         if mother:
             mother_name = f"{mother.first_name} {mother.middle_name} {mother.last_name}"
+            mother_id = mother.voter_list_id
 
     # ---------------- SIBLINGS + RELATIVES ----------------
 
@@ -199,7 +206,8 @@ def single_voters_info(request, voter_list_id):
             p_kramank = parse_kramank(p.kramank)
 
             member = {
-                "name": f"{p.first_name} {p.middle_name} {p.last_name}"
+                "name": f"{p.first_name} {p.middle_name} {p.last_name}",
+                "voter_list_id" : p.voter_list_id
             }
 
             #  FINAL SIBLING CHECK
@@ -220,6 +228,7 @@ def single_voters_info(request, voter_list_id):
 
     wife = None
     wife_name = None
+    wife_id = None
 
     if is_male:
         wife = VoterList.objects.filter(
@@ -230,6 +239,7 @@ def single_voters_info(request, voter_list_id):
 
         if wife:
             wife_name = f"{wife.first_name} {wife.middle_name} {wife.last_name}"
+            wife_id = wife.voter_list_id
 
     # ---------------- CHILDREN ----------------
 
@@ -268,7 +278,7 @@ def single_voters_info(request, voter_list_id):
                     "name": f"{kid.first_name} {kid.middle_name} {kid.last_name}",
                     # "age": kid_age,
                     # "gender": kid.gender_eng,
-                    # "kramank": kid.kramank,
+                    "voter_list_id": kid.voter_list_id,
                 })
 
     # ---------------- REMOVE SIBLINGS WHO ARE CHILDREN ----------------
@@ -282,22 +292,36 @@ def single_voters_info(request, voter_list_id):
     BloodRelatedFam = []
 
     BloodRelatedFam.extend(
-        ([{"relation": "Father", "name": father_name}] if father_name else [{"relation": "Father", "name": ""}]) +
-        ([{"relation": "Mother", "name": mother_name}] if mother_name else [{"relation": "Mother", "name": ""}]) +
-        ([{"relation": "Wife", "name": wife_name}] if wife_name else [{"relation": "Wife", "name": ""}]) +
-        ([{"relation": "Husband", "name": husband_name}] if husband_name else [{"relation": "Husband", "name":""}]) +
-        ([{"relation": "Child", "name": c["name"]} for c in children]) +
-        ([{
-            "relation": (
-                "Brother" if s.get("gender","").lower() == "male"
-                else "Sister" if s.get("gender","").lower() == "female"
-                else "Sibling"
-            ),
-            "name": s["name"]
-        } for s in siblings])
+        ([{"relation": "Father", "name": father_name, "voter_list_id": father_id}]
+            if father_name else [{"relation": "Father", "name": "", "voter_list_id": None}]) +
+    
+        ([{"relation": "Mother", "name": mother_name, "voter_list_id": mother_id}]
+            if mother_name else [{"relation": "Mother", "name": "", "voter_list_id": None}]) +
+    
+        ([{"relation": "Wife", "name": wife_name, "voter_list_id": wife_id}]
+            if wife_name else [{"relation": "Wife", "name": "", "voter_list_id": None}]) +
+    
+        ([{"relation": "Husband", "name": husband_name, "voter_list_id": husband_id}]
+            if husband_name else [{"relation": "Husband", "name": "", "voter_list_id": None}]) +
+    
+        (
+            [{"relation": "Child", "name": c["name"], "voter_list_id": c.get("voter_list_id")} for c in children]
+        ) +
+    
+        ([
+            {
+                "relation": (
+                    "Brother" if s.get("gender","").lower() == "male"
+                    else "Sister" if s.get("gender","").lower() == "female"
+                    else "Sibling"
+                ),
+                "name": s["name"],
+                "voter_list_id": s.get("voter_list_id")
+            }
+            for s in siblings
+        ])
     )
 
-    
     data = {
         "voter_list_id": voter.voter_list_id,
         "voter_name_eng": voter.voter_name_eng,
