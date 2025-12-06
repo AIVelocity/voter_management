@@ -502,37 +502,41 @@ def add_voter(request):
             "error": str(e)
         }, status=500)
 
+def apply_dynamic_initial_search(qs, search):
+    tokens = [t.strip().lower() for t in search.split() if t.strip()]
+
+    for token in tokens:
+        qs = qs.filter(
+            Q(voter_name_eng__iregex=rf'\m{token}')
+        )
+
+    return qs
+
+
 def voters_search(request):
 
-    search = request.GET.get("q", "").strip()
+    search = request.GET.get("search", "").strip()
     page = int(request.GET.get("page", 1))
-    size = int(request.GET.get("size", 30))
-
+    size = int(request.GET.get("size", 100))
+    print(search)
     qs = VoterList.objects.select_related("tag_id")
 
     if search:
-        tokens = [t.lower() for t in search.split() if len(t) >= 2]
-
-        for token in tokens:
-            qs = qs.filter(
-                Q(voter_name_eng__iregex=rf"(^|\s){token}")
-            )
+        qs = apply_dynamic_initial_search(qs, search)
 
     qs = qs.order_by("voter_list_id")
 
     paginator = Paginator(qs, size)
     page_obj = paginator.get_page(page)
 
-    data = []
-    for v in page_obj:
-        data.append({
-            "voter_list_id": v.voter_list_id,
-            "voter_name_eng": v.voter_name_eng,
-            "age": v.age_eng,
-            "gender": v.gender_eng,
-            "ward_id": v.ward_no,
-            "badge": v.badge
-        })
+    data = [{
+        "voter_list_id": v.voter_list_id,
+        "voter_name_eng": v.voter_name_eng,
+        "age": v.age_eng,
+        "gender": v.gender_eng,
+        "ward_id": v.ward_no,
+        "badge": v.badge
+    } for v in page_obj]
 
     return JsonResponse({
         "status": True,
