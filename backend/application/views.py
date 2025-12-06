@@ -103,7 +103,7 @@ def single_voters_info(request, voter_list_id):
     is_male = voter.gender_eng.lower() == "male"
     
     # =====================================================
-    # MALE VOTER  ---> FIND FATHER + MOTHER + SIBLINGS
+    # MALE VOTER  ---> FIND FATHER 
     # =====================================================
     
     father = None
@@ -272,7 +272,7 @@ def single_voters_info(request, voter_list_id):
             if (
                 kid_age is not None
                 and parent_age - kid_age >= 15
-                and abs(kid_kramank - parent_kramank) <= 5   # 👍 KEY FIX
+                and abs(kid_kramank - parent_kramank) <= 5   # KEY FIX
             ):
                 children.append({
                     "name": f"{kid.first_name} {kid.middle_name} {kid.last_name}",
@@ -327,6 +327,7 @@ def single_voters_info(request, voter_list_id):
         "voter_name_eng": voter.voter_name_eng,
         "sr_no": voter.sr_no,
         "voter_id": voter.voter_id,
+        
         "first_name": voter.first_name,
         "middle_name": voter.middle_name,
         "last_name": voter.last_name,
@@ -341,13 +342,21 @@ def single_voters_info(request, voter_list_id):
         "age": age,
         "gender": voter.gender_eng,
         "ward_id": voter.ward_no,
+        
         "tag": voter.tag_id.tag_name if voter.tag_id else None,
+        "tag_obj" : {
+            "name" : voter.tag_id.tag_name if voter.tag_id else None,
+            "id" :voter.tag_id.tag_id if voter.tag_id else None
+                },
+        
         "occupation":voter.occupation,
         "cast":voter.cast,
         "organisation":voter.organisation,
+        
         "badge":voter.badge,
         "location":voter.location,
         "BloodRelatedFam": BloodRelatedFam,
+        
         "father_name": father_name,
         "mother_name": mother_name,
         "wife_name":wife_name,
