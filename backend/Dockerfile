@@ -45,3 +45,4 @@ CMD ["gunicorn", "voter_mang_sys.wsgi:application", \
      "--workers", "4", \
      "--threads", "2", \
      "--timeout", "120"]
+ 
