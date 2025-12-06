@@ -165,7 +165,7 @@ def single_voters_info(request, voter_list_id):
     mother_name = None
     mother_id = None
     
-    if father and is_male:
+    if father :
         mother = VoterList.objects.filter(
             middle_name=father.first_name,
             last_name=father.last_name,
