@@ -502,15 +502,44 @@ def add_voter(request):
             "error": str(e)
         }, status=500)
 
+import re
+from collections import Counter
+from django.db.models import Q
+
+
 def apply_dynamic_initial_search(qs, search):
+
     tokens = [t.strip().lower() for t in search.split() if t.strip()]
 
-    for token in tokens:
+    token_counts = Counter(tokens)
+
+    # 1. DB side: fast existence filtering
+    for token in token_counts.keys():
         qs = qs.filter(
             Q(voter_name_eng__iregex=rf'\m{token}')
         )
 
-    return qs
+    # 2. Python side: validate counts
+    final_results = []
+    word_pattern = re.compile(r"[A-Za-z]+")
+
+    for v in qs:
+        words = word_pattern.findall(v.voter_name_eng.lower())
+        
+        word_prefixes = [w[:len(t)] for w in words for t in token_counts if w.startswith(t)]
+
+        counts_per_word = Counter(word_prefixes)
+
+        valid = True
+        for t, count in token_counts.items():
+            if counts_per_word[t] < count:
+                valid = False
+                break
+
+        if valid:
+            final_results.append(v)
+
+    return final_results
 
 
 def voters_search(request):
@@ -518,13 +547,15 @@ def voters_search(request):
     search = request.GET.get("search", "").strip()
     page = int(request.GET.get("page", 1))
     size = int(request.GET.get("size", 100))
-    print(search)
+
     qs = VoterList.objects.select_related("tag_id")
 
     if search:
         qs = apply_dynamic_initial_search(qs, search)
 
-    qs = qs.order_by("voter_list_id")
+    #  PATCH: if list → ordering must be Python side
+    if isinstance(qs, list):
+        qs.sort(key=lambda x: x.voter_list_id)
 
     paginator = Paginator(qs, size)
     page_obj = paginator.get_page(page)
@@ -545,6 +576,7 @@ def voters_search(request):
         "page_size": size,
         "total_pages": paginator.num_pages,
         "total_records": paginator.count,
+        "records_returned": len(data),
         "data": data
     })
 
