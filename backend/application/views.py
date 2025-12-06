@@ -562,11 +562,14 @@ def voters_search(request):
 
     data = [{
         "voter_list_id": v.voter_list_id,
+        "voter_id": v.voter_id,
         "voter_name_eng": v.voter_name_eng,
         "age": v.age_eng,
         "gender": v.gender_eng,
         "ward_id": v.ward_no,
-        "badge": v.badge
+        "badge": v.badge,
+        "tag":v.tag_id,
+        "badge":v.badge
     } for v in page_obj]
 
     return JsonResponse({
