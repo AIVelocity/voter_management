@@ -297,6 +297,7 @@ def single_voters_info(request, voter_list_id):
 
         "age": age,
         "gender": voter.gender_eng,
+        
         "ward_id": voter.ward_no,
         
         "tag": voter.tag_id.tag_name if voter.tag_id else None,
