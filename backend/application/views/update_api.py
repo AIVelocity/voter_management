@@ -28,42 +28,42 @@ def update_voter(request, voter_list_id):
         # -------------------
         # INPUT VALUES
         # -------------------
-        voter_id = body.get("voter_id")
-        kramank = body.get("kramank")
-        ward_no = body.get("ward_id")
+        # voter_id = body.get("voter_id")
+        # kramank = body.get("kramank")
+        # ward_no = body.get("ward_id")
 
         # -------------------
         # BASIC VALIDATION
         # -------------------
-        if ward_no and ward_no not in [36, 37]:
-            return JsonResponse({
-                "status": False,
-                "message": "ward_id must be 36 or 37"
-            }, status=400)
+        # if ward_no and ward_no not in [36, 37]:
+        #     return JsonResponse({
+        #         "status": False,
+        #         "message": "ward_id must be 36 or 37"
+        #     }, status=400)
 
         # -------------------
         # DUPLICATE CHECKS
         # exclude current row
         # -------------------
-        if voter_id:
-            if VoterList.objects.filter(voter_id=voter_id).exclude(voter_list_id=voter_list_id).exists():
-                return JsonResponse({
-                    "status": False,
-                    "message": f"Duplicate voter_id: {voter_id}"
-                }, status=409)
+        # if voter_id:
+        #     if VoterList.objects.filter(voter_id=voter_id).exclude(voter_list_id=voter_list_id).exists():
+        #         return JsonResponse({
+        #             "status": False,
+        #             "message": f"Duplicate voter_id: {voter_id}"
+        #         }, status=409)
 
-        if kramank:
-            check_ward = ward_no if ward_no else voter.ward_no
+        # if kramank:
+        #     check_ward = ward_no if ward_no else voter.ward_no
         
-            if VoterList.objects.filter(
-                    kramank=kramank,
-                    ward_no=check_ward
-                ).exclude(voter_list_id=voter_list_id).exists():
+        #     if VoterList.objects.filter(
+        #             kramank=kramank,
+        #             ward_no=check_ward
+        #         ).exclude(voter_list_id=voter_list_id).exists():
         
-                return JsonResponse({
-                    "status": False,
-                    "message": f"Duplicate kramank '{kramank}' in ward {check_ward}"
-                }, status=409)
+        #         return JsonResponse({
+        #             "status": False,
+        #             "message": f"Duplicate kramank '{kramank}' in ward {check_ward}"
+        #         }, status=409)
 
 
         # -------------------
@@ -85,19 +85,19 @@ def update_voter(request, voter_list_id):
         # UPDATE FIELDS
         # -------------------
 
-        if voter_id:
-            voter.voter_id = voter_id
+        # if voter_id:
+        #     voter.voter_id = voter_id
 
-        if kramank:
-            voter.kramank = kramank
+        # if kramank:
+        #     voter.kramank = kramank
 
-        if ward_no:
-            voter.ward_no = ward_no
+        # if ward_no:
+        #     voter.ward_no = ward_no
 
         # NAME FIELDS
-        voter.first_name  = body.get("first_name", voter.first_name)
-        voter.middle_name = body.get("middle_name", voter.middle_name)
-        voter.last_name   = body.get("last_name", voter.last_name)
+        # voter.first_name  = body.get("first_name", voter.first_name)
+        # voter.middle_name = body.get("middle_name", voter.middle_name)
+        # voter.last_name   = body.get("last_name", voter.last_name)
 
         # ADDRESS FIELDS
         voter.address_line1 = body.get("address", voter.address_line1)
@@ -109,6 +109,7 @@ def update_voter(request, voter_list_id):
         voter.mobile_no        = body.get("mobile_no", voter.mobile_no)
         voter.alternate_mobile1 = body.get("alternate_mobile_no1", voter.alternate_mobile1)
         voter.alternate_mobile2 = body.get("alternate_mobile_no2", voter.alternate_mobile2)
+        
         voter.badge = body.get("badge",voter.badge)
         voter.location = body.get("location",voter.location)
         # OCCUPATION & OTHER INFO
@@ -117,8 +118,8 @@ def update_voter(request, voter_list_id):
         voter.organisation = body.get("organisation", voter.organisation)
 
         # AGE & GENDER
-        voter.age_eng    = body.get("age", voter.age_eng)
-        voter.gender_eng = body.get("gender", voter.gender_eng)
+        # voter.age_eng    = body.get("age", voter.age_eng)
+        # voter.gender_eng = body.get("gender", voter.gender_eng)
 
         if tag_id:
             voter.tag_id = tag
