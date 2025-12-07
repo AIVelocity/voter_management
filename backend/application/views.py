@@ -4,6 +4,9 @@ from django.views.decorators.csrf import csrf_exempt
 import json
 from django.db import IntegrityError
 
+import re
+from collections import Counter
+
 from django.db.models import Q
 from django.core.paginator import Paginator
 
@@ -502,37 +505,39 @@ def add_voter(request):
             "error": str(e)
         }, status=500)
 
-import re
-from collections import Counter
-from django.db.models import Q
-
-
 def apply_dynamic_initial_search(qs, search):
 
     tokens = [t.strip().lower() for t in search.split() if t.strip()]
-
     token_counts = Counter(tokens)
 
-    # 1. DB side: fast existence filtering
-    for token in token_counts.keys():
+    # --------- DB side presence filter ---------
+    for token in token_counts:
         qs = qs.filter(
-            Q(voter_name_eng__iregex=rf'\m{token}')
+            Q(voter_name_eng__iregex=rf'\m{token}') |
+            Q(voter_id__icontains=token)
         )
 
-    # 2. Python side: validate counts
+    # --------- Python side frequency validation ---------
     final_results = []
-    word_pattern = re.compile(r"[A-Za-z]+")
+    words_re = re.compile(r"[A-Za-z]+")
 
     for v in qs:
-        words = word_pattern.findall(v.voter_name_eng.lower())
-        
-        word_prefixes = [w[:len(t)] for w in words for t in token_counts if w.startswith(t)]
+        words = words_re.findall((v.voter_name_eng or "").lower())
+        voter_id = (v.voter_id or "").lower()
 
-        counts_per_word = Counter(word_prefixes)
+        counts = Counter()
+        for t in token_counts:
+            for w in words:
+                if w.startswith(t):
+                    counts[t] += 1
 
         valid = True
-        for t, count in token_counts.items():
-            if counts_per_word[t] < count:
+        for t, required in token_counts.items():
+            # ✅ If token matched voter_id, accept it without name matching
+            if t in voter_id:
+                continue
+
+            if counts[t] < required:
                 valid = False
                 break
 
@@ -540,6 +545,7 @@ def apply_dynamic_initial_search(qs, search):
             final_results.append(v)
 
     return final_results
+
 
 
 def voters_search(request):
