@@ -4,6 +4,7 @@ from .update_api import update_voter
 from .voters_info_api import voters_info
 from .add_voter_api import add_voter
 from .db_list_api import tags ,index , roles
+from .add_relationship_api import add_relation,remove_relation
 
 __all__ = [
     "tags",
@@ -13,5 +14,7 @@ __all__ = [
     "update_voter",
     "add_voter",
     "voters_search",
-    "roles"
+    "roles",
+    "add_relation",
+    "remove_relation"
 ]

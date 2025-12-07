@@ -20,6 +20,8 @@ def voters_info(request):
         data.append({
             "voter_list_id": v.voter_list_id,
             "voter_id": v.voter_id,
+            "first_name":v.first_name,
+            "last_name" : v.last_name,
             "voter_name_marathi": v.voter_name_marathi,
             "voter_name_eng": v.voter_name_eng,
             "kramank": v.kramank,
