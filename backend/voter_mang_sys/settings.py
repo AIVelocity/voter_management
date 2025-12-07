@@ -28,9 +28,9 @@ SECRET_KEY = 'django-insecure-w^w75v0)bmgunxwhmmagl0bp*1rf$p^u9q-ca$2!%+q%(8f7=&
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = eval(os.getenv("ALLOWED_HOSTS"))
+# ALLOWED_HOSTS = eval(os.getenv("ALLOWED_HOSTS"))
 
-ALLOWED_HOSTS = ALLOWED_HOSTS
+ALLOWED_HOSTS = ["172.20.1.101","59.95.99.182","127.0.0.1", "localhost", "172.20.1.155", ".ngrok-free.app", ".ngrok-free.dev"]
 
 # Application definition
 
@@ -89,13 +89,14 @@ DB_PORT = os.getenv("DB_PORT")
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": DB_NAME,      # your DB name
-        "USER": DB_USER,        # your username
-        "PASSWORD": DB_PASSWORD,
-        "HOST": DB_HOST,       # or 172.20.1.155
-        "PORT": DB_PORT,
+        "NAME": "whatsapp_db",
+        "USER": "postgres",
+        "PASSWORD": "postgres",
+        "HOST": "172.20.1.155",
+        "PORT": "5432",
     }
 }
+
 
 VERIFY_TOKEN = os.getenv("WP_VERIFY_TOKEN")
 MESSAGE_URL = os.getenv("MESSAGE_URL")

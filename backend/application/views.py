@@ -4,7 +4,11 @@ from django.views.decorators.csrf import csrf_exempt
 import json
 from django.db import IntegrityError
 
+import re
+from collections import Counter
+
 from django.db.models import Q
+from django.core.paginator import Paginator
 
 def index(request):
     return JsonResponse ({
@@ -12,6 +16,13 @@ def index(request):
         "message":"Application running"
     })
     
+    
+# @csrf_exempt
+# def login(request):
+#     user = body.get("user_name")
+#     password = body.get("password")
+    
+    # pass
 # tags api
 def tags(request):
     tags = VoterTag.objects.all().order_by("tag_id")
@@ -27,38 +38,46 @@ def tags(request):
     })
    
 # all voters list 
+from django.core.paginator import Paginator
+
 def voters_info(request):
 
-    voters = VoterList.objects.select_related("tag_id").all().order_by("ward_no", "voter_list_id")[:100]   # limit for safety
+    page = int(request.GET.get("page", 1))
+    size = int(request.GET.get("size", 100))
+
+    qs = VoterList.objects.select_related("tag_id") \
+            .order_by("ward_no", "voter_list_id")
+
+    paginator = Paginator(qs, size)
+    page_obj = paginator.get_page(page)
 
     data = []
 
-    for v in voters:
+    for v in page_obj:
         data.append({
             "voter_list_id": v.voter_list_id,
-            # "sr_no": v.sr_no,
             "voter_id": v.voter_id,
             "voter_name_marathi": v.voter_name_marathi,
             "voter_name_eng": v.voter_name_eng,
             "kramank": v.kramank,
-            # "permanent_address": v.permanent_address,
-            # "current_address":v.current_address,
-            # "age": v.age,
-            # "gender": v.gender,
-            "age":v.age_eng,
-            "gender":v.gender_eng,
-            # "image_name": v.image_name,
+            "age": v.age_eng,
+            "gender": v.gender_eng,
             "ward_id": v.ward_no,
             "tag": v.tag_id.tag_name if v.tag_id else None,
-            "badge":v.badge,
-            "location":v.location
+            "badge": v.badge,
+            "location": v.location
         })
 
     return JsonResponse({
         "status": True,
-        "count": len(data),
+        "page": page,
+        "page_size": size,
+        "total_pages": paginator.num_pages,
+        "total_records": paginator.count,
+        "records_returned": len(data),
         "data": data
     })
+
 
 
 # single voter info
@@ -103,13 +122,15 @@ def single_voters_info(request, voter_list_id):
     is_male = voter.gender_eng.lower() == "male"
     
     # =====================================================
-    # MALE VOTER  ---> FIND FATHER + MOTHER + SIBLINGS
+    # MALE VOTER  ---> FIND FATHER 
     # =====================================================
     
     father = None
     father_name = None
+    father_id = None
     husband = None
     husband_name = None
+    husband_id = None
     BloodRelatedFam = []
     
     # ---------------- MALE VOTER ----------------
@@ -122,6 +143,7 @@ def single_voters_info(request, voter_list_id):
     
         if father:
             father_name = f"{father.first_name} {father.middle_name} {father.last_name}"
+            father_id = father.voter_list_id
         else:
             father_name = " ".join(filter(None, [
                 voter.middle_name,
@@ -148,18 +170,21 @@ def single_voters_info(request, voter_list_id):
             if age_gap >= 18:
                 father = male_match
                 father_name = f"{father.first_name} {father.middle_name} {father.last_name}"
+                father_id = father.voter_list_id
     
             #  HUSBAND CASE
             else:
                 husband = male_match
                 husband_name = f"{husband.first_name} {husband.middle_name} {husband.last_name}"
+                husband_id = husband.voter_list_id
 
     # ---------------- MOTHER ----------------
     
     mother = None
     mother_name = None
+    mother_id = None
     
-    if father and is_male:
+    if father :
         mother = VoterList.objects.filter(
             middle_name=father.first_name,
             last_name=father.last_name,
@@ -168,6 +193,7 @@ def single_voters_info(request, voter_list_id):
     
         if mother:
             mother_name = f"{mother.first_name} {mother.middle_name} {mother.last_name}"
+            mother_id = mother.voter_list_id
 
     # ---------------- SIBLINGS + RELATIVES ----------------
 
@@ -199,7 +225,8 @@ def single_voters_info(request, voter_list_id):
             p_kramank = parse_kramank(p.kramank)
 
             member = {
-                "name": f"{p.first_name} {p.middle_name} {p.last_name}"
+                "name": f"{p.first_name} {p.middle_name} {p.last_name}",
+                "voter_list_id" : p.voter_list_id
             }
 
             #  FINAL SIBLING CHECK
@@ -220,6 +247,7 @@ def single_voters_info(request, voter_list_id):
 
     wife = None
     wife_name = None
+    wife_id = None
 
     if is_male:
         wife = VoterList.objects.filter(
@@ -230,6 +258,7 @@ def single_voters_info(request, voter_list_id):
 
         if wife:
             wife_name = f"{wife.first_name} {wife.middle_name} {wife.last_name}"
+            wife_id = wife.voter_list_id
 
     # ---------------- CHILDREN ----------------
 
@@ -262,13 +291,13 @@ def single_voters_info(request, voter_list_id):
             if (
                 kid_age is not None
                 and parent_age - kid_age >= 15
-                and abs(kid_kramank - parent_kramank) <= 5   # 👍 KEY FIX
+                and abs(kid_kramank - parent_kramank) <= 5   # KEY FIX
             ):
                 children.append({
                     "name": f"{kid.first_name} {kid.middle_name} {kid.last_name}",
                     # "age": kid_age,
                     # "gender": kid.gender_eng,
-                    # "kramank": kid.kramank,
+                    "voter_list_id": kid.voter_list_id,
                 })
 
     # ---------------- REMOVE SIBLINGS WHO ARE CHILDREN ----------------
@@ -282,27 +311,42 @@ def single_voters_info(request, voter_list_id):
     BloodRelatedFam = []
 
     BloodRelatedFam.extend(
-        ([{"relation": "Father", "name": father_name}] if father_name else [{"relation": "Father", "name": ""}]) +
-        ([{"relation": "Mother", "name": mother_name}] if mother_name else [{"relation": "Mother", "name": ""}]) +
-        ([{"relation": "Wife", "name": wife_name}] if wife_name else [{"relation": "Wife", "name": ""}]) +
-        ([{"relation": "Husband", "name": husband_name}] if husband_name else [{"relation": "Husband", "name":""}]) +
-        ([{"relation": "Child", "name": c["name"]} for c in children]) +
-        ([{
-            "relation": (
-                "Brother" if s.get("gender","").lower() == "male"
-                else "Sister" if s.get("gender","").lower() == "female"
-                else "Sibling"
-            ),
-            "name": s["name"]
-        } for s in siblings])
+        ([{"relation": "Father", "name": father_name, "voter_list_id": father_id}]
+            if father_name else [{"relation": "Father", "name": "", "voter_list_id": None}]) +
+    
+        ([{"relation": "Mother", "name": mother_name, "voter_list_id": mother_id}]
+            if mother_name else [{"relation": "Mother", "name": "", "voter_list_id": None}]) +
+    
+        ([{"relation": "Wife", "name": wife_name, "voter_list_id": wife_id}]
+            if wife_name else [{"relation": "Wife", "name": "", "voter_list_id": None}]) +
+    
+        ([{"relation": "Husband", "name": husband_name, "voter_list_id": husband_id}]
+            if husband_name else [{"relation": "Husband", "name": "", "voter_list_id": None}]) +
+    
+        (
+            [{"relation": "Child", "name": c["name"], "voter_list_id": c.get("voter_list_id")} for c in children]
+        ) +
+    
+        ([
+            {
+                "relation": (
+                    "Brother" if s.get("gender","").lower() == "male"
+                    else "Sister" if s.get("gender","").lower() == "female"
+                    else "Sibling"
+                ),
+                "name": s["name"],
+                "voter_list_id": s.get("voter_list_id")
+            }
+            for s in siblings
+        ])
     )
 
-    
     data = {
         "voter_list_id": voter.voter_list_id,
         "voter_name_eng": voter.voter_name_eng,
         "sr_no": voter.sr_no,
         "voter_id": voter.voter_id,
+        
         "first_name": voter.first_name,
         "middle_name": voter.middle_name,
         "last_name": voter.last_name,
@@ -317,13 +361,21 @@ def single_voters_info(request, voter_list_id):
         "age": age,
         "gender": voter.gender_eng,
         "ward_id": voter.ward_no,
+        
         "tag": voter.tag_id.tag_name if voter.tag_id else None,
+        "tag_obj" : {
+            "name" : voter.tag_id.tag_name if voter.tag_id else None,
+            "id" :voter.tag_id.tag_id if voter.tag_id else None
+                },
+        
         "occupation":voter.occupation,
         "cast":voter.cast,
         "organisation":voter.organisation,
+        
         "badge":voter.badge,
         "location":voter.location,
         "BloodRelatedFam": BloodRelatedFam,
+        
         "father_name": father_name,
         "mother_name": mother_name,
         "wife_name":wife_name,
@@ -336,8 +388,6 @@ def single_voters_info(request, voter_list_id):
     }
 
     return JsonResponse({"status": True, "data": data})
-
-
 
 # add a new voter
 @csrf_exempt
@@ -454,6 +504,91 @@ def add_voter(request):
             "status": False,
             "error": str(e)
         }, status=500)
+
+def apply_dynamic_initial_search(qs, search):
+
+    tokens = [t.strip().lower() for t in search.split() if t.strip()]
+    token_counts = Counter(tokens)
+
+    # --------- DB side presence filter ---------
+    for token in token_counts:
+        qs = qs.filter(
+            Q(voter_name_eng__iregex=rf'\m{token}') |
+            Q(voter_id__icontains=token)
+        )
+
+    # --------- Python side frequency validation ---------
+    final_results = []
+    words_re = re.compile(r"[A-Za-z]+")
+
+    for v in qs:
+        words = words_re.findall((v.voter_name_eng or "").lower())
+        voter_id = (v.voter_id or "").lower()
+
+        counts = Counter()
+        for t in token_counts:
+            for w in words:
+                if w.startswith(t):
+                    counts[t] += 1
+
+        valid = True
+        for t, required in token_counts.items():
+            # ✅ If token matched voter_id, accept it without name matching
+            if t in voter_id:
+                continue
+
+            if counts[t] < required:
+                valid = False
+                break
+
+        if valid:
+            final_results.append(v)
+
+    return final_results
+
+
+
+def voters_search(request):
+
+    search = request.GET.get("search", "").strip()
+    page = int(request.GET.get("page", 1))
+    size = int(request.GET.get("size", 100))
+
+    qs = VoterList.objects.select_related("tag_id")
+
+    if search:
+        qs = apply_dynamic_initial_search(qs, search)
+
+    #  PATCH: if list → ordering must be Python side
+    if isinstance(qs, list):
+        qs.sort(key=lambda x: x.voter_list_id)
+
+    paginator = Paginator(qs, size)
+    page_obj = paginator.get_page(page)
+
+    data = [{
+        "voter_list_id": v.voter_list_id,
+        "voter_id": v.voter_id,
+        "voter_name_eng": v.voter_name_eng,
+        "age": v.age_eng,
+        "gender": v.gender_eng,
+        "ward_id": v.ward_no,
+        "badge": v.badge,
+        "tag":v.tag_id,
+        "badge":v.badge
+    } for v in page_obj]
+
+    return JsonResponse({
+        "status": True,
+        "query": search,
+        "page": page,
+        "page_size": size,
+        "total_pages": paginator.num_pages,
+        "total_records": paginator.count,
+        "records_returned": len(data),
+        "data": data
+    })
+
 
 # update voter
 @csrf_exempt
