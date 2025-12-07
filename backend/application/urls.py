@@ -10,4 +10,5 @@ urlpatterns = [
     path("voter_update/<int:voter_list_id>/", views.update_voter, name="update_voter"),
     path("tags/",views.tags,name="tags"),
     path("voters/search/", views.voters_search, name="voters_search"),
+    path("roles/",views.roles,name="roles")
 ]
