@@ -308,3 +308,17 @@ class VoterChatMessage(models.Model):
     def __str__(self):
         target = f"voter_id={self.voter_id}" if self.voter_id else "agent chat"
         return f"#{self.id} {self.sender} -> {target} ({self.status})"
+
+class TemplateName(models.Model):
+    id = models.AutoField(primary_key=True)
+    name = models.CharField(max_length=150, unique=True)
+
+    class Meta:
+        db_table = "template_names"
+        ordering = ['name']
+        indexes = [
+            models.Index(fields=['name']),
+        ]
+
+    def __str__(self):
+        return self.name
