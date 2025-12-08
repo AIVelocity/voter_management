@@ -76,11 +76,7 @@ def voters_search(request):
         "gender": v.gender_eng,
         "ward_id": v.ward_no,
         "badge": v.badge,
-        "tag": {
-            "id": v.tag_id.tag_id,
-            "name": v.tag_id.tag_name
-        } if v.tag_id else None,
-
+        "tag": str(v.tag_id) if v.tag_id else None,
         # "badge":v.badge
     } for v in page_obj]
 
