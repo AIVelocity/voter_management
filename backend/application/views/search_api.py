@@ -77,6 +77,7 @@ def voters_search(request):
         "ward_id": v.ward_no,
         "badge": v.badge,
         "tag": str(v.tag_id) if v.tag_id else None,
+        "location" : v.location
         # "badge":v.badge
     } for v in page_obj]
 
@@ -120,10 +121,14 @@ def family_dropdown_search(request):
     results = [{
         "voter_list_id": v.voter_list_id,
         "voter_id": v.voter_id,
-        "name": v.voter_name_eng,
+        "voter_name_eng": v.voter_name_eng,
         "age": v.age_eng,
         "gender": v.gender_eng,
         "ward": v.ward_no,
+        "location":v.location,
+        "badge" : v.badge,
+        "kramank": v.kramank,
+        "tag": str(v.tag_id) if v.tag_id else None
     } for v in page_obj]
 
     return JsonResponse({
