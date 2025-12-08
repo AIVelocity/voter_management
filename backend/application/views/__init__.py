@@ -1,4 +1,4 @@
-from .search_api import voters_search
+from .search_api import voters_search,family_dropdown_search
 from .single_voters_api import single_voters_info
 from .update_api import update_voter
 from .voters_info_api import voters_info
@@ -16,5 +16,6 @@ __all__ = [
     "voters_search",
     "roles",
     "add_relation",
-    "remove_relation"
+    "remove_relation",
+    "family_dropdown_search"
 ]
