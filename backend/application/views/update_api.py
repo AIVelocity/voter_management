@@ -98,9 +98,9 @@ def update_voter(request, voter_list_id):
         # voter.first_name  = body.get("first_name", voter.first_name)
         # voter.middle_name = body.get("middle_name", voter.middle_name)
         # voter.last_name   = body.get("last_name", voter.last_name)
-        full_address = (voter.address_line1 or "") + (voter.address_line2 or "") + (voter.address_line3 or "")
+        # full_address = (voter.address_line1 or "") + (voter.address_line2 or "") + (voter.address_line3 or "")
         # ADDRESS FIELDS
-        voter.address_line1 = body.get("full_address", full_address)
+        voter.address_line1 = body.get("full_address", voter.address_line1)
         # voter.address_line2 = body.get("address_line2", voter.address_line2)
         # voter.address_line3 = body.get("address_line3", voter.address_line3)
         # voter.current_address = body.get("current_address",voter.current_address)
