@@ -118,7 +118,7 @@ def family_dropdown_search(request):
     page_obj = paginator.get_page(page)
 
     results = [{
-        "id": v.voter_list_id,
+        "voter_list_id": v.voter_list_id,
         "voter_id": v.voter_id,
         "name": v.voter_name_eng,
         "age": v.age_eng,
