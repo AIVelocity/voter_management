@@ -36,9 +36,9 @@ def single_voters_info(request, voter_list_id):
     age = safe_age(voter.age_eng)
     kramank = parse_kramank(voter.kramank)
 
-    full_address = (voter.address_line1 or "") + \
-              (voter.address_line2 or "") + \
-              (voter.address_line3 or "")
+    # full_address = (voter.address_line1 or "") + \
+    #           (voter.address_line2 or "") + \
+    #           (voter.address_line3 or "")
 
     # ---------------- FATHER ----------------
     def calculate_and_save_family(voter):
@@ -289,7 +289,7 @@ def single_voters_info(request, voter_list_id):
 
         "kramank": voter.kramank,
         "address": voter.current_address,
-        "full_address": full_address,
+        "full_address": voter.address_line1,
 
         "mobile_no": voter.mobile_no,
         "alternate_mobile_no1": voter.alternate_mobile1,
