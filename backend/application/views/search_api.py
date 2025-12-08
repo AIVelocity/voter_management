@@ -90,3 +90,85 @@ def voters_search(request):
         "records_returned": len(data),
         "data": data
     })
+    
+def family_dropdown_search(request):
+    search = request.GET.get("search", "").strip()
+    print(search)
+    exclude_id = request.GET.get("exclude_id")   
+    print(exclude_id)
+    page = int(request.GET.get("page", 1))
+    size = 30   
+
+    qs = VoterList.objects.all()
+
+    # Exclude the current voter (self cannot be father/mother)
+    if exclude_id:
+        qs = qs.exclude(voter_list_id=exclude_id)
+
+    if search:
+        qs = apply_dynamic_initial_search(qs, search)
+
+    # If we got Python list back from search → sort manually
+    if isinstance(qs, list):
+        qs.sort(key=lambda x: x.voter_list_id)
+    else:
+        qs = qs.order_by("voter_list_id")
+
+    paginator = Paginator(qs, size)
+    page_obj = paginator.get_page(page)
+
+    results = [{
+        "id": v.voter_list_id,
+        "voter_id": v.voter_id,
+        "name": v.voter_name_eng,
+        "age": v.age_eng,
+        "gender": v.gender_eng,
+        "ward": v.ward_no,
+    } for v in page_obj]
+
+    return JsonResponse({
+        "status": True,
+        "query": search,
+        "exclude_id": exclude_id,
+        "page": page,
+        "page_size": size,
+        "total_pages": paginator.num_pages,
+        "total_records": paginator.count,
+        "results": results
+    })
+
+  
+# def family_dropdown_search(request):
+#     search = request.GET.get("search", "").strip()
+    
+#     page = int(request.GET.get("page", 1))
+#     size = int(request.GET.get("size", 100))
+
+#     qs = VoterList.objects.all()
+
+#     if search:
+#         qs = apply_dynamic_initial_search(qs, search)
+
+#     # if Python list, sort it
+#     if isinstance(qs, list):
+#         qs.sort(key=lambda x: x.voter_list_id)
+
+#         #  Limit to 30 only
+#     paginator = Paginator(qs, size)
+#     page_obj = paginator.get_page(page)
+
+#     results = [{
+#         "id": v.voter_list_id,
+#         "voter_id": v.voter_id,
+#         "name": v.voter_name_eng,
+#         "age": v.age_eng,
+#         "gender": v.gender_eng,
+#         "ward": v.ward_no,
+#     } for v in page_obj]
+
+#     return JsonResponse({
+#         "status": True,
+#         "query": search,
+#         "limit": 30,
+#         "results": results
+#     })
