@@ -82,6 +82,7 @@ class VoterList(models.Model):
     address_line1 = models.TextField(null=True, blank=True)
     address_line2 = models.TextField(null=True, blank=True)
     address_line3 = models.TextField(null=True, blank=True)
+    old_address_line1 = models.TextField(null=True, blank=True)
 
     age = models.CharField(max_length=10, null=True, blank=True)
 
