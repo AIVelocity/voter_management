@@ -76,8 +76,8 @@ def voters_search(request):
         "gender": v.gender_eng,
         "ward_id": v.ward_no,
         "badge": v.badge,
-        "tag":v.tag_id,
-        "badge":v.badge
+        "tag": str(v.tag_id) if v.tag_id else None,
+        # "badge":v.badge
     } for v in page_obj]
 
     return JsonResponse({
