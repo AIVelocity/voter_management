@@ -1,5 +1,11 @@
 from django.db import models
+from django.core.validators import RegexValidator
 
+
+mobile_validator = RegexValidator(
+    regex=r'^[679]\d{9}$',
+    message="Enter a valid mobile number"
+)
 
 # roles list
 class Roles(models.Model):
@@ -86,9 +92,9 @@ class VoterList(models.Model):
 
     image_name = models.CharField(max_length=255, null=True, blank=True)
 
-    mobile_no = models.CharField(max_length=10, null=True, blank=True)
-    alternate_mobile1 = models.CharField(max_length=10, null=True, blank=True)
-    alternate_mobile2 = models.CharField(max_length=10, null=True, blank=True)
+    mobile_no = models.CharField(max_length=10, null=True, blank=True,validators=[mobile_validator])
+    alternate_mobile1 = models.CharField(max_length=10, null=True, blank=True,validators=[mobile_validator])
+    alternate_mobile2 = models.CharField(max_length=10, null=True, blank=True,validators=[mobile_validator])
     badge = models.TextField(null=True, blank=True)
     location = models.TextField(null=True, blank=True)
     occupation = models.TextField(null=True,blank=True)
