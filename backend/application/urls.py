@@ -10,6 +10,7 @@ urlpatterns = [
     path("voter_update/<int:voter_list_id>/", views.update_voter, name="update_voter"),
     path("tags/",views.tags,name="tags"),
     path("voters/search/", views.voters_search, name="voters_search"),
+    path("voters/family_search/",views.family_dropdown_search, name = "family_dropdown_search"),
     path("roles/",views.roles,name="roles"),
     path("voters/relation_add/",views.add_relation,name="add_relation"),
     path("voters/relation_remove/",views.remove_relation,name="remove_relation")
