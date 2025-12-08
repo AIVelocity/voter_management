@@ -5,6 +5,8 @@ from .voters_info_api import voters_info
 from .add_voter_api import add_voter
 from .db_list_api import tags ,index , roles
 from .add_relationship_api import add_relation,remove_relation
+from .dashboard_api import dashboard
+from .filter_api import filter
 
 __all__ = [
     "tags",
@@ -17,5 +19,7 @@ __all__ = [
     "roles",
     "add_relation",
     "remove_relation",
-    "family_dropdown_search"
+    "family_dropdown_search",
+    "dashboard",
+    "filter"
 ]
