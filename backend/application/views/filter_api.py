@@ -2,6 +2,7 @@ from ..models import VoterList
 from django.db.models import Q
 from django.core.paginator import Paginator
 from django.http import JsonResponse
+from .search_api import apply_dynamic_initial_search
 
 
 def filter(request):
@@ -33,25 +34,26 @@ def filter(request):
     last_ends = request.GET.get("last_ends")
     
     kramank = request.GET.get("kramank")
+    voter_id = request.GET.get("voter_id")   
+
     # badge = request.GET.get("badge")
 
     qs = VoterList.objects.select_related("tag_id").all()
-
-    # Global search
+    
+    # Apply advanced search (name + voter_id)
     if search:
-        tokens = search.lower().split()
-        search_q = Q()
-        for t in tokens:
-            search_q &= (
-                Q(first_name__icontains=t) |
-                Q(middle_name__icontains=t) |
-                Q(last_name__icontains=t)
-            )
-        qs = qs.filter(search_q)
+        qs = apply_dynamic_initial_search(qs, search)
+
+    # If Python converted to list → sort manually
+    if isinstance(qs, list):
+        qs.sort(key=lambda x: x.voter_list_id)
 
     # if badge:
     #     qs = qs.filter(badge__icontains=badge)
-        
+    
+    if voter_id:
+        qs = qs.filter(voter_id__icontains=voter_id)
+    
     if kramank:
         qs = qs.filter(kramank__icontains=kramank)
         
@@ -79,6 +81,8 @@ def filter(request):
     
     if sort:
         qs = qs.order_by(sort)
+    # else:
+    #     qs = qs.order_by(voter)
 
     if gender:
         qs = qs.filter(gender_eng__iexact=gender)
