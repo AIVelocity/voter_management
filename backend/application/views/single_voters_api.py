@@ -226,12 +226,12 @@ def single_voters_info(request, voter_list_id):
     family = get_family_from_db(voter)
 
     # if empty → calculate & persist → re-fetch from DB
-    if not (
-        family["father"] or family["mother"] or family["wife"]
-        or family["husband"] or family["siblings"] or family["children"]
-    ):
-        calculate_and_save_family(voter)
-        family = get_family_from_db(voter)
+    # if not (
+    #     family["father"] or family["mother"] or family["wife"]
+    #     or family["husband"] or family["siblings"] or family["children"]
+    # ):
+    #     calculate_and_save_family(voter)
+        # family = get_family_from_db(voter)
 
     BloodRelatedFam = []
 
