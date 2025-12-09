@@ -103,7 +103,10 @@ MESSAGE_URL = os.getenv("MESSAGE_URL")
 UPLOAD_URL = os.getenv("UPLOAD_URL")
 ACCESS_TOKEN = os.getenv("WP_ACCESS_TOKEN")
 
-
+AWS_ACCESS_KEY_ID= os.getenv("AWS_ACCESS_KEY_ID")
+AWS_SECRET_ACCESS_KEY= os.getenv("AWS_SECRET_ACCESS_KEY")
+AWS_S3_BUCKET_NAME= os.getenv("AWS_S3_BUCKET_NAME")
+AWS_S3_REGION_NAME= os.getenv("AWS_S3_REGION_NAME")
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
