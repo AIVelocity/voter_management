@@ -22,6 +22,16 @@ def filter(request):
     tag = request.GET.get("tag_id")
     gender = request.GET.get("gender")
 
+    # STARTS WITH filters
+    first_starts = request.GET.get("first_starts")
+    middle_starts = request.GET.get("middle_starts")
+    last_starts = request.GET.get("last_starts")
+
+    # ENDS WITH filters
+    first_ends = request.GET.get("first_ends")
+    middle_ends = request.GET.get("middle_ends")
+    last_ends = request.GET.get("last_ends")
+
     qs = VoterList.objects.select_related("tag_id").all()
 
     # Global search
@@ -63,6 +73,26 @@ def filter(request):
 
     if gender:
         qs = qs.filter(gender_eng__iexact=gender)
+        
+        # Apply STARTS WITH filters
+    if first_starts:
+        qs = qs.filter(first_name__istartswith=first_starts)
+    
+    if middle_starts:
+        qs = qs.filter(middle_name__istartswith=middle_starts)
+    
+    if last_starts:
+        qs = qs.filter(last_name__istartswith=last_starts)
+    
+    # Apply ENDS WITH filters
+    if first_ends:
+        qs = qs.filter(first_name__iendswith=first_ends)
+    
+    if middle_ends:
+        qs = qs.filter(middle_name__iendswith=middle_ends)
+    
+    if last_ends:
+        qs = qs.filter(last_name__iendswith=last_ends)
         
     # Pagination
     paginator = Paginator(qs, size)
