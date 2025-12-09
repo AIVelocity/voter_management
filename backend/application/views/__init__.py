@@ -9,6 +9,8 @@ from .dashboard_api import dashboard
 from .filter_api import filter
 from .caste_religion_api import caste_dropdown,religion_dropdown
 from .occupation_api import occupation_dropdown
+from .registration_api import registration
+from .id_validation_api import id_validation
 
 __all__ = [
     "tags",
@@ -25,5 +27,8 @@ __all__ = [
     "dashboard",
     "filter",
     "caste_dropdown",
-    "religion_dropdown"
+    "religion_dropdown",
+    "occupation_dropdown",
+    "registration",
+    "id_validation"
 ]
