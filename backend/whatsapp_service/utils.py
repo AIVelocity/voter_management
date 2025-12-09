@@ -2,11 +2,13 @@ import json
 import re
 import uuid
 import requests
+import mimetypes
+import boto3
 from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
 from typing import List, Tuple, Any, Dict, Optional
-
+from datetime import timedelta
 from application.models import VoterList
 from .models import VoterChatMessage
 
@@ -17,7 +19,56 @@ token = settings.ACCESS_TOKEN
 PROVIDER_MAX_PER_SECOND = 50  # provider limit (messages / sec)
 DEFAULT_CHUNK_SIZE = PROVIDER_MAX_PER_SECOND  # how many messages to send per second
 
+# Initialize S3 client
+s3_client = boto3.client(
+    "s3",
+    aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+    aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+)
+
+BUCKET = settings.AWS_S3_BUCKET_NAME
+REGION = settings.AWS_S3_REGION_NAME
+
 # --- helpers ---
+def upload_to_s3(file_obj, folder: str = "chat_media") -> str:
+    """
+    Upload a Django UploadedFile instance to S3.
+    
+    file_obj: request.FILES["file"]
+    folder: S3 folder name
+    
+    Returns: public S3 URL (no query params)
+    """
+
+    # Generate unique key: prevents overwriting existing S3 objects
+    original_name = file_obj.name
+    extension = original_name.split(".")[-1] if "." in original_name else ""
+    unique_name = f"{uuid.uuid4().hex}.{extension}"
+    key = f"{folder}/{unique_name}"
+
+    # Reset pointer for safety — very important
+    file_obj.seek(0)
+
+    # Detect mime type
+    mime_type = mimetypes.guess_type(original_name)[0] or "application/octet-stream"
+
+    # Upload
+    s3_client.upload_fileobj(
+        Fileobj=file_obj,
+        Bucket=BUCKET,
+        Key=key,
+        ExtraArgs={
+            "ContentType": mime_type,
+            "ContentDisposition": "inline",
+            "ACL": "public-read"   # makes it directly browser-viewable
+        }
+    )
+
+    # Construct permanent S3 URL
+    url = f"https://{BUCKET}.s3.{REGION}.amazonaws.com/{key}"
+    return url
+
+
 def parse_request_body(request) -> dict:
     """Return parsed JSON body (fallback to request.POST)."""
     try:
@@ -83,6 +134,30 @@ def get_recipients_from_request(request) -> Tuple[List[Any], List[str]]:
 
     return recipients, errors
 
+
+def is_within_reengagement_window(voter) -> bool:
+    """
+    Returns True if the voter has an incoming (non-admin) message within the last 24 hours.
+    We treat any message whose sender is NOT 'admin' or 'sub-admin' as an incoming/customer message.
+    Adjust the sender filtering if your sender values differ.
+    """
+    if not voter:
+        return False
+
+    # Find last non-admin message for this voter
+    last_incoming = (
+        VoterChatMessage.objects
+        .filter(voter_id=getattr(voter, "voter_list_id", None))
+        .exclude(sender__in=("admin", "sub-admin"))
+        .order_by("-sent_at")
+        .first()
+    )
+    if not last_incoming or not last_incoming.sent_at:
+        return False
+
+    return (timezone.now() - last_incoming.sent_at) <= timedelta(hours=24)
+
+
 # --- core send function (returns dict for each recipient) ---
 def send_whatapps_request(payload: dict,
                           voter: Any,
@@ -98,7 +173,14 @@ def send_whatapps_request(payload: dict,
     Performs the HTTP call to provider and records a VoterChatMessage row.
     Returns a dict describing the result for the recipient (not an HttpResponse).
     """
-    result: Dict[str, Any] = {"ok": False, "http_status": 0, "whatsapp_response": None, "error": None, "db_message_id": None, "db_status": None}
+    result: Dict[str, Any] = {
+        "ok": False,
+        "http_status": 0,
+        "whatsapp_response": None,
+        "error": None,
+        "db_message_id": None,
+        "db_status": None
+    }
 
     # Validate sender fields
     if not sender_type:
@@ -108,7 +190,71 @@ def send_whatapps_request(payload: dict,
         result.update({"error": "sender_id required for admin/sub-admin", "http_status": 400})
         return result
 
-    # Perform HTTP request to provider
+    # --- NEW: check 24-hour re-engagement window BEFORE calling provider ---
+    try:
+        if not is_within_reengagement_window(voter):
+            # create a DB row so frontend can show the attempted message (and reason)
+            fallback_local_id = _make_fallback_local_id()
+            reply_to_db_id = _resolve_reply_to(reply_to_message_id)
+
+            instance_kwargs = {
+                "message_id": fallback_local_id,
+                "voter_id": voter.voter_list_id if getattr(voter, "voter_list_id", None) else None,
+                "sender": sender_type,
+                "status": "failed",
+                "message": message,
+                "type": message_type,
+                "media_id": media_id,
+                "media_url": media_url,
+                "sent_at": timezone.now(),
+            }
+
+            if sender_type == "admin":
+                instance_kwargs["admin_id"] = sender_id
+            elif sender_type == "sub-admin":
+                instance_kwargs["subadmin_id"] = sender_id
+            else:
+                # If you expect other sender types to be valid, remove this block.
+                result.update({"error": "Invalid sender_type", "http_status": 400})
+                return result
+
+            if reply_to_db_id:
+                instance_kwargs["reply_to_id"] = reply_to_db_id
+
+            try:
+                with transaction.atomic():
+                    VoterChatMessage.objects.create(**instance_kwargs)
+            except Exception as e:
+                result.update({
+                    "error": f"reengagement_window_closed; DB error: {str(e)}",
+                    "http_status": 500,
+                    "whatsapp_response": None,
+                    "db_message_id": fallback_local_id,
+                    "db_status": "failed",
+                })
+                return result
+
+            result.update({
+                "error": "reengagement_window_closed",
+                "http_status": 400,
+                "whatsapp_response": None,
+                "db_message_id": fallback_local_id,
+                "db_status": "failed",
+            })
+            return result
+    except Exception as e:
+        # If the re-engagement check itself fails, surface a clear error to caller.
+        result.update({
+            "error": f"reengagement_window_check_failed: {str(e)}",
+            "http_status": 500,
+        })
+        return result
+
+    # --- Perform HTTP request to provider ---
+    response_json = None
+    resp_status = 0
+    wa_message_id = None
+
     try:
         resp = requests.post(url, headers={
             "Authorization": f"Bearer {token}",
@@ -117,20 +263,28 @@ def send_whatapps_request(payload: dict,
     except Exception as e:
         response_json = {"error": str(e)}
         resp_status = 0
-        wa_message_id = None
     else:
         resp_status = getattr(resp, "status_code", 0)
         try:
             response_json = resp.json()
         except Exception:
             response_json = {"raw_text": getattr(resp, "text", "")}
-        wa_message_id = None
-        if resp_status and resp_status < 400:
-            try:
-                wa_message_id = response_json.get("messages", [])[0].get("id")
-            except Exception:
-                wa_message_id = None
 
+        # Robust extraction of provider message id(s)
+        if resp_status and resp_status < 400 and isinstance(response_json, dict):
+            # common shapes: { "messages": [ { "id":... } ] }, { "id": ... }, { "media": [{ "id": ... }] }
+            wa_message_id = None
+            if "messages" in response_json and isinstance(response_json["messages"], list) and response_json["messages"]:
+                wa_message_id = response_json["messages"][0].get("id")
+            if not wa_message_id and "id" in response_json:
+                wa_message_id = response_json.get("id")
+            if not wa_message_id and "media" in response_json and isinstance(response_json["media"], list) and response_json["media"]:
+                wa_message_id = response_json["media"][0].get("id")
+            # fallback keys
+            if not wa_message_id:
+                wa_message_id = response_json.get("mid") or response_json.get("media_id")
+
+    # Resolve reply_to DB id for DB row
     reply_to_db_id = _resolve_reply_to(reply_to_message_id)
 
     # Decide DB message id and status
@@ -141,7 +295,7 @@ def send_whatapps_request(payload: dict,
         db_message_id = _make_fallback_local_id()
         db_status = "failed" if resp_status == 0 or resp_status >= 400 else "sent"
 
-    # Build DB row kwargs
+    # Build DB row kwargs (single place)
     instance_kwargs = {
         "message_id": db_message_id,
         "voter_id": voter.voter_list_id if getattr(voter, "voter_list_id", None) else None,
@@ -153,6 +307,7 @@ def send_whatapps_request(payload: dict,
         "media_url": media_url,
         "sent_at": timezone.now(),
     }
+
     if sender_type == "admin":
         instance_kwargs["admin_id"] = sender_id
     elif sender_type == "sub-admin":
@@ -160,13 +315,14 @@ def send_whatapps_request(payload: dict,
     else:
         result.update({"error": "Invalid sender_type", "http_status": 400})
         return result
+
     if reply_to_db_id:
         instance_kwargs["reply_to_id"] = reply_to_db_id
 
     # Save DB row (always attempt to save so UI can show message row)
     try:
         with transaction.atomic():
-            chat_row = VoterChatMessage.objects.create(**instance_kwargs)
+            VoterChatMessage.objects.create(**instance_kwargs)
     except Exception as e:
         result.update({
             "error": f"DB error: {str(e)}",
@@ -177,6 +333,7 @@ def send_whatapps_request(payload: dict,
         })
         return result
 
+    # Final result
     result.update({
         "ok": True if resp_status and resp_status < 400 else False,
         "http_status": resp_status,
