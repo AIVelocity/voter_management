@@ -8,7 +8,7 @@ def filter(request):
 
     page = int(request.GET.get("page", 1))
     size = int(request.GET.get("size", 50))
-
+    sort = request.GET.get("sort")
     search = request.GET.get("search")
 
     first_name = request.GET.get("first_name")
@@ -20,6 +20,7 @@ def filter(request):
 
     location = request.GET.get("location")
     tag = request.GET.get("tag_id")
+    gender = request.GET.get("gender")
 
     qs = VoterList.objects.select_related("tag_id").all()
 
@@ -56,7 +57,13 @@ def filter(request):
 
     if tag:
         qs = qs.filter(tag_id__id=tag)
+    
+    if sort:
+        qs = qs.order_by(sort)
 
+    if gender:
+        qs = qs.filter(gender_eng__iexact=gender)
+        
     # Pagination
     paginator = Paginator(qs, size)
     page_obj = paginator.get_page(page)
@@ -72,6 +79,7 @@ def filter(request):
             "badge": v.badge,
             "tag": v.tag_id.tag_name if v.tag_id else None,
             "kramank": v.kramank,
+            "age":v.age_eng,
             "ward_id": v.ward_no
         })
 
