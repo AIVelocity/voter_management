@@ -31,6 +31,9 @@ def filter(request):
     first_ends = request.GET.get("first_ends")
     middle_ends = request.GET.get("middle_ends")
     last_ends = request.GET.get("last_ends")
+    
+    kramank = request.GET.get("kramank")
+    badge = request.GET.get("badge")
 
     qs = VoterList.objects.select_related("tag_id").all()
 
@@ -46,6 +49,12 @@ def filter(request):
             )
         qs = qs.filter(search_q)
 
+    if badge:
+        qs = qs.filter(badge__icontains=badge)
+        
+    if kramank:
+        qs = qs.filter(kramank__icontains=kramank)
+        
     # Field filters
     if first_name:
         qs = qs.filter(first_name__icontains=first_name)
@@ -93,6 +102,7 @@ def filter(request):
     
     if last_ends:
         qs = qs.filter(last_name__iendswith=last_ends)
+        
         
     # Pagination
     paginator = Paginator(qs, size)
