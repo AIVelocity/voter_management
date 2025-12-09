@@ -33,7 +33,7 @@ def filter(request):
     last_ends = request.GET.get("last_ends")
     
     kramank = request.GET.get("kramank")
-    badge = request.GET.get("badge")
+    # badge = request.GET.get("badge")
 
     qs = VoterList.objects.select_related("tag_id").all()
 
@@ -49,8 +49,8 @@ def filter(request):
             )
         qs = qs.filter(search_q)
 
-    if badge:
-        qs = qs.filter(badge__icontains=badge)
+    # if badge:
+    #     qs = qs.filter(badge__icontains=badge)
         
     if kramank:
         qs = qs.filter(kramank__icontains=kramank)
