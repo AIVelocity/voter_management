@@ -8,6 +8,7 @@ from .add_relationship_api import add_relation,remove_relation
 from .dashboard_api import dashboard
 from .filter_api import filter
 from .caste_religion_api import caste_dropdown,religion_dropdown
+from .occupation_api import occupation_dropdown
 
 __all__ = [
     "tags",
