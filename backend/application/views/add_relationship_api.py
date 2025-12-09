@@ -74,7 +74,7 @@ def add_relation(request):
                 relation_with_voter=reverse,
             )
 
-        return JsonResponse({"status": True})
+        return JsonResponse({"status": True,"message":"Relation added successfully"})
 
     except IntegrityError:
         return JsonResponse(
@@ -127,7 +127,7 @@ def remove_relation(request):
                 relation_with_voter=reverse
             ).delete()
 
-        return JsonResponse({"status": True})
+        return JsonResponse({"status": True,"message":"Deleted successfully"})
 
     except Exception as e:
         print("REMOVE RELATION ERROR:", str(e))
