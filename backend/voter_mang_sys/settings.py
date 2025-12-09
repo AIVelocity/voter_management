@@ -89,11 +89,11 @@ DB_PORT = os.getenv("DB_PORT")
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": DB_NAME,
-        "USER": DB_USER,
-        "PASSWORD": DB_PASSWORD,
-        "HOST": DB_HOST,
-        "PORT": DB_PORT,
+        "NAME": "whatsapp_db",      # your DB name
+        "USER": "postgres",        # your username
+        "PASSWORD": "postgres",
+        "HOST": "172.20.1.155",       # or 172.20.1.155
+        "PORT": "5432",
     }
 }
 
