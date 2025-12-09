@@ -96,11 +96,15 @@ class VoterList(models.Model):
     mobile_no = models.CharField(max_length=10, null=True, blank=True,validators=[mobile_validator])
     alternate_mobile1 = models.CharField(max_length=10, null=True, blank=True,validators=[mobile_validator])
     alternate_mobile2 = models.CharField(max_length=10, null=True, blank=True,validators=[mobile_validator])
+    
     badge = models.TextField(null=True, blank=True)
     location = models.TextField(null=True, blank=True)
+    
     occupation = models.TextField(null=True,blank=True)
     cast = models.TextField(null=True,blank=True)
     organisation = models.TextField(null=True,blank=True)
+    
+    comments = models.TextField(null=True,blank=True)
 
     tag_id = models.ForeignKey(
         VoterTag,

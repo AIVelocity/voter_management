@@ -116,6 +116,7 @@ def update_voter(request, voter_list_id):
         voter.occupation  = body.get("occupation", voter.occupation)
         voter.cast        = body.get("cast", voter.cast)
         voter.organisation = body.get("organisation", voter.organisation)
+        voter.comments = body.get("comments",voter.comments)
 
         # AGE & GENDER
         # voter.age_eng    = body.get("age", voter.age_eng)

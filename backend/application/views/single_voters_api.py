@@ -309,6 +309,7 @@ def single_voters_info(request, voter_list_id):
         "occupation":voter.occupation,
         "cast":voter.cast,
         "organisation":voter.organisation,
+        "comments" : voter.comments,
         
         "badge":voter.badge,
         "location":voter.location,
