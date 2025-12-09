@@ -7,6 +7,7 @@ from .db_list_api import tags ,index , roles
 from .add_relationship_api import add_relation,remove_relation
 from .dashboard_api import dashboard
 from .filter_api import filter
+from .caste_religion_api import caste_dropdown,religion_dropdown
 
 __all__ = [
     "tags",
@@ -21,5 +22,7 @@ __all__ = [
     "remove_relation",
     "family_dropdown_search",
     "dashboard",
-    "filter"
+    "filter",
+    "caste_dropdown",
+    "religion_dropdown"
 ]

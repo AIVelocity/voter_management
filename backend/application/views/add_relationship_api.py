@@ -127,7 +127,7 @@ def remove_relation(request):
                 relation_with_voter=reverse
             ).delete()
 
-        return JsonResponse({"status": True,"message":"Relationship removed successfully"})
+        return JsonResponse({"status": True,"message":"Deleted successfully"})
 
     except Exception as e:
         print("REMOVE RELATION ERROR:", str(e))

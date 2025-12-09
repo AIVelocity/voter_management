@@ -54,6 +54,67 @@ class VoterTag(models.Model):
 
     def __str__(self):
         return self.tag_name
+    
+# voter_religion_master
+class Religion(models.Model):
+    religion_id = models.AutoField(primary_key=True)
+    religion_name = models.CharField(max_length=100)
+
+    class Meta:
+        db_table = "voter_religion_master"
+        managed = False
+
+
+# voter_caste_master
+class Caste(models.Model):
+    caste_id = models.AutoField(primary_key=True)
+
+    religion = models.ForeignKey(
+        Religion,
+        db_column="religion_id",
+        on_delete=models.DO_NOTHING
+    )
+
+    caste_name = models.CharField(max_length=150)
+
+    class Meta:
+        db_table = "voter_caste_master"
+        managed = False
+
+
+class VoterUserMaster(models.Model):
+
+    voter_user_id = models.AutoField(primary_key=True)
+
+    user_id = models.IntegerField(null=True, blank=True)
+
+    f_name = models.CharField(max_length=100, null=True, blank=True)
+    m_name = models.CharField(max_length=100, null=True, blank=True)
+    l_name = models.CharField(max_length=100, null=True, blank=True)
+
+    created_by = models.IntegerField(null=True, blank=True)
+    created_date = models.DateTimeField(auto_now_add=True)
+
+    updated_by = models.IntegerField(null=True, blank=True)
+    updated_date = models.DateTimeField(null=True, blank=True)
+
+    deleted_by = models.IntegerField(null=True, blank=True)
+    deleted_date = models.DateTimeField(null=True, blank=True)
+
+    role_id = models.ForeignKey(
+        "Roles",
+        db_column="role_id",
+        on_delete=models.DO_NOTHING,
+        null=True,
+        blank=True
+    )
+
+    class Meta:
+        db_table = "voter_user_master"
+        managed = False
+
+    def __str__(self):
+        return f"{self.f_name or ''} {self.l_name or ''}".strip()
 
 
 # voters list
@@ -124,9 +185,6 @@ class VoterList(models.Model):
     def __str__(self):
         return str(self.voter_id)
 
-# models.py
-
-from django.db import models
 
 class VoterRelationshipDetails(models.Model):
 
@@ -177,3 +235,4 @@ class VoterRelationshipDetails(models.Model):
 
     def __str__(self):
         return f"{self.voter.voter_list_id} - {self.relation_with_voter} -> {self.related_voter.voter_list_id}"
+
