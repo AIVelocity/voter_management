@@ -7,6 +7,19 @@ mobile_validator = RegexValidator(
     message="Enter a valid mobile number"
 )
 
+class Occupation(models.Model):
+
+    occupation_id = models.AutoField(primary_key=True)
+
+    occupation_name = models.CharField(max_length=100)
+
+    class Meta:
+        db_table = "voter_occupation_master"
+        managed = False
+
+    def __str__(self):
+        return self.occupation_name
+
 # roles list
 class Roles(models.Model):
     role_id = models.AutoField(primary_key=True)
