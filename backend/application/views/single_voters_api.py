@@ -226,12 +226,12 @@ def single_voters_info(request, voter_list_id):
     family = get_family_from_db(voter)
 
     # if empty → calculate & persist → re-fetch from DB
-    # if not (
-    #     family["father"] or family["mother"] or family["wife"]
-    #     or family["husband"] or family["siblings"] or family["children"]
-    # ):
-    #     calculate_and_save_family(voter)
-        # family = get_family_from_db(voter)
+    if not (
+        family["father"] or family["mother"] or family["wife"]
+        or family["husband"] or family["siblings"] or family["children"]
+    ):
+        calculate_and_save_family(voter)
+        family = get_family_from_db(voter)
 
     BloodRelatedFam = []
 
@@ -256,19 +256,27 @@ def single_voters_info(request, voter_list_id):
             "voter_list_id": family["husband"]["voter_list_id"],
         })
 
+    spouse = None
+
     if family["wife"]:
-        BloodRelatedFam.append({
-            "relation": "Wife",
+        spouse = {
             "name": family["wife"]["name"],
-            "voter_list_id": family["wife"]["voter_list_id"],
+            "voter_list_id": family["wife"]["voter_list_id"]
+        }
+
+    elif family["husband"]:
+        spouse = {
+            "name": family["husband"]["name"],
+            "voter_list_id": family["husband"]["voter_list_id"]
+        }
+
+    if spouse:
+        BloodRelatedFam.append({
+            "relation": "Spouse",
+            "name": spouse["name"],
+            "voter_list_id": spouse["voter_list_id"],
         })
 
-    for c in family["children"]:
-        BloodRelatedFam.append({
-            "relation": "Child",
-            "name": c["name"],
-            "voter_list_id": c["voter_list_id"],
-        })
 
     for s in family["siblings"]:
         BloodRelatedFam.append({
@@ -307,8 +315,9 @@ def single_voters_info(request, voter_list_id):
                 },
         
         "occupation":voter.occupation,
-        "cast":voter.cast,
-        "organisation":voter.organisation,
+        "religion_id" : voter.religion.religion_id if voter.religion else None,
+        "cast": voter.cast,
+        "organisation": voter.organisation,
         "comments" : voter.comments,
         
         "badge":voter.badge,
@@ -316,8 +325,9 @@ def single_voters_info(request, voter_list_id):
         "BloodRelatedFam": BloodRelatedFam,
         "father": family["father"],
         "mother": family["mother"],
-        "wife": family["wife"],
-        "husband": family["husband"],
+        "spouse" : spouse,
+        # "wife": family["wife"],
+        # "husband": family["husband"],
         "siblings": family["siblings"],
         "children": family["children"], 
 

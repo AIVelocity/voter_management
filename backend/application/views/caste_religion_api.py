@@ -21,7 +21,7 @@ def caste_dropdown(request):
             "message": "Religion ID is required"
         },status = 400)
         
-    data = list(Caste.objects.all()
+    data = list(Caste.objects.filter(religion_id=religion_id)
                 .values("religion_id","caste_id","caste_name")
                 .order_by("caste_id")
                 )

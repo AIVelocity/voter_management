@@ -14,7 +14,7 @@ class Admin(models.Model):
     last_name = models.CharField(max_length=120, null=True, blank=True)
     full_name = models.CharField(max_length=360, null=True, blank=True)
     mobile_no = models.CharField(max_length=10, unique=True, validators=[PHONE_VALIDATOR])
-    password = models.CharField(max_length=128)  # store hashed
+    activation_key = models.CharField(max_length=10,null=False,blank=True)
     created_at = models.DateTimeField(default=timezone.now)
 
     class Meta:
@@ -22,18 +22,6 @@ class Admin(models.Model):
         indexes = [
             models.Index(fields=["mobile_no"]),
         ]
-
-    def save(self, *args, **kwargs):
-        # if password is not hashed (a simple heuristic: no $ in it), hash it
-        if self.password and '$' not in self.password:
-            self.password = make_password(self.password)
-        if not self.full_name:
-            names = [self.first_name, self.middle_name, self.last_name]
-            self.full_name = " ".join(p for p in names if p)
-        super().save(*args, **kwargs)
-
-    def check_password(self, raw_password):
-        return check_password(raw_password, self.password)
 
     def __str__(self):
         return f"{self.full_name or self.mobile_no} (Admin)"
@@ -46,23 +34,12 @@ class SubAdmin(models.Model):
     last_name = models.CharField(max_length=120, null=True, blank=True)
     full_name = models.CharField(max_length=360, null=True, blank=True)
     mobile_no = models.CharField(max_length=10, unique=True, validators=[PHONE_VALIDATOR])
-    password = models.CharField(max_length=128)
+    activation_key = models.CharField(max_length=10,null=False,blank=True)
     created_at = models.DateTimeField(default=timezone.now)
 
     class Meta:
         db_table = "sub_admin"
         indexes = [models.Index(fields=["admin_pk"]), models.Index(fields=["mobile_no"])]
-
-    def save(self, *args, **kwargs):
-        if self.password and '$' not in self.password:
-            self.password = make_password(self.password)
-        if not self.full_name:
-            names = [self.first_name, self.middle_name, self.last_name]
-            self.full_name = " ".join(p for p in names if p)
-        super().save(*args, **kwargs)
-
-    def check_password(self, raw_password):
-        return check_password(raw_password, self.password)
 
     def __str__(self):
         return f"{self.full_name or self.mobile_no} (SubAdmin)"
@@ -75,23 +52,12 @@ class Volunteer(models.Model):
     last_name = models.CharField(max_length=120, null=True, blank=True)
     full_name = models.CharField(max_length=360, null=True, blank=True)
     mobile_no = models.CharField(max_length=10, unique=True, validators=[PHONE_VALIDATOR])
-    password = models.CharField(max_length=128)
+    activation_key = models.CharField(max_length=10,null=False,blank=True)
     created_at = models.DateTimeField(default=timezone.now)
 
     class Meta:
         db_table = "volunteer"
         indexes = [models.Index(fields=["subadmin_pk"]), models.Index(fields=["mobile_no"])]
-
-    def save(self, *args, **kwargs):
-        if self.password and '$' not in self.password:
-            self.password = make_password(self.password)
-        if not self.full_name:
-            names = [self.first_name, self.middle_name, self.last_name]
-            self.full_name = " ".join(p for p in names if p)
-        super().save(*args, **kwargs)
-
-    def check_password(self, raw_password):
-        return check_password(raw_password, self.password)
 
     def __str__(self):
         return f"{self.full_name or self.mobile_no} (Volunteer)"

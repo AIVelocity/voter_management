@@ -19,6 +19,8 @@ urlpatterns = [
     path("dropdown/religion/",views.religion_dropdown,name="religion_dropdown"),
     path("dropdown/caste/",views.caste_dropdown,name="caste_dropdown"),
     path("dropdown/occupation/",views.occupation_dropdown,name="occupation_dropdown"),
+    path('registration/',views.registration,name="registration"),
+    path("registration/login/",views.id_validation,name="id_validation"),
 ]
 
 # POST /api/voter/relation/add
