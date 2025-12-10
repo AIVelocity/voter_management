@@ -1,125 +1,109 @@
-from whatsapp_service.models import Admin,SubAdmin,Volunteer
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
+from django.contrib.auth.hashers import make_password
+from ..models import VoterUserMaster, Roles
 import json
-import random
+import re
 
-def generate_key():
-    return f"{random.randint(1111,9999)}"
+
+def is_valid_mobile(mobile):
+    # Allows only exactly 10 digits
+    pattern = r'^[6-9]\d{9}$'
+    return bool(re.match(pattern, mobile))
+
 
 @csrf_exempt
 def registration(request):
-    
+
     if request.method != "POST":
         return JsonResponse({
-            "status":False,
-            "message" : "Method must be POST"
+            "status": False,
+            "message": "Method must be POST"
         })
-    
+
     try:
         body = json.loads(request.body)
 
         first_name = body.get("first_name")
         last_name = body.get("last_name")
-        
-        role = body.get("role")
-        
-        # admin_id = body.get("admin_id")
-        # subadmin_id = body.get("subadmin_id")
+        role_id = body.get("role_id")
         mobile_no = body.get("mobile_no")
-        # key = generate_key()
-        # activation_key = first_name[0] + last_name[0] + key
-        activation_key = body.get("activation_key")
-        
-        if not first_name :
-            return JsonResponse({
-                "status":False,
-                "message":"First Name is required"
-            })
-        
-        if not last_name :
-            return JsonResponse({
-                "status":False,
-                "message":"Last Name is required"
-            })
-        
-        if not role :
-            return JsonResponse({
-                "status":False,
-                "message":"Role is required"
-            })
+
+        password = body.get("password")
+        confirm_password = body.get("confirm_password")
+
+        # ---------- VALIDATION ----------
+        if not first_name:
+            return JsonResponse({"status": False, "message": "First Name is required"})
+
+        if not last_name:
+            return JsonResponse({"status": False, "message": "Last Name is required"})
+
+        if not role_id:
+            return JsonResponse({"status": False, "message": "Role is required"})
+
         if not mobile_no:
+            return JsonResponse({"status": False, "message": "Mobile Number is required"})
+
+        if not is_valid_mobile(mobile_no):
             return JsonResponse({
-                "status":False,
-                "message":"Mobile Number is required"
+                "status": False,
+                "message": "Mobile number must be a valid 10-digit Indian number"
             })
-        
-        if not activation_key :
+
+        if not password or not confirm_password:
             return JsonResponse({
-                "status":False,
-                "message":"Key is required"
+                "status": False,
+                "message": "Password and Confirm Password are required"
             })
-            
-        # if not admin_id:
-        #     return JsonResponse({
-        #         "status":False,
-        #         "message":"Admin ID is required"
-        #     })
-        
-        role = role.lower()
-        models = [Admin, SubAdmin, Volunteer]
-        
-        for m in models:
-            if m.objects.filter(mobile_no=mobile_no).exists():
-                return JsonResponse({
-                    "status" : False,
-                    "message" : f"Mobile number {mobile_no} already registered."
-                })
-        
-        
-        if activation_key.lower() == 'RNT123':
-            flag = True
-        else:
+
+        if password != confirm_password:
             return JsonResponse({
-                "status" : False,
-                "message" : "Invalid Key"
+                "status": False,
+                "message": "Password and Confirm Password do not match"
             })
-        roles = ['subadmin','volunteer']
-        
-        if flag:
-            if role in roles:
-                if role == roles[0]:
-                    # admin = Admin.objects.filter(id=admin_id).first()
-                    obj = SubAdmin.objects.create(
-                        # admin_pk=admin,
-                        first_name=first_name,
-                        # middle_name=middle,
-                        last_name=last_name,
-                        # full_name=full,
-                        mobile_no=mobile_no
-                        # activation_key=activation_key
-                    )
-                elif role == roles[1]:
-                    # sa = SubAdmin.objects.filter(id=subadmin_id)
-                    obj = Volunteer.objects.create(
-                        # subadmin_pk = sa,
-                        first_name=first_name,
-                        last_name=last_name,
-                        mobile_no=mobile_no
-                        # activation_key=activation_key
-                    )
-                    
-                return JsonResponse({
-                    "status" : True,
-                    "message" : f"Registered successfully",
-                    # "activation_key": activation_key,
-                    "role" : role,
-                    "user_id" : obj.id,
-                    "user_name" : obj.first_name + obj.last_name
-                })
-                
+
+        # ---------- ROLE VALIDATION ----------
+        try:
+            role = Roles.objects.get(role_id=role_id)
+        except Roles.DoesNotExist:
+            return JsonResponse({"status": False, "message": "Invalid role_id"})
+
+        # ---------- DUPLICATE MOBILE ----------
+        if VoterUserMaster.objects.filter(mobile_no=mobile_no).exists():
+            return JsonResponse({
+                "status": False,
+                "message": "Mobile number already registered"
+            })
+
+        # ---------- HASH PASSWORD ----------
+        hashed_password = make_password(password)
+
+        # ---------- SAVE USER ----------
+        user = VoterUserMaster.objects.create(
+            first_name=first_name,
+            last_name=last_name,
+            mobile_no=mobile_no,
+            password=hashed_password,
+            confirm_password=hashed_password,
+            role=role
+        )
+
+        # ---------- RESPONSE ----------
+        return JsonResponse({
+            "status": True,
+            "message": "Registration successful",
+            "data": {
+                "user_id": user.user_id,
+                "first_name": user.first_name,
+                "last_name": user.last_name,
+                "mobile_no": user.mobile_no,
+                "role_id": user.role.role_id
+            }
+        })
+
     except Exception as e:
         return JsonResponse({
-            "status" : False,
-            "error" :str(e) 
+            "status": False,
+            "error": str(e)
         })
