@@ -130,13 +130,10 @@ class VoterUserMaster(models.Model):
         return f"{self.f_name or ''} {self.l_name or ''}".strip()
 
 
-# voters list
 class VoterList(models.Model):
 
     voter_list_id = models.AutoField(primary_key=True)
-
     sr_no = models.IntegerField()
-
     voter_id = models.CharField(max_length=20, null=True, blank=True)
 
     voter_name_marathi = models.TextField(null=True, blank=True)
@@ -153,13 +150,12 @@ class VoterList(models.Model):
     current_address = models.TextField(null=True, blank=True)
     permanent_address = models.TextField(null=True, blank=True)
 
+    old_address_line1 = models.TextField(null=True, blank=True)
     address_line1 = models.TextField(null=True, blank=True)
     address_line2 = models.TextField(null=True, blank=True)
     address_line3 = models.TextField(null=True, blank=True)
-    old_address_line1 = models.TextField(null=True, blank=True)
 
     age = models.CharField(max_length=10, null=True, blank=True)
-
     age_eng = models.TextField(null=True, blank=True)
 
     gender = models.TextField(null=True, blank=True)
@@ -167,18 +163,33 @@ class VoterList(models.Model):
 
     image_name = models.CharField(max_length=255, null=True, blank=True)
 
-    mobile_no = models.CharField(max_length=10, null=True, blank=True,validators=[mobile_validator])
-    alternate_mobile1 = models.CharField(max_length=10, null=True, blank=True,validators=[mobile_validator])
-    alternate_mobile2 = models.CharField(max_length=10, null=True, blank=True,validators=[mobile_validator])
-    
+    mobile_no = models.CharField(max_length=10, null=True, blank=True, validators=[mobile_validator])
+    alternate_mobile1 = models.CharField(max_length=10, null=True, blank=True, validators=[mobile_validator])
+    alternate_mobile2 = models.CharField(max_length=10, null=True, blank=True, validators=[mobile_validator])
+
     badge = models.TextField(null=True, blank=True)
     location = models.TextField(null=True, blank=True)
-    
-    occupation = models.TextField(null=True,blank=True)
-    cast = models.TextField(null=True,blank=True)
-    organisation = models.TextField(null=True,blank=True)
-    
-    comments = models.TextField(null=True,blank=True)
+
+    # FIXED TYPES
+    occupation = models.IntegerField(null=True, blank=True)
+
+    cast = models.IntegerField(
+        db_column="cast",
+        null=True,
+        blank=True
+    )
+
+    organisation = models.TextField(null=True, blank=True)
+    comments = models.TextField(null=True, blank=True)
+
+    #  RELATIONS
+    religion = models.ForeignKey(
+        Religion,
+        db_column="religion_id",
+        on_delete=models.DO_NOTHING,
+        null=True,
+        blank=True
+    )
 
     tag_id = models.ForeignKey(
         VoterTag,

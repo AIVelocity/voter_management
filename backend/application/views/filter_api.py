@@ -34,7 +34,10 @@ def filter(request):
     last_ends = request.GET.get("last_ends")
     
     kramank = request.GET.get("kramank")
-    voter_id = request.GET.get("voter_id")   
+    voter_id = request.GET.get("voter_id")
+    
+    religion = request.GET.get("religion")
+    # caste = request.GET.get("caste")
 
     # badge = request.GET.get("badge")
 
@@ -47,6 +50,25 @@ def filter(request):
     # If Python converted to list → sort manually
     if isinstance(qs, list):
         qs.sort(key=lambda x: x.voter_list_id)
+
+
+    caste = request.GET.get("caste")
+    occupation = request.GET.get("occupation")
+
+    # -------- CAST / CASTE --------
+    if caste:
+        if caste.lower() == "null":
+            qs = qs.filter(cast__isnull=True)
+        else:
+            qs = qs.filter(cast=int(caste))
+
+
+    # -------- OCCUPATION --------
+    if occupation:
+        if occupation.lower() == "null":
+            qs = qs.filter(occupation__isnull=True)
+        else:
+            qs = qs.filter(occupation=int(occupation))
 
     # if badge:
     #     qs = qs.filter(badge__icontains=badge)
@@ -78,6 +100,10 @@ def filter(request):
 
     if tag:
         qs = qs.filter(tag_id__id=tag)
+    
+    if religion:
+        religion = qs.filter(religion_id__id=religion)
+        
     
     if sort:
         qs = qs.order_by(sort)
