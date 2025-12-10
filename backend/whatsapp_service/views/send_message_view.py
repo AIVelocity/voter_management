@@ -3,7 +3,7 @@ from django.conf import settings
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
-from ..utils import parse_request_body, _chunked, _clean_phone, get_recipients_from_request, send_whatapps_request
+from ..utils.send_messages_handlers import parse_request_body, _chunked, _clean_phone, get_recipients_from_request, send_whatapps_request
 
 from application.models import VoterList
 from ..models import VoterChatMessage, TemplateName

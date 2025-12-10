@@ -5,12 +5,8 @@ from django.conf import settings
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
+from ..utils.s3_integration import upload_to_s3
 
-# add this import at top of file where other utils are imported
-from ..utils import upload_to_s3  # new helper (see utils.py code below)
-
-# existing file already has `token = settings.ACCESS_TOKEN` and `url = settings.MESSAGE_URL`
-# we'll look for an upload url in settings with fallbacks:
 Upload_Url = settings.UPLOAD_URL
 token = settings.ACCESS_TOKEN
 ALLOWED_MEDIA_TYPES = {"image", "audio", "video", "document"}
