@@ -55,20 +55,30 @@ def filter(request):
     caste = request.GET.get("caste")
     occupation = request.GET.get("occupation")
 
-    # -------- CAST / CASTE --------
+    # ---------- CAST / CASTE ----------
     if caste:
         if caste.lower() == "null":
             qs = qs.filter(cast__isnull=True)
         else:
             qs = qs.filter(cast=int(caste))
 
-
-    # -------- OCCUPATION --------
+    # ---------- OCCUPATION ----------
     if occupation:
         if occupation.lower() == "null":
             qs = qs.filter(occupation__isnull=True)
         else:
             qs = qs.filter(occupation=int(occupation))
+
+    # ---------- RELIGION ----------
+    if religion:
+        if religion.lower() == "null":
+            qs = qs.filter(religion__isnull=True)
+        else:
+            qs = qs.filter(religion_id=int(religion))
+
+    # ---------- TAG ----------
+    if tag:
+        qs = qs.filter(tag_id=int(tag))
 
     # if badge:
     #     qs = qs.filter(badge__icontains=badge)
@@ -97,13 +107,7 @@ def filter(request):
 
     if location:
         qs = qs.filter(location__icontains=location)
-
-    if tag:
-        qs = qs.filter(tag_id__id=tag)
-    
-    if religion:
-        religion = qs.filter(religion_id__id=religion)
-        
+     
     
     if sort:
         qs = qs.order_by(sort)
@@ -132,7 +136,6 @@ def filter(request):
     
     if last_ends:
         qs = qs.filter(last_name__iendswith=last_ends)
-        
         
     # Pagination
     paginator = Paginator(qs, size)
