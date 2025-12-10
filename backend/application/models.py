@@ -171,7 +171,13 @@ class VoterList(models.Model):
     location = models.TextField(null=True, blank=True)
 
     # FIXED TYPES
-    occupation = models.IntegerField(null=True, blank=True)
+    occupation = models.ForeignKey(
+        Occupation,
+        db_column="occupation",
+        on_delete=models.DO_NOTHING,
+        null=True,
+        blank=True
+    )
 
     cast = models.IntegerField(
         db_column="cast",
@@ -261,3 +267,34 @@ class VoterRelationshipDetails(models.Model):
     def __str__(self):
         return f"{self.voter.voter_list_id} - {self.relation_with_voter} -> {self.related_voter.voter_list_id}"
 
+class VoterUserMaster(models.Model):
+    user_id = models.AutoField(primary_key=True)
+
+    first_name = models.TextField(null=True, blank=True)
+    last_name = models.TextField(null=True, blank=True)
+
+    mobile_no = models.TextField(null=False,validators=[mobile_validator])
+
+    password = models.TextField(null=True, blank=True)
+    confirm_password = models.TextField(null=True, blank=True)
+
+    role = models.ForeignKey(
+        Roles,
+        on_delete=models.DO_NOTHING,
+        db_column="role_id"
+    )
+
+    created_by = models.IntegerField(null=True, blank=True)
+    created_date = models.DateTimeField(auto_now_add=True)
+
+    updated_by = models.IntegerField(null=True, blank=True)
+    updated_date = models.DateTimeField(null=True, blank=True)
+
+    deleted_by = models.IntegerField(null=True, blank=True)
+    deleted_date = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = "voter_user_master"
+
+    def __str__(self):
+        return f"{self.first_name or ''} {self.last_name or ''} - {self.mobile_no}"
