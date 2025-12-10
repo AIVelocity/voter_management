@@ -10,7 +10,7 @@ from django.utils import timezone
 from typing import List, Tuple, Any, Dict, Optional
 from datetime import timedelta
 from application.models import VoterList
-from .models import VoterChatMessage
+from ..models import VoterChatMessage
 
 url = settings.MESSAGE_URL
 token = settings.ACCESS_TOKEN
@@ -18,55 +18,6 @@ token = settings.ACCESS_TOKEN
 # --- CONFIG: provider limit ---
 PROVIDER_MAX_PER_SECOND = 50  # provider limit (messages / sec)
 DEFAULT_CHUNK_SIZE = PROVIDER_MAX_PER_SECOND  # how many messages to send per second
-
-# Initialize S3 client
-s3_client = boto3.client(
-    "s3",
-    aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
-    aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
-)
-
-BUCKET = settings.AWS_S3_BUCKET_NAME
-REGION = settings.AWS_S3_REGION_NAME
-
-# --- helpers ---
-def upload_to_s3(file_obj, folder: str = "chat_media") -> str:
-    """
-    Upload a Django UploadedFile instance to S3.
-    
-    file_obj: request.FILES["file"]
-    folder: S3 folder name
-    
-    Returns: public S3 URL (no query params)
-    """
-
-    # Generate unique key: prevents overwriting existing S3 objects
-    original_name = file_obj.name
-    extension = original_name.split(".")[-1] if "." in original_name else ""
-    unique_name = f"{uuid.uuid4().hex}.{extension}"
-    key = f"{folder}/{unique_name}"
-
-    # Reset pointer for safety — very important
-    file_obj.seek(0)
-
-    # Detect mime type
-    mime_type = mimetypes.guess_type(original_name)[0] or "application/octet-stream"
-
-    # Upload
-    s3_client.upload_fileobj(
-        Fileobj=file_obj,
-        Bucket=BUCKET,
-        Key=key,
-        ExtraArgs={
-            "ContentType": mime_type,
-            "ContentDisposition": "inline",
-            "ACL": "public-read"   # makes it directly browser-viewable
-        }
-    )
-
-    # Construct permanent S3 URL
-    url = f"https://{BUCKET}.s3.{REGION}.amazonaws.com/{key}"
-    return url
 
 
 def parse_request_body(request) -> dict:
