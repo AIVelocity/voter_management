@@ -256,19 +256,27 @@ def single_voters_info(request, voter_list_id):
             "voter_list_id": family["husband"]["voter_list_id"],
         })
 
+    spouse = None
+
     if family["wife"]:
-        BloodRelatedFam.append({
-            "relation": "Wife",
+        spouse = {
             "name": family["wife"]["name"],
-            "voter_list_id": family["wife"]["voter_list_id"],
+            "voter_list_id": family["wife"]["voter_list_id"]
+        }
+
+    elif family["husband"]:
+        spouse = {
+            "name": family["husband"]["name"],
+            "voter_list_id": family["husband"]["voter_list_id"]
+        }
+
+    if spouse:
+        BloodRelatedFam.append({
+            "relation": "Spouse",
+            "name": spouse["name"],
+            "voter_list_id": spouse["voter_list_id"],
         })
 
-    for c in family["children"]:
-        BloodRelatedFam.append({
-            "relation": "Child",
-            "name": c["name"],
-            "voter_list_id": c["voter_list_id"],
-        })
 
     for s in family["siblings"]:
         BloodRelatedFam.append({
@@ -316,8 +324,9 @@ def single_voters_info(request, voter_list_id):
         "BloodRelatedFam": BloodRelatedFam,
         "father": family["father"],
         "mother": family["mother"],
-        "wife": family["wife"],
-        "husband": family["husband"],
+        "spouse" : spouse,
+        # "wife": family["wife"],
+        # "husband": family["husband"],
         "siblings": family["siblings"],
         "children": family["children"], 
 
