@@ -1,63 +1,65 @@
-from whatsapp_service.models import Admin,SubAdmin,Volunteer
 from django.http import JsonResponse
-import json
 from django.views.decorators.csrf import csrf_exempt
+from django.contrib.auth.hashers import check_password
+from ..models import VoterUserMaster
+import json
+
 
 @csrf_exempt
 def id_validation(request):
-    
+
     if request.method != "POST":
-        return JsonResponse({"status": False, "message": "POST method required"}, status=405)
-    
+        return JsonResponse({
+            "status": False,
+            "message": "POST method required"
+        }, status=405)
+
     try:
         body = json.loads(request.body)
 
-        activation_key = body.get("activation_key")
-        
-        if not activation_key:
+        mobile_no = body.get("mobile_no")
+        password = body.get("password")
+
+        # -------- VALIDATIONS --------
+        if not mobile_no:
             return JsonResponse({
-                "status":False,
-                "message":"Activation Key Required"
+                "status": False,
+                "message": "Mobile number is required"
             })
-            
-        admin = Admin.objects.filter(activation_key=activation_key).first()
-        
-        if admin:
+
+        if not password:
             return JsonResponse({
-                "status": True,
-                "role" : "admin",
-                "user_name": admin.first_name + admin.last_name,
-                "message":"Activation key validated successfully"
+                "status": False,
+                "message": "Password is required"
             })
-            
-        subadmin = SubAdmin.objects.filter(activation_key=activation_key).first()
-        
-        if subadmin:
+
+        # -------- FIND USER BY MOBILE --------
+        user = VoterUserMaster.objects.filter(mobile_no=mobile_no).select_related("role").first()
+
+        if not user:
             return JsonResponse({
-                "status": True,
-                "role" : "subadmin",
-                "user_name": subadmin.first_name + subadmin.last_name,
-                "message":"Activation key validated successfully"
-            })
-            
-        volunteer = Volunteer.objects.filter(activation_key=activation_key).first()
-        
-        if volunteer:
+                "status": False,
+                "message": "User not found"
+            }, status=404)
+
+        # -------- PASSWORD CHECK --------
+        if not check_password(password, user.password):
             return JsonResponse({
-                "status": True,
-                "role" : "volunteer",
-                "user_name": volunteer.first_name + volunteer.last_name,
-                "message":"Activation key validated successfully"
-            })
-            
+                "status": False,
+                "message": "Invalid mobile number or password"
+            }, status=401)
+
+        # -------- SUCCESS --------
         return JsonResponse({
-            "status": False,
-            "message": "Invalid activation key"
-        }, status=404)
-        
+            "status": True,
+            "role": user.role.role_name if hasattr(user.role, "role_name") else user.role.role_id,
+            "user_name": f"{user.first_name} {user.last_name}",
+            "user_id": user.user_id,
+            "message": "Login successful"
+        })
+
     except Exception as e:
         return JsonResponse({
             "status": False,
             "message": str(e)
         }, status=500)
-    
