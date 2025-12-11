@@ -268,3 +268,39 @@ class VoterUserMaster(models.Model):
     def id(self):
         return self.user_id
     
+class ActivityLog(models.Model):
+    log_id = models.AutoField(primary_key=True)
+
+    # FK → voter_user_master.user_id
+    user = models.ForeignKey(
+        VoterUserMaster,
+        on_delete=models.DO_NOTHING,
+        db_column="user_id",
+        null=True,
+        blank=True
+    )
+
+    action = models.CharField(max_length=255, null=True, blank=True)
+    description = models.TextField(null=True, blank=True)
+    ip_address = models.CharField(max_length=50, null=True, blank=True)
+    
+    voter = models.ForeignKey(
+        VoterList,
+        on_delete=models.DO_NOTHING,
+        db_column="voter_list_id",
+        null= True,
+        blank= True
+    )
+
+    # JSON fields for tracking changed data
+    old_data = models.JSONField(null=True, blank=True)
+    new_data = models.JSONField(null=True, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "voter_activity_log"   # TABLE NAME IN DB
+        managed = True               # You want Django to create/manage this table
+
+    def __str__(self):
+        return f"{self.action} by User {self.user_id}"

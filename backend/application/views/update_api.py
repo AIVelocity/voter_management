@@ -1,10 +1,11 @@
 from django.http import JsonResponse
-from ..models import VoterList,VoterTag
+from ..models import VoterList,VoterTag,VoterUserMaster
 from django.views.decorators.csrf import csrf_exempt
 import json
 from django.db import IntegrityError
+from .view_utils import log_user_update
+from rest_framework_simplejwt.tokens import AccessToken
 
-# update voter
 @csrf_exempt
 def update_voter(request, voter_list_id):
 
@@ -12,145 +13,103 @@ def update_voter(request, voter_list_id):
         return JsonResponse({"status": False, "message": "PUT method required"}, status=405)
 
     try:
+        auth_header = request.headers.get("Authorization")
         body = json.loads(request.body)
+        
+        # Extract user_id from Bearer token
+        user = None
+        if auth_header and auth_header.startswith("Bearer "):
+            token_str = auth_header.split(" ")[1]
+            try:
+                token = AccessToken(token_str)
+                user_id = token["user_id"]
+                # user = VoterUserMaster.objects.get(user_id=user_id)
+            except Exception:
+                pass
 
-        # -------------------
-        # GET EXISTING RECORD
-        # -------------------
+        # user_id = body.get("user_id")  # coming from frontend after login
+        ip = request.META.get("REMOTE_ADDR")
+
+        # Get logged-in user
+        user = None
+        if user_id:
+            try:
+                user = VoterUserMaster.objects.get(user_id=user_id)
+            except VoterUserMaster.DoesNotExist:
+                user = None
+
         try:
             voter = VoterList.objects.get(voter_list_id=voter_list_id)
         except VoterList.DoesNotExist:
-            return JsonResponse({
-                "status": False,
-                "message": "Voter not found"
-            }, status=404)
+            return JsonResponse({"status": False, "message": "Voter not found"}, status=404)
 
-        # -------------------
-        # INPUT VALUES
-        # -------------------
-        # voter_id = body.get("voter_id")
-        # kramank = body.get("kramank")
-        # ward_no = body.get("ward_id")
+        # Track changed fields
+        changed_fields = {}
 
-        # -------------------
-        # BASIC VALIDATION
-        # -------------------
-        # if ward_no and ward_no not in [36, 37]:
-        #     return JsonResponse({
-        #         "status": False,
-        #         "message": "ward_id must be 36 or 37"
-        #     }, status=400)
+        def track(field, new_value):
+            old_value = getattr(voter, field)
+            if new_value != old_value:
+                changed_fields[field] = {"old": old_value, "new": new_value}
+                setattr(voter, field, new_value)
 
-        # -------------------
-        # DUPLICATE CHECKS
-        # exclude current row
-        # -------------------
-        # if voter_id:
-        #     if VoterList.objects.filter(voter_id=voter_id).exclude(voter_list_id=voter_list_id).exists():
-        #         return JsonResponse({
-        #             "status": False,
-        #             "message": f"Duplicate voter_id: {voter_id}"
-        #         }, status=409)
+        # Now track only changed values
+        track("address_line1", body.get("full_address", voter.address_line1))
+        track("mobile_no", body.get("mobile_no", voter.mobile_no))
+        track("alternate_mobile1", body.get("alternate_mobile_no1", voter.alternate_mobile1))
+        track("alternate_mobile2", body.get("alternate_mobile_no2", voter.alternate_mobile2))
+        track("badge", body.get("badge", voter.badge))
+        track("location", body.get("location", voter.location))
+        track("comments", body.get("comments", voter.comments))
 
-        # if kramank:
-        #     check_ward = ward_no if ward_no else voter.ward_no
-        
-        #     if VoterList.objects.filter(
-        #             kramank=kramank,
-        #             ward_no=check_ward
-        #         ).exclude(voter_list_id=voter_list_id).exists():
-        
-        #         return JsonResponse({
-        #             "status": False,
-        #             "message": f"Duplicate kramank '{kramank}' in ward {check_ward}"
-        #         }, status=409)
-
-
-        # -------------------
-        # TAG VALIDATION
-        # -------------------
-        tag = None
+        # TAG update
         tag_id = body.get("tag_id")
-
         if tag_id:
             try:
-                tag = VoterTag.objects.get(tag_id=tag_id)
+                new_tag = VoterTag.objects.get(tag_id=tag_id)
+
+                if voter.tag_id != new_tag:
+                    changed_fields["tag_id"] = {
+                        "old": voter.tag_id.tag_id if voter.tag_id else None,
+                        "new": new_tag.tag_id
+                    }
+                    voter.tag_id = new_tag
+
             except VoterTag.DoesNotExist:
-                return JsonResponse({
-                    "status": False,
-                    "message": "Invalid tag_id"
-                }, status=400)
+                return JsonResponse({"status": False, "message": "Invalid tag_id"}, status=400)
 
-       # -------------------
-        # UPDATE FIELDS
-        # -------------------
+        # If nothing changed, return message
+        if not changed_fields:
+            return JsonResponse({"status": True, "message": "No changes detected"})
 
-        # if voter_id:
-        #     voter.voter_id = voter_id
-
-        # if kramank:
-        #     voter.kramank = kramank
-
-        # if ward_no:
-        #     voter.ward_no = ward_no
-
-        # NAME FIELDS
-        # voter.first_name  = body.get("first_name", voter.first_name)
-        # voter.middle_name = body.get("middle_name", voter.middle_name)
-        # voter.last_name   = body.get("last_name", voter.last_name)
-        # full_address = (voter.address_line1 or "") + (voter.address_line2 or "") + (voter.address_line3 or "")
-        # ADDRESS FIELDS
-        voter.address_line1 = body.get("full_address", voter.address_line1)
-        # voter.address_line2 = body.get("address_line2", voter.address_line2)
-        # voter.address_line3 = body.get("address_line3", voter.address_line3)
-        # voter.current_address = body.get("current_address",voter.current_address)
-
-        # CONTACT FIELDS
-        voter.mobile_no        = body.get("mobile_no", voter.mobile_no)
-        voter.alternate_mobile1 = body.get("alternate_mobile_no1", voter.alternate_mobile1)
-        voter.alternate_mobile2 = body.get("alternate_mobile_no2", voter.alternate_mobile2)
-        
-        voter.badge = body.get("badge",voter.badge)
-        voter.location = body.get("location",voter.location)
-        # OCCUPATION & OTHER INFO
-        voter.occupation  = body.get("occupation", voter.occupation)
-        voter.cast        = body.get("cast", voter.cast)
-        voter.organisation = body.get("organisation", voter.organisation)
-        voter.comments = body.get("comments",voter.comments)
-
-        # AGE & GENDER
-        # voter.age_eng    = body.get("age", voter.age_eng)
-        # voter.gender_eng = body.get("gender", voter.gender_eng)
-
-        if tag_id:
-            voter.tag_id = tag
-
-        # -------------------
-        # SAVE
-        # -------------------
         voter.save()
+
+        # Save to logs
+        # Build dynamic action text
+        if len(changed_fields) == 1:
+            # Only 1 field changed → action describes that field
+            field_name = list(changed_fields.keys())[0]
+            action_text = f"UPDATED_{field_name.upper()}"
+        else:
+            # Multiple fields changed
+            updated_list = ", ".join([f.upper() for f in changed_fields.keys()])
+            action_text = f"UPDATED_MULTIPLE_FIELDS ({updated_list})"
+
+        
+        log_user_update(
+            user=user,
+            action=action_text,
+            description=f"Updated voter {voter_list_id}",
+            changed_fields=changed_fields,
+            ip=ip,
+            voter_list_id=voter_list_id
+            
+        )
 
         return JsonResponse({
             "status": True,
             "message": "Voter updated successfully",
-            "voter_list_id": voter.voter_list_id,
-            "sr_no": voter.sr_no
+            "updated_fields": changed_fields
         })
 
-    except IntegrityError:
-        return JsonResponse({
-            "status": False,
-            "message": "Duplicate entry detected"
-        }, status=409)
-
-    except json.JSONDecodeError:
-        return JsonResponse({
-            "status": False,
-            "message": "Invalid JSON body"
-        }, status=400)
-
     except Exception as e:
-        return JsonResponse({
-            "status": False,
-            "error": str(e)
-        }, status=500)
+        return JsonResponse({"status": False, "error": str(e)}, status=500)

@@ -4,3 +4,4 @@ requests
 python-dotenv
 gunicorn
 boto3
+djangorestframework-simplejwt

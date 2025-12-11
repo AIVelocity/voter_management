@@ -1,5 +1,5 @@
 from django.http import JsonResponse
-from ..models import VoterList,VoterTag
+from ..models import VoterList,VoterTag,ActivityLog
 from .view_utils import save_relation,get_family_from_db
 
 # single voter info
@@ -285,6 +285,23 @@ def single_voters_info(request, voter_list_id):
             "voter_list_id": s["voter_list_id"],
         })
 
+    lasted_log = ActivityLog.objects.filter(
+        voter=voter,
+    ).select_related("user").order_by("-created_at").first()
+    
+    last_modified = []
+
+    if lasted_log and lasted_log.user:
+        last_modified = ({
+            "user_id" : lasted_log.user.user_id,
+            "name" : f"{lasted_log.user.last_name} {lasted_log.user.first_name}",
+            "mobile-no" : lasted_log.user.mobile_no,
+            "action" : lasted_log.description,
+            "changed_at" : lasted_log.created_at,
+            "old_data" : lasted_log.old_data,
+            "new_data" : lasted_log.new_data,
+        })
+        
     data = {
         "voter_list_id": voter.voter_list_id,
         "voter_name_eng": voter.voter_name_eng,
@@ -330,6 +347,7 @@ def single_voters_info(request, voter_list_id):
         # "husband": family["husband"],
         "siblings": family["siblings"],
         "children": family["children"], 
+        "last_modified" : last_modified
 
     }
 
