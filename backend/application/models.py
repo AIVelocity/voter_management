@@ -183,11 +183,12 @@ class VoterList(models.Model):
     #     blank=True
     # )
 
-    cast = models.IntegerField(
-        db_column="cast",
-        null=True,
-        blank=True
-    )
+    cast = models.TextField(null=True,blank=True)
+    # cast = models.IntegerField(
+    #     db_column="cast",
+    #     null=True,
+    #     blank=True
+    # )
 
     organisation = models.TextField(null=True, blank=True)
     comments = models.TextField(null=True, blank=True)
