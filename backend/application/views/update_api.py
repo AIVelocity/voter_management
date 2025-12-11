@@ -16,6 +16,8 @@ def update_voter(request, voter_list_id):
         auth_header = request.headers.get("Authorization")
         body = json.loads(request.body)
         
+        user_id = None
+
         # Extract user_id from Bearer token
         # user = None
         if auth_header and auth_header.startswith("Bearer "):
