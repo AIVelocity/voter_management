@@ -95,6 +95,43 @@ class Caste(models.Model):
         managed = False
 
 
+class VoterUserMaster(models.Model):
+    user_id = models.AutoField(primary_key=True)
+
+    first_name = models.TextField(null=True, blank=True)
+    last_name = models.TextField(null=True, blank=True)
+
+    mobile_no = models.TextField(null=False,validators=[mobile_validator])
+
+    password = models.TextField(null=True, blank=True)
+    confirm_password = models.TextField(null=True, blank=True)
+
+    role = models.ForeignKey(
+        Roles,
+        on_delete=models.DO_NOTHING,
+        db_column="role_id"
+    )
+
+    created_by = models.IntegerField(null=True, blank=True)
+    created_date = models.DateTimeField(auto_now_add=True)
+
+    updated_by = models.IntegerField(null=True, blank=True)
+    updated_date = models.DateTimeField(null=True, blank=True)
+
+    deleted_by = models.IntegerField(null=True, blank=True)
+    deleted_date = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = "voter_user_master"
+        managed = False
+
+    def __str__(self):
+        return f"{self.first_name or ''} {self.last_name or ''} - {self.mobile_no}"
+    
+    @property
+    def id(self):
+        return self.user_id
+
 class VoterList(models.Model):
 
     voter_list_id = models.AutoField(primary_key=True)
@@ -173,6 +210,15 @@ class VoterList(models.Model):
     ward_no = models.IntegerField()
     check_progress = models.BooleanField(null=True,blank=True)
     check_progress_date = models.DateField(null=True, blank=True)
+    full_name = models.TextField(null=True,blank=True)
+    
+    user = models.ForeignKey(
+        VoterUserMaster,
+        db_column="user_id",
+        on_delete=models.DO_NOTHING,
+        null=True,
+        blank=True
+    )
 
     class Meta:
         db_table = "voter_list"
@@ -233,42 +279,7 @@ class VoterRelationshipDetails(models.Model):
     def __str__(self):
         return f"{self.voter.voter_list_id} - {self.relation_with_voter} -> {self.related_voter.voter_list_id}"
 
-class VoterUserMaster(models.Model):
-    user_id = models.AutoField(primary_key=True)
 
-    first_name = models.TextField(null=True, blank=True)
-    last_name = models.TextField(null=True, blank=True)
-
-    mobile_no = models.TextField(null=False,validators=[mobile_validator])
-
-    password = models.TextField(null=True, blank=True)
-    confirm_password = models.TextField(null=True, blank=True)
-
-    role = models.ForeignKey(
-        Roles,
-        on_delete=models.DO_NOTHING,
-        db_column="role_id"
-    )
-
-    created_by = models.IntegerField(null=True, blank=True)
-    created_date = models.DateTimeField(auto_now_add=True)
-
-    updated_by = models.IntegerField(null=True, blank=True)
-    updated_date = models.DateTimeField(null=True, blank=True)
-
-    deleted_by = models.IntegerField(null=True, blank=True)
-    deleted_date = models.DateTimeField(null=True, blank=True)
-
-    class Meta:
-        db_table = "voter_user_master"
-        managed = False
-
-    def __str__(self):
-        return f"{self.first_name or ''} {self.last_name or ''} - {self.mobile_no}"
-    
-    @property
-    def id(self):
-        return self.user_id
     
 class ActivityLog(models.Model):
     log_id = models.AutoField(primary_key=True)

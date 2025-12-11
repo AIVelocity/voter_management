@@ -318,6 +318,12 @@ def single_voters_info(request, voter_list_id):
         ).filter(
             Q(old_data__has_key='tag_id') | Q(new_data__has_key='tag_id')
         ).order_by('-created_at').first()
+        
+    lasted_log_comment = ActivityLog.objects.filter(
+            voter_id=voter_list_id
+        ).filter(
+            Q(old_data__has_key='comments') | Q(new_data__has_key='comments')
+        ).order_by('-created_at').first()
 
     
     last_modified = []
@@ -335,15 +341,21 @@ def single_voters_info(request, voter_list_id):
         
     tag_last_updated_by = "NA"
     tag_last_updated_at = "NA"
-
+    comment_last_updated_by = "NA"
+    comment_last_updated_at = "NA"
         
     if user and user.role.role_name == "Admin":
         if lasted_log and lasted_log.user_id:
-            tag_last_updated_by = f"{lasted_log.user.first_name} {lasted_log.user.last_name}".strip()
+            tag_last_updated_by = f"{lasted_log.user.last_name} {lasted_log.user.first_name}".strip()
             tag_last_updated_at = lasted_log.created_at
+        if lasted_log_comment and lasted_log_comment.user_id:
+            comment_last_updated_by = f"{lasted_log_comment.user.last_name} {lasted_log_comment.user.first_name}".strip()
+            comment_last_updated_at = lasted_log_comment.created_at
         else:
             tag_last_updated_by = None
             tag_last_updated_at = None
+            comment_last_updated_by = None
+            comment_last_updated_at = None
     
         
     data = {
@@ -391,12 +403,13 @@ def single_voters_info(request, voter_list_id):
         # "husband": family["husband"],
         "siblings": family["siblings"],
         "children": family["children"], 
-        "last_modified" : last_modified,
+        # "last_modified" : last_modified,
         
         "check_progress" : voter.check_progress,
         "tag_last_updated_by": tag_last_updated_by,
         "tag_last_updated_at": tag_last_updated_at,
-
+        "comment_last_updated_by" : comment_last_updated_by,
+        "comment_last_updated_at" : comment_last_updated_at,
     }
 
     return JsonResponse({"status": True, "data": data})
