@@ -17,7 +17,7 @@ def update_voter(request, voter_list_id):
         body = json.loads(request.body)
         
         # Extract user_id from Bearer token
-        user = None
+        # user = None
         if auth_header and auth_header.startswith("Bearer "):
             token_str = auth_header.split(" ")[1]
             try:
@@ -60,6 +60,7 @@ def update_voter(request, voter_list_id):
         track("badge", body.get("badge", voter.badge))
         track("location", body.get("location", voter.location))
         track("comments", body.get("comments", voter.comments))
+        track("check_progress",body.get("check_progress",voter.check_progress))
 
         # TAG update
         tag_id = body.get("tag_id")
