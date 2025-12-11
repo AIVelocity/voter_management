@@ -1,10 +1,18 @@
 from django.http import JsonResponse
-from ..models import VoterList,VoterTag,ActivityLog
+from ..models import VoterList,VoterTag,ActivityLog,VoterUserMaster
 from .view_utils import save_relation,get_family_from_db
+from rest_framework_simplejwt.tokens import AccessToken
+from django.db.models import Q
 
 # single voter info
 def single_voters_info(request, voter_list_id):
 
+    if request.method != "GET":
+        return JsonResponse({
+            "status" :False,
+            "message" : "Get method required"
+        },status = 405)
+    
     try:
         voter = VoterList.objects.select_related("tag_id").get(
             voter_list_id=voter_list_id
@@ -15,6 +23,26 @@ def single_voters_info(request, voter_list_id):
             "message": "Voter not found"
         }, status=404)
 
+    
+    user = None
+    user_id = None
+    
+    try:
+        auth_header = request.headers.get("Authorization")
+    
+        if auth_header and auth_header.startswith("Bearer "):
+            token_str = auth_header.split(" ")[1]
+            token = AccessToken(token_str)
+            user_id = token.get("user_id")
+    except Exception:
+        pass
+    
+    # user = None
+    if user_id:
+        try:
+            user = VoterUserMaster.objects.get(user_id=user_id)
+        except VoterUserMaster.DoesNotExist:
+            user = None
 
     # ---------------- HELPERS ----------------
 
@@ -286,8 +314,11 @@ def single_voters_info(request, voter_list_id):
         })
 
     lasted_log = ActivityLog.objects.filter(
-        voter=voter,
-    ).select_related("user").order_by("-created_at").first()
+            voter_id=voter_list_id
+        ).filter(
+            Q(old_data__has_key='tag_id') | Q(new_data__has_key='tag_id')
+        ).order_by('-created_at').first()
+
     
     last_modified = []
 
@@ -301,6 +332,19 @@ def single_voters_info(request, voter_list_id):
             "old_data" : lasted_log.old_data,
             "new_data" : lasted_log.new_data,
         })
+        
+    tag_last_updated_by = "NA"
+    tag_last_updated_at = "NA"
+
+        
+    if user and user.role.role_name == "Admin":
+        if lasted_log and lasted_log.user_id:
+            tag_last_updated_by = f"{lasted_log.user.first_name} {lasted_log.user.last_name}".strip()
+            tag_last_updated_at = lasted_log.created_at
+        else:
+            tag_last_updated_by = None
+            tag_last_updated_at = None
+    
         
     data = {
         "voter_list_id": voter.voter_list_id,
@@ -347,7 +391,11 @@ def single_voters_info(request, voter_list_id):
         # "husband": family["husband"],
         "siblings": family["siblings"],
         "children": family["children"], 
-        "last_modified" : last_modified
+        "last_modified" : last_modified,
+        
+        "check_progress" : voter.check_progress,
+        "tag_last_updated_by": tag_last_updated_by,
+        "tag_last_updated_at": tag_last_updated_at,
 
     }
 
