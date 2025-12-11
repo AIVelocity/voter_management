@@ -99,7 +99,7 @@ def is_within_reengagement_window(voter) -> bool:
     last_incoming = (
         VoterChatMessage.objects
         .filter(voter_id=getattr(voter, "voter_list_id", None))
-        .exclude(sender__in=("admin", "sub-admin"))
+        .filter(sender='voter')
         .order_by("-sent_at")
         .first()
     )
@@ -121,10 +121,15 @@ def send_whatapps_request(payload: dict,
                           reply_to_message_id: Optional[str] = None,
                           http_timeout: int = 30) -> Dict[str, Any]:
     """
-    Performs the HTTP call to provider and records a VoterChatMessage row.
-    Returns a dict describing the result for the recipient (not an HttpResponse).
+    CLEAN + FINAL VERSION
+    ---------------------
+    - All API-outgoing messages (Admin, subAdmin, user) are saved as sender='user'
+    - sender_user_id always = sender_id
+    - sender_role_id / sender_role resolved from VoterUserMaster.role FK
+    - No duplicate logic
     """
-    result: Dict[str, Any] = {
+
+    result = {
         "ok": False,
         "http_status": 0,
         "whatsapp_response": None,
@@ -132,161 +137,123 @@ def send_whatapps_request(payload: dict,
         "db_message_id": None,
         "db_status": None
     }
-
-    # Validate sender fields
-    if not sender_type:
-        result.update({"error": "sender_type required", "http_status": 400})
-        return result
-    if sender_type in ("admin", "sub-admin") and not sender_id:
-        result.update({"error": "sender_id required for admin/sub-admin", "http_status": 400})
+    if sender_type not in ("Admin", "subAdmin", "user"):
+        result.update({"error": "Invalid sender_type", "http_status": 400})
         return result
 
-    # --- NEW: check 24-hour re-engagement window BEFORE calling provider ---
+    if not sender_id:
+        result.update({"error": "sender_id required", "http_status": 400})
+        return result
+
+    normalized_sender = "user"
+    sender_user_obj = None
+    sender_role_id_val = None
+    sender_role_name = None
+
     try:
-        if not is_within_reengagement_window(voter):
-            # create a DB row so frontend can show the attempted message (and reason)
-            fallback_local_id = _make_fallback_local_id()
-            reply_to_db_id = _resolve_reply_to(reply_to_message_id)
+        from django.apps import apps
+        VoterUserMaster = apps.get_model("application", "VoterUserMaster")
 
-            instance_kwargs = {
-                "message_id": fallback_local_id,
-                "voter_id": voter.voter_list_id if getattr(voter, "voter_list_id", None) else None,
-                "sender": sender_type,
-                "status": "failed",
-                "message": message,
-                "type": message_type,
-                "media_id": media_id,
-                "media_url": media_url,
-                "sent_at": timezone.now(),
-            }
+        sender_user_obj = VoterUserMaster.objects.filter(pk=sender_id).first()
+        if sender_user_obj:
+            role_obj = getattr(sender_user_obj, "role", None)
+            if role_obj:
+                sender_role_id_val = getattr(role_obj, "role_id", None)
+                sender_role_name = getattr(role_obj, "role_name", None)
 
-            if sender_type == "admin":
-                instance_kwargs["admin_id"] = sender_id
-            elif sender_type == "sub-admin":
-                instance_kwargs["subadmin_id"] = sender_id
-            else:
-                # If you expect other sender types to be valid, remove this block.
-                result.update({"error": "Invalid sender_type", "http_status": 400})
-                return result
+    except Exception:
+        pass  # keep role fields empty if resolution fails
 
-            if reply_to_db_id:
-                instance_kwargs["reply_to_id"] = reply_to_db_id
+    if not is_within_reengagement_window(voter):
+        db_id = _make_fallback_local_id()
+        reply_to_db = _resolve_reply_to(reply_to_message_id)
 
-            try:
-                with transaction.atomic():
-                    VoterChatMessage.objects.create(**instance_kwargs)
-            except Exception as e:
-                result.update({
-                    "error": f"reengagement_window_closed; DB error: {str(e)}",
-                    "http_status": 500,
-                    "whatsapp_response": None,
-                    "db_message_id": fallback_local_id,
-                    "db_status": "failed",
-                })
-                return result
+        instance_kwargs = {
+            "message_id": db_id,
+            "voter_id": getattr(voter, "voter_list_id", None),
+            "sender": normalized_sender,
+            "status": "failed",
+            "message": message,
+            "type": message_type,
+            "media_id": media_id,
+            "media_url": media_url,
+            "sent_at": timezone.now(),
+            "sender_user_id": sender_id,
+            "sender_role_id": sender_role_id_val,
+            "sender_role": sender_role_name,
+        }
 
-            result.update({
-                "error": "reengagement_window_closed",
-                "http_status": 400,
-                "whatsapp_response": None,
-                "db_message_id": fallback_local_id,
-                "db_status": "failed",
-            })
-            return result
-    except Exception as e:
-        # If the re-engagement check itself fails, surface a clear error to caller.
+        if reply_to_db:
+            instance_kwargs["reply_to_id"] = reply_to_db
+
+        VoterChatMessage.objects.create(**instance_kwargs)
+
         result.update({
-            "error": f"reengagement_window_check_failed: {str(e)}",
-            "http_status": 500,
+            "error": "reengagement_window_closed",
+            "http_status": 400,
+            "db_message_id": db_id,
+            "db_status": "failed",
         })
         return result
 
-    # --- Perform HTTP request to provider ---
     response_json = None
     resp_status = 0
     wa_message_id = None
 
     try:
-        resp = requests.post(url, headers={
-            "Authorization": f"Bearer {token}",
-            "Content-Type": "application/json",
-        }, json=payload, timeout=http_timeout)
-    except Exception as e:
-        response_json = {"error": str(e)}
-        resp_status = 0
-    else:
-        resp_status = getattr(resp, "status_code", 0)
+        resp = requests.post(
+            url,
+            headers={
+                "Authorization": f"Bearer {token}",
+                "Content-Type": "application/json",
+            },
+            json=payload,
+            timeout=http_timeout,
+        )
+        resp_status = resp.status_code
         try:
             response_json = resp.json()
-        except Exception:
-            response_json = {"raw_text": getattr(resp, "text", "")}
+        except:
+            response_json = {"raw": resp.text}
 
-        # Robust extraction of provider message id(s)
-        if resp_status and resp_status < 400 and isinstance(response_json, dict):
-            # common shapes: { "messages": [ { "id":... } ] }, { "id": ... }, { "media": [{ "id": ... }] }
-            wa_message_id = None
-            if "messages" in response_json and isinstance(response_json["messages"], list) and response_json["messages"]:
+        # Extract WA message ID
+        if resp_status < 400:
+            if "messages" in response_json:
                 wa_message_id = response_json["messages"][0].get("id")
-            if not wa_message_id and "id" in response_json:
-                wa_message_id = response_json.get("id")
-            if not wa_message_id and "media" in response_json and isinstance(response_json["media"], list) and response_json["media"]:
-                wa_message_id = response_json["media"][0].get("id")
-            # fallback keys
             if not wa_message_id:
-                wa_message_id = response_json.get("mid") or response_json.get("media_id")
+                wa_message_id = response_json.get("id")
 
-    # Resolve reply_to DB id for DB row
-    reply_to_db_id = _resolve_reply_to(reply_to_message_id)
+    except Exception as e:
+        response_json = {"error": str(e)}
 
-    # Decide DB message id and status
-    if wa_message_id:
-        db_message_id = wa_message_id
-        db_status = "sent" if resp_status < 400 else "failed"
-    else:
-        db_message_id = _make_fallback_local_id()
-        db_status = "failed" if resp_status == 0 or resp_status >= 400 else "sent"
+    # Fallback message_id
+    db_message_id = wa_message_id or _make_fallback_local_id()
+    db_status = "sent" if resp_status and resp_status < 400 else "failed"
 
-    # Build DB row kwargs (single place)
+    reply_to_db = _resolve_reply_to(reply_to_message_id)
+
     instance_kwargs = {
         "message_id": db_message_id,
-        "voter_id": voter.voter_list_id if getattr(voter, "voter_list_id", None) else None,
-        "sender": sender_type,
+        "voter_id": getattr(voter, "voter_list_id", None),
+        "sender": normalized_sender,
         "status": db_status,
         "message": message,
         "type": message_type,
         "media_id": media_id,
         "media_url": media_url,
         "sent_at": timezone.now(),
+        "sender_user_id": sender_id,
+        "sender_role_id": sender_role_id_val,
+        "sender_role": sender_role_name,
     }
 
-    if sender_type == "admin":
-        instance_kwargs["admin_id"] = sender_id
-    elif sender_type == "sub-admin":
-        instance_kwargs["subadmin_id"] = sender_id
-    else:
-        result.update({"error": "Invalid sender_type", "http_status": 400})
-        return result
+    if reply_to_db:
+        instance_kwargs["reply_to_id"] = reply_to_db
 
-    if reply_to_db_id:
-        instance_kwargs["reply_to_id"] = reply_to_db_id
+    VoterChatMessage.objects.create(**instance_kwargs)
 
-    # Save DB row (always attempt to save so UI can show message row)
-    try:
-        with transaction.atomic():
-            VoterChatMessage.objects.create(**instance_kwargs)
-    except Exception as e:
-        result.update({
-            "error": f"DB error: {str(e)}",
-            "http_status": 500,
-            "whatsapp_response": response_json,
-            "db_message_id": db_message_id,
-            "db_status": db_status,
-        })
-        return result
-
-    # Final result
     result.update({
-        "ok": True if resp_status and resp_status < 400 else False,
+        "ok": resp_status < 400,
         "http_status": resp_status,
         "whatsapp_response": response_json,
         "db_message_id": db_message_id,
