@@ -3,6 +3,34 @@ from ..models import VoterList,VoterTag,ActivityLog,VoterUserMaster
 from .view_utils import save_relation,get_family_from_db
 from rest_framework_simplejwt.tokens import AccessToken
 from django.db.models import Q
+from django.utils import timezone
+import pytz
+
+
+ist = pytz.timezone("Asia/Kolkata")
+
+def make_aware_if_needed(dt):
+    if dt is None:
+        return None
+
+    # If already aware → return as-is
+    if timezone.is_aware(dt):
+        return dt
+
+    # Make it aware in UTC
+    return timezone.make_aware(dt, timezone=pytz.UTC)
+
+def format_indian_datetime(dt):
+    if not dt:
+        return None
+    ist = pytz.timezone("Asia/Kolkata")
+
+    # First make dt timezone aware in UTC
+    dt = make_aware_if_needed(dt)
+
+    dt_ist = dt.astimezone(ist)
+    return dt_ist.strftime("%d-%m-%Y %I:%M %p")
+
 
 # single voter info
 def single_voters_info(request, voter_list_id):
@@ -339,24 +367,31 @@ def single_voters_info(request, voter_list_id):
             "new_data" : lasted_log.new_data,
         })
         
+# ---- GET LAST UPDATED LOGS ----
     tag_last_updated_by = "NA"
-    tag_last_updated_at = "NA"
     comment_last_updated_by = "NA"
-    comment_last_updated_at = "NA"
-        
+    tag_dt = None
+    comment_dt = None
+    
     if user and user.role.role_name == "Admin":
+    
+        # TAG LOG
         if lasted_log and lasted_log.user_id:
             tag_last_updated_by = f"{lasted_log.user.last_name} {lasted_log.user.first_name}".strip()
-            tag_last_updated_at = lasted_log.created_at
+            tag_dt = lasted_log.created_at
+    
+        # COMMENT LOG
         if lasted_log_comment and lasted_log_comment.user_id:
             comment_last_updated_by = f"{lasted_log_comment.user.last_name} {lasted_log_comment.user.first_name}".strip()
-            comment_last_updated_at = lasted_log_comment.created_at
-        else:
-            tag_last_updated_by = None
-            tag_last_updated_at = None
-            comment_last_updated_by = None
-            comment_last_updated_at = None
+            comment_dt = lasted_log_comment.created_at
     
+    
+    # ---- CONVERT TIMEZONES SAFELY ----
+    tag_dt = make_aware_if_needed(tag_dt)
+    comment_dt = make_aware_if_needed(comment_dt)
+    
+    formatted_tag_time = format_indian_datetime(tag_dt)
+    formatted_comment_time = format_indian_datetime(comment_dt)
         
     data = {
         "voter_list_id": voter.voter_list_id,
@@ -407,9 +442,10 @@ def single_voters_info(request, voter_list_id):
         
         "check_progress" : voter.check_progress,
         "tag_last_updated_by": tag_last_updated_by,
-        "tag_last_updated_at": tag_last_updated_at,
-        "comment_last_updated_by" : comment_last_updated_by,
-        "comment_last_updated_at" : comment_last_updated_at,
+        "tag_last_updated_at": formatted_tag_time,
+        "comment_last_updated_by": comment_last_updated_by,
+        "comment_last_updated_at": formatted_comment_time
+        
     }
 
     return JsonResponse({"status": True, "data": data})
