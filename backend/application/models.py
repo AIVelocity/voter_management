@@ -1,6 +1,6 @@
 from django.db import models
 from django.core.validators import RegexValidator
-
+from django.utils import timezone
 
 mobile_validator = RegexValidator(
     regex=r'^[679]\d{9}$',
@@ -95,6 +95,43 @@ class Caste(models.Model):
         managed = False
 
 
+class VoterUserMaster(models.Model):
+    user_id = models.AutoField(primary_key=True)
+
+    first_name = models.TextField(null=True, blank=True)
+    last_name = models.TextField(null=True, blank=True)
+
+    mobile_no = models.TextField(null=False,validators=[mobile_validator])
+
+    password = models.TextField(null=True, blank=True)
+    confirm_password = models.TextField(null=True, blank=True)
+
+    role = models.ForeignKey(
+        Roles,
+        on_delete=models.DO_NOTHING,
+        db_column="role_id"
+    )
+
+    created_by = models.IntegerField(null=True, blank=True)
+    created_date = models.DateTimeField(auto_now_add=True)
+
+    updated_by = models.IntegerField(null=True, blank=True)
+    updated_date = models.DateTimeField(null=True, blank=True)
+
+    deleted_by = models.IntegerField(null=True, blank=True)
+    deleted_date = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = "voter_user_master"
+        managed = False
+
+    def __str__(self):
+        return f"{self.first_name or ''} {self.last_name or ''} - {self.mobile_no}"
+    
+    @property
+    def id(self):
+        return self.user_id
+
 class VoterList(models.Model):
 
     voter_list_id = models.AutoField(primary_key=True)
@@ -171,12 +208,22 @@ class VoterList(models.Model):
     )
 
     ward_no = models.IntegerField()
+    check_progress = models.BooleanField(null=True,blank=True)
+    check_progress_date = models.DateField(null=True, blank=True)
+    full_name = models.TextField(null=True,blank=True)
+    
+    user = models.ForeignKey(
+        VoterUserMaster,
+        db_column="user_id",
+        on_delete=models.DO_NOTHING,
+        null=True,
+        blank=True
+    )
 
     class Meta:
         db_table = "voter_list"
         managed = False
         unique_together = ("sr_no", "ward_no")
-        ordering = ["voter_list_id"]
 
     def __str__(self):
         return str(self.voter_id)
@@ -232,39 +279,42 @@ class VoterRelationshipDetails(models.Model):
     def __str__(self):
         return f"{self.voter.voter_list_id} - {self.relation_with_voter} -> {self.related_voter.voter_list_id}"
 
-class VoterUserMaster(models.Model):
-    user_id = models.AutoField(primary_key=True)
 
-    first_name = models.TextField(null=True, blank=True)
-    last_name = models.TextField(null=True, blank=True)
+    
+class ActivityLog(models.Model):
+    log_id = models.AutoField(primary_key=True)
 
-    mobile_no = models.CharField(null=False, blank=False, validators=[mobile_validator])
-
-    password = models.TextField(null=True, blank=True)
-    confirm_password = models.TextField(null=True, blank=True)
-
-    role = models.ForeignKey(
-        Roles,
+    # FK → voter_user_master.user_id
+    user = models.ForeignKey(
+        VoterUserMaster,
         on_delete=models.DO_NOTHING,
-        db_column="role_id", 
+        db_column="user_id",
+        null=True,
+        blank=True
     )
 
-    created_by = models.IntegerField(null=True, blank=True)
-    created_date = models.DateTimeField(auto_now_add=True)
+    action = models.CharField(max_length=255, null=True, blank=True)
+    description = models.TextField(null=True, blank=True)
+    ip_address = models.CharField(max_length=50, null=True, blank=True)
+    
+    voter = models.ForeignKey(
+        VoterList,
+        on_delete=models.DO_NOTHING,
+        db_column="voter_list_id",
+        null= True,
+        blank= True
+    )
 
-    updated_by = models.IntegerField(null=True, blank=True)
-    updated_date = models.DateTimeField(null=True, blank=True)
+    # JSON fields for tracking changed data
+    old_data = models.JSONField(null=True, blank=True)
+    new_data = models.JSONField(null=True, blank=True)
 
-    deleted_by = models.IntegerField(null=True, blank=True)
-    deleted_date = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        db_table = "voter_user_master"
+        db_table = "voter_activity_log"   # TABLE NAME IN DB
+        managed = False               # You want Django to create/manage this table
+        
 
     def __str__(self):
-        return f"{self.first_name or ''} {self.last_name or ''} - {self.mobile_no}"
-    
-    @property
-    def id(self):
-        return self.user_id
-    
+        return f"{self.action} by User {self.user_id}"
