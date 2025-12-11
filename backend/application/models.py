@@ -178,15 +178,6 @@ class VoterList(models.Model):
         db_table = "voter_list"
         managed = False
         unique_together = ("sr_no", "ward_no")
-        ordering = ["voter_list_id"]
-
-    def save(self, *args, **kwargs):
-        # Save today's date when check_progress is turned True for first time
-        if self.check_progress and not self.check_progress_date:
-            self.check_progress_date = timezone.now().date()
-
-        super().save(*args, **kwargs)
-
 
     def __str__(self):
         return str(self.voter_id)
