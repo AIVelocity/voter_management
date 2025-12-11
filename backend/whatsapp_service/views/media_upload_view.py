@@ -1,3 +1,4 @@
+import os
 import mimetypes
 import urllib.parse
 import requests
@@ -7,37 +8,65 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from ..utils.s3_integration import upload_to_s3
 
-Upload_Url = settings.UPLOAD_URL
-token = settings.ACCESS_TOKEN
+Upload_Url = getattr(settings, "UPLOAD_URL", None)
+token = getattr(settings, "ACCESS_TOKEN", None)
 ALLOWED_MEDIA_TYPES = {"image", "audio", "video", "document"}
 
+# Limits (bytes)
+MB = 1024 * 1024
+LIMITS = {
+    "image": 5 * MB,      # images: 5 MB
+    "audio": 16 * MB,     # audio: 16 MB
+    "video": 16 * MB,     # video: 16 MB
+    "document": 100 * MB, # documents: 100 MB
+}
+
+# Allowed extensions and a small set of mime-types to validate (not exhaustive but practical)
+ALLOWED_EXTENSIONS = {
+    "image": {"jpeg", "jpg", "png"},
+    "audio": {"aac", "amr", "mp3", "m4a", "ogg"},
+    "video": {"mp4", "3gp", "3gpp"},
+    "document": {"txt", "pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx", "odt", "ods", "odp"},
+}
+
+# Helpful mapping of common mime -> ext fallback
+COMMON_MIME_TO_EXT = {
+    "image/jpeg": "jpg",
+    "image/png": "png",
+    "audio/aac": "aac",
+    "audio/amr": "amr",
+    "audio/mpeg": "mp3",
+    "audio/mp4": "m4a",
+    "audio/ogg": "ogg",
+    "video/mp4": "mp4",
+    "video/3gpp": "3gp",
+    "application/pdf": "pdf",
+    "text/plain": "txt",
+    "application/msword": "doc",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "docx",
+    "application/vnd.ms-excel": "xls",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": "xlsx",
+    "application/vnd.ms-powerpoint": "ppt",
+    "application/vnd.openxmlformats-officedocument.presentationml.presentation": "pptx",
+}
+
+def _bytes_human(n: int) -> str:
+    if n >= MB:
+        return f"{round(n / MB)} MB"
+    return f"{n} bytes"
 
 @csrf_exempt
 @require_http_methods(["POST"])
 def upload_media(request):
     """
     Upload media file to WhatsApp Cloud and optionally mirror to S3.
-    Expects multipart/form-data with:
-      - file: file to upload
-      - media_type: one of image/audio/video/document (optional, defaults to 'image')
-    Returns JSON:
-      {
-        "status": True,
-        "media_type": "image",
-        "media_id": "<whatsapp_media_id>",
-        "media_url": "<s3_or_none>",
-        "whatsapp_response": {...}
-      }
+    Performs pre-upload validation (type + size) and returns friendly errors.
     """
-    # Basic validations
     if not Upload_Url:
-        return JsonResponse({"status": False, "message": "WHATSAPP upload URL not configured (WHATSAPP_UPLOAD_URL/UPLOAD_URL)"}, status=500)
-
-    
+        return JsonResponse({"status": False, "message": "WHATSAPP upload URL not configured (UPLOAD_URL)"}, status=500)
     if not token:
         return JsonResponse({"status": False, "message": "ACCESS_TOKEN not configured in settings"}, status=500)
 
-    # Get file
     upload_file = request.FILES.get("file")
     if not upload_file:
         return JsonResponse({"status": False, "message": "file (multipart) is required"}, status=400)
@@ -46,26 +75,77 @@ def upload_media(request):
     if media_type not in ALLOWED_MEDIA_TYPES:
         return JsonResponse({"status": False, "message": f"Invalid media_type. Allowed: {', '.join(ALLOWED_MEDIA_TYPES)}"}, status=400)
 
-    # Guess mime type
+    # Basic file metadata
     filename = getattr(upload_file, "name", "upload")
-    mime_type = mimetypes.guess_type(filename)[0] or upload_file.content_type or "application/octet-stream"
+    size = getattr(upload_file, "size", None)
+    content_type = getattr(upload_file, "content_type", None) or mimetypes.guess_type(filename)[0] or ""
 
-    # Build multipart payload for WhatsApp Cloud API
-    files = {
-        "file": (filename, upload_file.read(), mime_type),
-    }
-    # Some providers accept the type as part of multipart non-file fields
-    data = {
-        "type": media_type,
-        "messaging_product": "whatsapp"
-    }
+    # Determine extension (normalize)
+    _, ext = os.path.splitext(filename)
+    ext = ext.lower().lstrip(".")  # e.g. "jpg"
 
-    headers = {
-        "Authorization": f"Bearer {token}"
-    }
+    # If ext missing, try guessing from mime
+    if not ext and content_type:
+        ext = COMMON_MIME_TO_EXT.get(content_type.split(";")[0].strip(), "")
+
+    # Validate size
+    max_allowed = LIMITS.get(media_type)
+    if size is None:
+        # best-effort: try reading to determine size (but avoid full read for very large files)
+        try:
+            # .size should normally be available; fallback to len(read())
+            cur = upload_file.read()
+            size = len(cur)
+            # rewind for later usage
+            try:
+                upload_file.seek(0)
+            except Exception:
+                pass
+        except Exception:
+            size = None
+
+    if max_allowed and size is not None and size > max_allowed:
+        return JsonResponse({
+            "status": False,
+            "message": f"File too large for {media_type}. Maximum allowed is {_bytes_human(max_allowed)}; uploaded file is {_bytes_human(size)}."
+        }, status=400)
+
+    # Validate extension / mime for media_type
+    allowed_exts = ALLOWED_EXTENSIONS.get(media_type, set())
+    # Normalise some common alias extensions
+    if ext == "jpeg":
+        ext_check = "jpg"
+    else:
+        ext_check = ext
+
+    # For images we also allow "jpg" when ext is "jpeg"
+    if not ext_check:
+        # Unknown extension: check mime_type fallback
+        mime_main = content_type.split(";")[0].strip().lower()
+        ext_guess = COMMON_MIME_TO_EXT.get(mime_main, "")
+        ext_check = ext_guess
+
+    if ext_check and ext_check not in allowed_exts:
+        return JsonResponse({
+            "status": False,
+            "message": f"Invalid file type for {media_type}. Allowed extensions: {', '.join(sorted(allowed_exts))}. Uploaded file extension: '{ext or '(none)'}'."
+        }, status=400)
+
+    # Special-case: images must be 8-bit RGB/RGBA — we can't check color depth server-side easily,
+    # so we only check extension and size. If WhatsApp rejects, we return their error message below.
+
+    # Rewind file pointer before sending
+    try:
+        upload_file.seek(0)
+    except Exception:
+        pass
+
+    # Build multipart for WhatsApp
+    files = {"file": (filename, upload_file.read(), content_type or "application/octet-stream")}
+    data = {"type": media_type, "messaging_product": "whatsapp"}
+    headers = {"Authorization": f"Bearer {token}"}
 
     try:
-        # send to WhatsApp upload endpoint
         resp = requests.post(Upload_Url, headers=headers, files=files, data=data, timeout=60)
     except requests.RequestException as exc:
         return JsonResponse({"status": False, "message": f"Upload request failed: {str(exc)}"}, status=500)
@@ -77,60 +157,62 @@ def upload_media(request):
         resp_json = {"raw_text": getattr(resp, "text", "")}
 
     if resp.status_code >= 400:
+        # Provide WhatsApp's error in natural language if possible
+        err = resp_json.get("error") if isinstance(resp_json, dict) else None
+        if isinstance(err, dict):
+            details = err.get("error_data") or {}
+            detail_msg = details.get("details") or err.get("message") or resp_json
+            # For clarity, return small, user-friendly sentence
+            user_msg = f"WhatsApp upload failed: {detail_msg}"
+        else:
+            user_msg = f"WhatsApp upload failed (HTTP {resp.status_code})"
         return JsonResponse({
             "status": False,
-            "message": "WhatsApp upload failed",
+            "message": user_msg,
             "http_status": resp.status_code,
             "whatsapp_response": resp_json
         }, status=500)
 
-    # Typical Cloud API returns {"id": "<media_id>"} but vary by provider — try safe reads
+    # Extract WA media id
     wa_media_id = None
     if isinstance(resp_json, dict):
-        # direct id
         wa_media_id = resp_json.get("id")
-
-        # media: [ { "id": ... } ]
         if not wa_media_id:
             media = resp_json.get("media")
-            if isinstance(media, list) and len(media) > 0:
+            if isinstance(media, list) and media:
                 wa_media_id = media[0].get("id")
-
-        # messages: [ { "id": ... } ] (some endpoints return messages array)
         if not wa_media_id:
             messages = resp_json.get("messages")
-            if isinstance(messages, list) and len(messages) > 0:
+            if isinstance(messages, list) and messages:
                 wa_media_id = messages[0].get("id")
+
     if not wa_media_id:
-        # If we can't find ID, still return entire whatsapp response
         return JsonResponse({
             "status": False,
             "message": "Upload succeeded but response did not contain media id",
             "whatsapp_response": resp_json
         }, status=500)
 
-    # Optionally mirror uploaded file to S3 (so you keep a public/archival copy). This helper returns a URL or None.
-    try:
-        # rewind file pointer to start (we read above). If you prefer to upload original file object, use upload_file
-        # We will upload using the original InMemoryUploadedFile or TemporaryUploadedFile; ensure pointer is reset.
-        # Here we'll attempt to get original file back from request.FILES for S3 helper.
-        upload_file_for_s3 = request.FILES.get("file")
-        media_url = None
+    # Mirror to S3 (optional) — make sure to rewind first
+    s3_error = None
+    media_url = None
+    upload_file_for_s3 = request.FILES.get("file")
+    if upload_file_for_s3:
         try:
+            try:
+                upload_file_for_s3.seek(0)
+            except Exception:
+                pass
             media_url = upload_to_s3(upload_file_for_s3, filename)
         except Exception as e:
-            # don't fail the whole API if S3 upload fails; include error in response
             media_url = None
             s3_error = str(e)
-        else:
-            s3_error = None
-    except Exception as e:
-        media_url = None
-        s3_error = str(e)
 
-    # strip query params from media_url if present
     if media_url:
-        media_url = urllib.parse.urlsplit(media_url)._replace(query="").geturl()
+        try:
+            media_url = urllib.parse.urlsplit(media_url)._replace(query="").geturl()
+        except Exception:
+            pass
 
     resp_payload = {
         "status": True,

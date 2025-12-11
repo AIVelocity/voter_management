@@ -303,6 +303,8 @@ def send_document(request):
 
     data = parse_request_body(request)
     media_id = data.get("media_id")
+    media_url=data.get("media_url")
+    print("media_url",media_url)
     if not media_id:
         return JsonResponse({"status": False, "message": "media_id required for document"}, status=400)
 
@@ -348,7 +350,7 @@ def send_document(request):
                                         sender_type=sender_type,
                                         sender_id=sender_id,
                                         media_id=media_id,
-                                        media_url=data.get("media_url"),
+                                        media_url=media_url,
                                         reply_to_message_id=reply_to)
             results.append({
                 "recipient_voter_list_id": getattr(voter, "voter_list_id", None),

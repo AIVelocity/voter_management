@@ -120,7 +120,24 @@ def handle_incoming_messages(messages, contacts=None):
             raw_from = msg.get("from")
             msg_type = msg.get("type") or "text"
 
-            # extract contact name (if provided in contacts)
+            # --- handle reaction messages by converting to text (emoji) ---
+            text_body = None  # default
+            # If it's a reaction, extract emoji and optionally the reacted-to message id
+            if msg_type == "reaction":
+                reaction = msg.get("reaction") or {}
+                emoji = reaction.get("emoji")
+                reacted_message_id = reaction.get("message_id")
+                if emoji:
+                    # store emoji as a text message
+                    msg_type = "text"
+                    text_body = emoji
+                else:
+                    msg_type = "text"
+                    text_body = "[reaction]"
+                reply_to_db_id = _resolve_reply_to_db_id(reacted_message_id) if reacted_message_id else None
+            else:
+                reply_to_db_id = None
+
             contact_name = None
             if contacts:
                 try:
@@ -128,12 +145,10 @@ def handle_incoming_messages(messages, contacts=None):
                 except Exception:
                     contact_name = None
 
-            # text
-            text_body = None
-            if msg_type == "text":
+            # text body for normal text messages — only set if not already set (reaction case)
+            if msg_type == "text" and text_body is None:
                 text_body = (msg.get("text") or {}).get("body")
-
-            # # location
+                # # location
             # latitude = longitude = location_name = location_address = None
             # if msg_type == "location":
             #     loc = msg.get("location") or {}
