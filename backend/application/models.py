@@ -1,6 +1,6 @@
 from django.db import models
 from django.core.validators import RegexValidator
-
+from django.utils import timezone
 
 mobile_validator = RegexValidator(
     regex=r'^[679]\d{9}$',
@@ -171,12 +171,22 @@ class VoterList(models.Model):
     )
 
     ward_no = models.IntegerField()
+    check_progress = models.BooleanField(null=True,blank=True)
+    check_progress_date = models.DateField(null=True, blank=True)
 
     class Meta:
         db_table = "voter_list"
         managed = False
         unique_together = ("sr_no", "ward_no")
         ordering = ["voter_list_id"]
+
+    def save(self, *args, **kwargs):
+        # Save today's date when check_progress is turned True for first time
+        if self.check_progress and not self.check_progress_date:
+            self.check_progress_date = timezone.now().date()
+
+        super().save(*args, **kwargs)
+
 
     def __str__(self):
         return str(self.voter_id)
@@ -260,6 +270,7 @@ class VoterUserMaster(models.Model):
 
     class Meta:
         db_table = "voter_user_master"
+        managed = False
 
     def __str__(self):
         return f"{self.first_name or ''} {self.last_name or ''} - {self.mobile_no}"
@@ -300,7 +311,8 @@ class ActivityLog(models.Model):
 
     class Meta:
         db_table = "voter_activity_log"   # TABLE NAME IN DB
-        managed = True               # You want Django to create/manage this table
+        managed = False               # You want Django to create/manage this table
+        
 
     def __str__(self):
         return f"{self.action} by User {self.user_id}"
