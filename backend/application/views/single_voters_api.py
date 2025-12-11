@@ -1,10 +1,46 @@
 from django.http import JsonResponse
-from ..models import VoterList,VoterTag
+from ..models import VoterList,VoterTag,ActivityLog,VoterUserMaster
 from .view_utils import save_relation,get_family_from_db
+from rest_framework_simplejwt.tokens import AccessToken
+from django.db.models import Q
+from django.utils import timezone
+import pytz
+
+
+ist = pytz.timezone("Asia/Kolkata")
+
+def make_aware_if_needed(dt):
+    if dt is None:
+        return None
+
+    # If already aware → return as-is
+    if timezone.is_aware(dt):
+        return dt
+
+    # Make it aware in UTC
+    return timezone.make_aware(dt, timezone=pytz.UTC)
+
+def format_indian_datetime(dt):
+    if not dt:
+        return None
+    ist = pytz.timezone("Asia/Kolkata")
+
+    # First make dt timezone aware in UTC
+    dt = make_aware_if_needed(dt)
+
+    dt_ist = dt.astimezone(ist)
+    return dt_ist.strftime("%d-%m-%Y %I:%M %p")
+
 
 # single voter info
 def single_voters_info(request, voter_list_id):
 
+    if request.method != "GET":
+        return JsonResponse({
+            "status" :False,
+            "message" : "Get method required"
+        },status = 405)
+    
     try:
         voter = VoterList.objects.select_related("tag_id").get(
             voter_list_id=voter_list_id
@@ -15,6 +51,26 @@ def single_voters_info(request, voter_list_id):
             "message": "Voter not found"
         }, status=404)
 
+    
+    user = None
+    user_id = None
+    
+    try:
+        auth_header = request.headers.get("Authorization")
+    
+        if auth_header and auth_header.startswith("Bearer "):
+            token_str = auth_header.split(" ")[1]
+            token = AccessToken(token_str)
+            user_id = token.get("user_id")
+    except Exception:
+        pass
+    
+    # user = None
+    if user_id:
+        try:
+            user = VoterUserMaster.objects.get(user_id=user_id)
+        except VoterUserMaster.DoesNotExist:
+            user = None
 
     # ---------------- HELPERS ----------------
 
@@ -285,6 +341,58 @@ def single_voters_info(request, voter_list_id):
             "voter_list_id": s["voter_list_id"],
         })
 
+    lasted_log = ActivityLog.objects.filter(
+            voter_id=voter_list_id
+        ).filter(
+            Q(old_data__has_key='tag_id') | Q(new_data__has_key='tag_id')
+        ).order_by('-created_at').first()
+        
+    lasted_log_comment = ActivityLog.objects.filter(
+            voter_id=voter_list_id
+        ).filter(
+            Q(old_data__has_key='comments') | Q(new_data__has_key='comments')
+        ).order_by('-created_at').first()
+
+    
+    last_modified = []
+
+    if lasted_log and lasted_log.user:
+        last_modified = ({
+            "user_id" : lasted_log.user.user_id,
+            "name" : f"{lasted_log.user.last_name} {lasted_log.user.first_name}",
+            "mobile-no" : lasted_log.user.mobile_no,
+            "action" : lasted_log.description,
+            "changed_at" : lasted_log.created_at,
+            "old_data" : lasted_log.old_data,
+            "new_data" : lasted_log.new_data,
+        })
+        
+# ---- GET LAST UPDATED LOGS ----
+    tag_last_updated_by = "NA"
+    comment_last_updated_by = "NA"
+    tag_dt = None
+    comment_dt = None
+    
+    if user and user.role.role_name == "Admin":
+    
+        # TAG LOG
+        if lasted_log and lasted_log.user_id:
+            tag_last_updated_by = f"{lasted_log.user.last_name} {lasted_log.user.first_name}".strip()
+            tag_dt = lasted_log.created_at
+    
+        # COMMENT LOG
+        if lasted_log_comment and lasted_log_comment.user_id:
+            comment_last_updated_by = f"{lasted_log_comment.user.last_name} {lasted_log_comment.user.first_name}".strip()
+            comment_dt = lasted_log_comment.created_at
+    
+    
+    # ---- CONVERT TIMEZONES SAFELY ----
+    tag_dt = make_aware_if_needed(tag_dt)
+    comment_dt = make_aware_if_needed(comment_dt)
+    
+    formatted_tag_time = format_indian_datetime(tag_dt)
+    formatted_comment_time = format_indian_datetime(comment_dt)
+        
     data = {
         "voter_list_id": voter.voter_list_id,
         "voter_name_eng": voter.voter_name_eng,
@@ -330,7 +438,14 @@ def single_voters_info(request, voter_list_id):
         # "husband": family["husband"],
         "siblings": family["siblings"],
         "children": family["children"], 
-
+        # "last_modified" : last_modified,
+        
+        "check_progress" : voter.check_progress,
+        "tag_last_updated_by": tag_last_updated_by,
+        "tag_last_updated_at": formatted_tag_time,
+        "comment_last_updated_by": comment_last_updated_by,
+        "comment_last_updated_at": formatted_comment_time
+        
     }
 
     return JsonResponse({"status": True, "data": data})

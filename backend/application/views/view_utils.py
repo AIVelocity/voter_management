@@ -1,4 +1,28 @@
-from ..models import VoterRelationshipDetails
+from ..models import VoterRelationshipDetails,ActivityLog
+
+
+def log_user_update(user, action, description, changed_fields, ip,voter_list_id):
+    """
+    changed_fields = {
+        "mobile_no": {"old": "1111111111", "new": "9999999999"},
+        "address_line1": {"old": "Old Address", "new": "New Address"}
+    }
+    """
+    if not changed_fields:
+        return  # No changes → no logs
+
+    ActivityLog.objects.create(
+        user=user,
+        action=action,
+        description=description,
+        old_data={k: v["old"] for k, v in changed_fields.items()},
+        new_data={k: v["new"] for k, v in changed_fields.items()},
+        ip_address=ip,
+        voter_id=voter_list_id
+
+    )
+
+
 
 def save_relation(voter, relation, related_voter_id):
     """
