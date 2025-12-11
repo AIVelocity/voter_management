@@ -61,6 +61,7 @@ def update_voter(request, voter_list_id):
         track("location", body.get("location", voter.location))
         track("comments", body.get("comments", voter.comments))
         track("check_progress",body.get("check_progress",voter.check_progress))
+        track("occupation",body.get("occupation",voter.occupation))
 
         # TAG update
         tag_id = body.get("tag_id")
