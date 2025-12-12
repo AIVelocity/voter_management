@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 from pathlib import Path
 from dotenv import load_dotenv
 import os
+from datetime import timedelta
 load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -32,7 +33,18 @@ DEBUG = True
 
 ALLOWED_HOSTS = ["172.20.1.101","59.95.99.182","127.0.0.1", "localhost", "172.20.1.155", ".ngrok-free.app", ".ngrok-free.dev"]
 
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(hours=18),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=0),     # effectively disable refresh
+    "AUTH_HEADER_TYPES": ("Bearer",),
+}
+
 # Application definition
+REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": (
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
+    )
+}
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -42,7 +54,8 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'application',
-    'whatsapp_service'
+    'whatsapp_service',
+    'rest_framework'
 ]
 
 MIDDLEWARE = [
