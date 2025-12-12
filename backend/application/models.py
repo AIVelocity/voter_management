@@ -109,7 +109,8 @@ class VoterUserMaster(models.Model):
     role = models.ForeignKey(
         Roles,
         on_delete=models.DO_NOTHING,
-        db_column="role_id"
+        db_column="role_id",
+        null=True
     )
 
     created_by = models.IntegerField(null=True, blank=True)
@@ -172,6 +173,8 @@ class VoterList(models.Model):
     badge = models.TextField(null=True, blank=True)
     location = models.TextField(null=True, blank=True)
 
+    # occupation = models.CharField(null=True,blank=True)
+    
     # FIXED TYPES
     occupation = models.ForeignKey(
         Occupation,
@@ -181,8 +184,11 @@ class VoterList(models.Model):
         blank=True
     )
 
-    cast = models.IntegerField(
+    # cast = models.TextField(null=True,blank=True)
+    cast = models.ForeignKey(
+        Caste,
         db_column="cast",
+        on_delete=models.DO_NOTHING,
         null=True,
         blank=True
     )
