@@ -24,9 +24,9 @@ def filter(request):
     gender = request.GET.get("gender")
 
     # STARTS WITH filters
-    first_starts = request.GET.get("first_starts")
-    middle_starts = request.GET.get("middle_starts")
-    last_starts = request.GET.get("last_starts")
+    # first_starts = request.GET.get("first_starts")
+    # middle_starts = request.GET.get("middle_starts")
+    # last_starts = request.GET.get("last_starts")
 
     # ENDS WITH filters
     first_ends = request.GET.get("first_ends")
@@ -91,13 +91,19 @@ def filter(request):
         
     # Field filters
     if first_name:
-        qs = qs.filter(first_name__icontains=first_name)
+        # qs = qs.filter(first_name__icontains=first_name)
+        qs = qs.filter(first_name__istartswith=first_name)
+        
 
     if middle_name:
-        qs = qs.filter(middle_name__icontains=middle_name)
+        # qs = qs.filter(middle_name__icontains=middle_name)
+        qs = qs.filter(middle_name__istartswith=middle_name)
+        
 
     if last_name:
-        qs = qs.filter(last_name__icontains=last_name)
+        # qs = qs.filter(last_name__icontains=last_name)
+        qs = qs.filter(last_name__istartswith=last_name)
+
 
     if age_max:
         qs = qs.filter(age_eng__lte=age_max)
@@ -118,14 +124,14 @@ def filter(request):
         qs = qs.filter(gender_eng__iexact=gender)
         
         # Apply STARTS WITH filters
-    if first_starts:
-        qs = qs.filter(first_name__istartswith=first_starts)
+    # if first_starts:
+    #     qs = qs.filter(first_name__istartswith=first_starts)
     
-    if middle_starts:
-        qs = qs.filter(middle_name__istartswith=middle_starts)
+    # if middle_starts:
+    #     qs = qs.filter(middle_name__istartswith=middle_starts)
     
-    if last_starts:
-        qs = qs.filter(last_name__istartswith=last_starts)
+    # if last_starts:
+    #     qs = qs.filter(last_name__istartswith=last_starts)
     
     # Apply ENDS WITH filters
     if first_ends:
