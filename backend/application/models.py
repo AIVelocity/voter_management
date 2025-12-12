@@ -109,7 +109,8 @@ class VoterUserMaster(models.Model):
     role = models.ForeignKey(
         Roles,
         on_delete=models.DO_NOTHING,
-        db_column="role_id"
+        db_column="role_id",
+        null=True
     )
 
     created_by = models.IntegerField(null=True, blank=True)
