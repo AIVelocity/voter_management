@@ -136,6 +136,7 @@ def filter(request):
     
     if last_ends:
         qs = qs.filter(last_name__iendswith=last_ends)
+        
     # Pagination
     paginator = Paginator(qs, size)
     page_obj = paginator.get_page(page)
