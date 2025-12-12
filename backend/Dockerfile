@@ -41,7 +41,7 @@ COPY . .
 EXPOSE 8086
 
 CMD ["gunicorn", "voter_mang_sys.wsgi:application", \
-     "--bind", "0.0.0.0:8087", \
+     "--bind", "0.0.0.0:8086", \
      "--workers", "4", \
      "--threads", "2", \
      "--timeout", "120"]
