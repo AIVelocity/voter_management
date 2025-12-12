@@ -5,7 +5,7 @@ from .voters_info_api import voters_info
 from .add_voter_api import add_voter
 from .db_list_api import tags ,index , roles
 from .add_relationship_api import add_relation,remove_relation
-from .dashboard_api import dashboard
+from .admin_dashboard_api import dashboard,admin_allocation_panel
 from .filter_api import filter
 from .caste_religion_api import caste_dropdown,religion_dropdown
 from .occupation_api import occupation_dropdown
@@ -30,5 +30,6 @@ __all__ = [
     "religion_dropdown",
     "occupation_dropdown",
     "registration",
-    "id_validation"
+    "id_validation",
+    "admin_allocation_panel"
 ]
