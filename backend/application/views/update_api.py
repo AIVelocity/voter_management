@@ -1,5 +1,5 @@
 from django.http import JsonResponse
-from ..models import VoterList,VoterTag,VoterUserMaster
+from ..models import VoterList,VoterTag,VoterUserMaster,Occupation,Religion,Caste
 from django.views.decorators.csrf import csrf_exempt
 import json
 from django.db import IntegrityError
@@ -63,9 +63,54 @@ def update_voter(request, voter_list_id):
         track("location", body.get("location", voter.location))
         track("comments", body.get("comments", voter.comments))
         track("check_progress",body.get("check_progress",voter.check_progress))
-        track("occupation",body.get("occupation",voter.occupation))
-        track("cast",body.get("cast",voter.cast))
-        
+        track("organisation", body.get("organisation",voter.organisation))
+        # OCCUPATION update (ForeignKey)
+        occupation = body.get("occupation")
+        if occupation is not None:
+            try:
+                new_occupation = Occupation.objects.get(occupation_id=occupation)
+
+                if voter.occupation != new_occupation:
+                    changed_fields["occupation"] = {
+                        "old": voter.occupation.occupation_id if voter.occupation else None,
+                        "new": new_occupation.occupation_id
+                    }
+                    voter.occupation = new_occupation
+
+            except Occupation.DoesNotExist:
+                return JsonResponse({"status": False, "message": "Invalid occupation"}, status=400)
+
+        # RELIGION update (ForeignKey)
+        religion_id = body.get("religion_id")
+        if religion_id is not None:
+            try:
+                new_religion = Religion.objects.get(religion_id=religion_id)
+
+                if voter.religion != new_religion:
+                    changed_fields["religion"] = {
+                        "old": voter.religion.religion_id if voter.religion else None,
+                        "new": new_religion.religion_id
+                    }
+                    voter.religion = new_religion
+
+            except Religion.DoesNotExist:
+                return JsonResponse({"status": False, "message": "Invalid religion_id"}, status=400)
+
+        # CAST update (ForeignKey)
+        caste_id = body.get("cast")
+        if caste_id is not None:
+            try:
+                new_caste = Caste.objects.get(caste_id=caste_id)
+
+                if voter.cast != new_caste:
+                    changed_fields["cast"] = {
+                        "old": voter.cast.caste_id if voter.cast else None,
+                        "new": new_caste.caste_id
+                    }
+                    voter.cast = new_caste
+
+            except Caste.DoesNotExist:
+                return JsonResponse({"status": False, "message": "Invalid cast"}, status=400)
 
         # TAG update
         tag_id = body.get("tag_id")

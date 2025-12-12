@@ -173,23 +173,25 @@ class VoterList(models.Model):
     badge = models.TextField(null=True, blank=True)
     location = models.TextField(null=True, blank=True)
 
-    occupation = models.CharField(null=True,blank=True)
+    # occupation = models.CharField(null=True,blank=True)
     
     # FIXED TYPES
-    # occupation = models.ForeignKey(
-    #     Occupation,
-    #     db_column="occupation",
-    #     on_delete=models.DO_NOTHING,
-    #     null=True,
-    #     blank=True
-    # )
+    occupation = models.ForeignKey(
+        Occupation,
+        db_column="occupation",
+        on_delete=models.DO_NOTHING,
+        null=True,
+        blank=True
+    )
 
-    cast = models.TextField(null=True,blank=True)
-    # cast = models.IntegerField(
-    #     db_column="cast",
-    #     null=True,
-    #     blank=True
-    # )
+    # cast = models.TextField(null=True,blank=True)
+    cast = models.ForeignKey(
+        Caste,
+        db_column="cast",
+        on_delete=models.DO_NOTHING,
+        null=True,
+        blank=True
+    )
 
     organisation = models.TextField(null=True, blank=True)
     comments = models.TextField(null=True, blank=True)
