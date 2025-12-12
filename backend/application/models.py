@@ -101,7 +101,7 @@ class VoterUserMaster(models.Model):
     first_name = models.TextField(null=True, blank=True)
     last_name = models.TextField(null=True, blank=True)
 
-    mobile_no = models.TextField(null=False,validators=[mobile_validator])
+    mobile_no = models.TextField(null=False,validators=[mobile_validator],unique=True)
 
     password = models.TextField(null=True, blank=True)
     confirm_password = models.TextField(null=True, blank=True)
@@ -113,7 +113,15 @@ class VoterUserMaster(models.Model):
         null=True
     )
 
-    created_by = models.IntegerField(null=True, blank=True)
+    created_by = models.ForeignKey(
+    "VoterUserMaster",
+    on_delete=models.SET_NULL,
+    null=True,
+    blank=True,
+    db_column="created_by",
+    related_name="created_karyakartas"
+    )
+
     created_date = models.DateTimeField(auto_now_add=True)
 
     updated_by = models.IntegerField(null=True, blank=True)
@@ -233,6 +241,17 @@ class VoterList(models.Model):
 
     def __str__(self):
         return str(self.voter_id)
+    
+    def save(self, *args, **kwargs):
+        # If check_progress becomes True AND no date set → set today
+        if self.check_progress and not self.check_progress_date:
+            self.check_progress_date = timezone.now().date()
+
+        # If someone unchecks the status → clear the date
+        if not self.check_progress:
+            self.check_progress_date = None
+
+        super().save(*args, **kwargs)
 
 
 class VoterRelationshipDetails(models.Model):

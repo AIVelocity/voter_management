@@ -14,13 +14,14 @@ urlpatterns = [
     path("roles/",views.roles,name="roles"),# roles 
     path("voters/relation_add/",views.add_relation,name="add_relation"),# voter relation add 
     path("voters/relation_remove/",views.remove_relation,name="remove_relation"),# voter relation remove
-    path("admin/dashboard/",views.dashboard,name="dashboard"),# dashboard 
     path("voters/filter/",views.filter,name="filter"),# filter 
     path("dropdown/religion/",views.religion_dropdown,name="religion_dropdown"),
     path("dropdown/caste/",views.caste_dropdown,name="caste_dropdown"),
     path("dropdown/occupation/",views.occupation_dropdown,name="occupation_dropdown"),
     path('registration/',views.registration,name="registration"),
     path("registration/login/",views.id_validation,name="id_validation"),
+    path("admin/dashboard/",views.dashboard,name="dashboard"),# dashboard 
+    path("admin/dashboard/allocated/",views.admin_allocation_panel,name="allocated_screen"),
 ]
 
 # POST /api/voter/relation/add
