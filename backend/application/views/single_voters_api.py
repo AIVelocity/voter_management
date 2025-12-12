@@ -1,5 +1,5 @@
 from django.http import JsonResponse
-from ..models import VoterList,VoterTag,ActivityLog,VoterUserMaster
+from ..models import VoterList,VoterTag,ActivityLog,VoterUserMaster,Caste,Religion,Occupation
 from .view_utils import save_relation,get_family_from_db
 from rest_framework_simplejwt.tokens import AccessToken
 from django.db.models import Q
@@ -392,7 +392,9 @@ def single_voters_info(request, voter_list_id):
     
     formatted_tag_time = format_indian_datetime(tag_dt)
     formatted_comment_time = format_indian_datetime(comment_dt)
-        
+   
+
+
     data = {
         "voter_list_id": voter.voter_list_id,
         "voter_name_eng": voter.voter_name_eng,
@@ -422,9 +424,14 @@ def single_voters_info(request, voter_list_id):
             "id" :voter.tag_id.tag_id if voter.tag_id else None
                 },
         
-        "occupation":voter.occupation,
-        "religion_id" : voter.religion.religion_id if voter.religion else None,
-        "cast": voter.cast,
+        "occupation": voter.occupation.occupation_name if voter.occupation else None,
+        # "occupation": voter.occupation_id,
+
+        "cast": voter.cast.caste_name if voter.cast else None,
+        # "cast": voter.cast_id,
+
+        "religion_id" : voter.religion.religion_name if voter.religion else None,
+        # "cast": voter.cast,
         "organisation": voter.organisation,
         "comments" : voter.comments,
         
@@ -444,8 +451,21 @@ def single_voters_info(request, voter_list_id):
         "tag_last_updated_by": tag_last_updated_by,
         "tag_last_updated_at": formatted_tag_time,
         "comment_last_updated_by": comment_last_updated_by,
-        "comment_last_updated_at": formatted_comment_time
-        
+        "comment_last_updated_at": formatted_comment_time,
+        "caste_obj": {
+            "id": voter.cast_id,
+            "name": voter.cast.caste_name if voter.cast else None
+        },
+
+        "religion_obj": {
+            "id": voter.religion_id,
+            "name": voter.religion.religion_name if voter.religion else None
+        },
+
+        "occupation_obj": {
+            "id": voter.occupation_id,
+            "name": voter.occupation.occupation_name if voter.occupation else None
+        }
     }
 
     return JsonResponse({"status": True, "data": data})
