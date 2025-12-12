@@ -38,7 +38,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-EXPOSE 8086
+EXPOSE 8087
 
 CMD ["gunicorn", "voter_mang_sys.wsgi:application", \
      "--bind", "0.0.0.0:8087", \
