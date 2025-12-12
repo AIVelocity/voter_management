@@ -4,13 +4,13 @@ from django.conf import settings
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
-from ..utils.webhook_handler import handle_incoming_messages, handle_statuses
+from ..utils.webhook_handler import handle_incoming_messages, handle_statuses, parse_whatsapp_error
 
 logger = logging.getLogger(__name__)
 VERIFY_TOKEN = settings.VERIFY_TOKEN
 
 def ok_resp():
-    return JsonResponse({"status": True})
+    return JsonResponse({"status": True}, status=200)
 
 def error_resp(msg="error", status=400):
     return JsonResponse({"status": False, "message": msg}, status=status)
@@ -31,13 +31,11 @@ def verify_webhook(request):
 @csrf_exempt
 @require_http_methods(["POST"])
 def receive_webhook(request):
-    # single entry point for WhatsApp — parse and dispatch to handler funcs
     try:
         body = json.loads(request.body.decode("utf-8") or "{}")
-        print(body)
         logger.debug("Webhook body: %s", body)
     except json.JSONDecodeError:
-        logger.exception("Bad JSON")
+        logger.error("Bad JSON in webhook payload")
         return error_resp("Invalid JSON", status=400)
 
     entries = body.get("entry", [])
@@ -45,28 +43,34 @@ def receive_webhook(request):
         logger.debug("Empty entry")
         return ok_resp()
     
-    overall_results = {"statuses": [], "incoming": []}
+    overall_results = {"statuses": [], "incoming": [], "errors": []}
     for entry in entries:
-        changes = (entry.get("changes") or [])[:]
-        for change in changes:
+        for change in entry.get("changes", []):
             value = change.get("value", {}) or {}
 
             # Status updates
             statuses = value.get("statuses")
             if statuses:
-                res = handle_statuses(statuses)
-                overall_results["statuses"].append(res)
-                # statuses may be delivered separately from messages
+                try:
+                    res = handle_statuses(statuses)
+                    overall_results["statuses"].append({"ok": True, "result": res})
+                except Exception as exc:
+                    msg = parse_whatsapp_error({"error": {"message": str(exc)}})
+                    overall_results["statuses"].append({"ok": False, "error": msg})
                 continue
 
             # Incoming messages
             messages = value.get("messages") or []
             contacts = value.get("contacts") or []
             if messages:
-                res = handle_incoming_messages(messages, contacts=contacts)
-                overall_results["incoming"].append(res)
+                try:
+                    res = handle_incoming_messages(messages, contacts=contacts)
+                    overall_results["incoming"].append({"ok": True, "result": res})
+                except Exception as exc:
+                    msg = parse_whatsapp_error({"error": {"message": str(exc)}})
+                    overall_results["incoming"].append({"ok": False, "error": msg})
                 continue
 
-            logger.debug("Unhandled change value: %s", value)
+            overall_results.setdefault("unhandled", []).append(value)
 
     return ok_resp()
