@@ -233,6 +233,17 @@ class VoterList(models.Model):
 
     def __str__(self):
         return str(self.voter_id)
+    
+    def save(self, *args, **kwargs):
+        # If check_progress becomes True AND no date set → set today
+        if self.check_progress and not self.check_progress_date:
+            self.check_progress_date = timezone.now().date()
+
+        # If someone unchecks the status → clear the date
+        if not self.check_progress:
+            self.check_progress_date = None
+
+        super().save(*args, **kwargs)
 
 
 class VoterRelationshipDetails(models.Model):
