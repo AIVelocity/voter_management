@@ -392,7 +392,9 @@ def single_voters_info(request, voter_list_id):
     
     formatted_tag_time = format_indian_datetime(tag_dt)
     formatted_comment_time = format_indian_datetime(comment_dt)
-        
+   
+
+
     data = {
         "voter_list_id": voter.voter_list_id,
         "voter_name_eng": voter.voter_name_eng,
