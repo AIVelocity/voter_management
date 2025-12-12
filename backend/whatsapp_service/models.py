@@ -178,7 +178,7 @@ class VoterChatMessage(models.Model):
 class TemplateName(models.Model):
     id = models.AutoField(primary_key=True)
     name = models.CharField(max_length=150, unique=True)
-
+    template_language = models.CharField(max_length=20, default='en_US')
     class Meta:
         db_table = "template_names"
         ordering = ['name']

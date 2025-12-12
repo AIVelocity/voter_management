@@ -2,7 +2,7 @@ import logging
 import mimetypes
 import os
 from io import BytesIO
-
+import re
 from django.apps import apps
 from django.conf import settings
 from django.db import transaction
@@ -135,6 +135,14 @@ def handle_incoming_messages(messages, contacts=None):
                     msg_type = "text"
                     text_body = "[reaction]"
                 reply_to_db_id = _resolve_reply_to_db_id(reacted_message_id) if reacted_message_id else None
+            elif msg_type == "button":
+                button = msg.get("button") or {}
+                # Prefer the human visible button text, fallback to payload
+                btn_text = button.get("text") or button.get("payload") or ""
+                msg_type = "text"
+                text_body = btn_text
+                # context may be present separately; keep reply resolution below
+                reply_to_db_id = None
             else:
                 reply_to_db_id = None
 
@@ -257,3 +265,81 @@ def handle_incoming_messages(messages, contacts=None):
             saved.append({"error": str(e), "raw_msg": msg.get("id")})
 
     return {"saved": saved}
+
+
+
+logger = logging.getLogger(__name__)
+
+def parse_whatsapp_error(response_json) -> str:
+    """
+    Turn WhatsApp / Meta error JSON into a short human-readable message.
+
+    Examples handled:
+    - {"error": {"message": "...Session has expired...", "type": "OAuthException", "code": 190, "error_subcode": 463}}
+    - {"error": {"message": "Some other message", "code": 4}}
+    - deep nested / unexpected shapes -> fallback summary
+    """
+    try:
+        # typical location: {"error": {...}}
+        err = response_json.get("error") if isinstance(response_json, dict) else None
+        # Some responses put error inside whatsapp_response or nested keys
+        if not err:
+            # search nested dicts for an 'error' key
+            if isinstance(response_json, dict):
+                for v in response_json.values():
+                    if isinstance(v, dict) and "error" in v:
+                        err = v.get("error")
+                        break
+
+        if not err:
+            # no structured error found - stringify a short summary
+            short = str(response_json)
+            return f"WhatsApp API returned an unexpected response: {short[:300]}"
+
+        # Extract fields safely
+        msg = err.get("message") or err.get("error_message") or err.get("title") or ""
+        err_type = err.get("type") or err.get("error_user_title") or ""
+        code = err.get("code")
+        subcode = err.get("error_subcode")
+
+        # specific: expired access token (common)
+        if (err_type and "OAuthException" in err_type) or (isinstance(code, int) and code == 190) or ("expired" in (msg or "").lower()):
+            # try to find date/time in the provider message for clarity
+            date_match = None
+            if msg:
+                # crude extraction of a date/time substring (keeps the provider's text)
+                m = re.search(r"(on\s+[^.]+PST|on[^.]+UTC|on[^.]+GMT|on\s+\w+,\s*\d{1,2}-\w+-\d{2,4}[^.]*)", msg)
+                if m:
+                    date_match = m.group(0)
+            friendly = "Your WhatsApp access token has expired or is invalid. Please renew or re-generate the token in your Meta app (Facebook Developer/Business settings) and update the server configuration."
+            if date_match:
+                friendly += f" (Provider message: {date_match})"
+            return friendly
+
+        # rate limit / too many requests
+        if isinstance(code, int) and code in (4, 88, 1) or ("rate" in (msg or "").lower()):
+            return "WhatsApp API rate limit or throttling error. Retry after some time; consider implementing backoff."
+
+        # permission / auth errors
+        if isinstance(code, int) and (400 <= code < 500):
+            return f"Authentication/permission error from WhatsApp API: {msg or 'check credentials and permissions'}."
+
+        # server errors
+        if isinstance(code, int) and (500 <= code < 600):
+            return f"WhatsApp API server error: {msg or 'server failure (5xx)'}; retry later."
+
+        # Generic fallback
+        pieces = []
+        if err_type:
+            pieces.append(f"type={err_type}")
+        if code:
+            pieces.append(f"code={code}")
+        if subcode:
+            pieces.append(f"subcode={subcode}")
+        pieces_text = ", ".join(pieces)
+        fallback_msg = msg if msg else "Unknown error from WhatsApp API."
+        return f"{fallback_msg} ({pieces_text})" if pieces_text else fallback_msg
+
+    except Exception as e:
+        logger.exception("Failed to parse WhatsApp error payload: %s", e)
+        return "Unknown error from WhatsApp API (failed to parse provider response)."
