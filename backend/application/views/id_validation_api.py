@@ -37,23 +37,31 @@ def id_validation(request):
         if not check_password(password, user.password):
             return JsonResponse({"status": False, "message": "Invalid mobile number or password"}, status=401)
 
-        # -------- GENERATE ACCESS TOKEN ONLY --------
+        # -------- GENERATE ACCESS TOKEN --------
         access_token = str(AccessToken.for_user(user))
 
         # -------- USER NAME --------
-        first = user.first_name.capitalize() if user.first_name else ""
-        last = user.last_name.capitalize() if user.last_name else ""
+        first = (user.first_name or "").capitalize()
+        last = (user.last_name or "").capitalize()
         user_name = f"{first} {last}".strip()
+
+        # -------- ROLE (SAFE HANDLING) --------
+        if user.role:
+            role_name = user.role.role_name
+            role_id = user.role.role_id
+        else:
+            role_name = None
+            role_id = None
 
         # -------- SUCCESS --------
         return JsonResponse({
             "status": True,
             "access_token": access_token,
             "token_type": "Bearer",
-            # "expires_in_minutes": 60,
             "user_id": user.user_id,
-            "role": user.role.role_name if hasattr(user.role, "role_name") else user.role.role_id,
             "user_name": user_name,
+            "role_id": role_id,
+            "role_name": role_name,
             "message": "Login successful"
         })
 
