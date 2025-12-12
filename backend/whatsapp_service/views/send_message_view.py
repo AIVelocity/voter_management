@@ -4,7 +4,7 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from ..utils.send_messages_handlers import parse_request_body, _chunked, _clean_phone, get_recipients_from_request, send_whatapps_request
-
+from ..utils.webhook_handler import parse_whatsapp_error
 from application.models import VoterList
 from ..models import VoterChatMessage, TemplateName
 
@@ -19,7 +19,6 @@ country_code = "91"
 # --- Views that use chunking to obey provider rate limits ---
 @csrf_exempt
 def send_template(request):
-    
     if request.method != "POST":
         return JsonResponse({"status": False, "message": "Only POST allowed"}, status=405)
 
@@ -44,7 +43,6 @@ def send_template(request):
     if chunk_size <= 0:
         chunk_size = DEFAULT_CHUNK_SIZE
 
-    # Build a per-recipient list of payloads + voters
     tasks = []
     for v in recipients:
         phone = _clean_phone(getattr(v, "mobile_no", None))
@@ -56,11 +54,10 @@ def send_template(request):
             "recipient_type": "individual",
             "to": country_code + phone,
             "type": "template",
-            "template": {"name": template.name, "language": {"code": "en_US"}}
+            "template": {"name": template.name, "language": {"code": template.template_language}}
         }
         tasks.append((payload, v))
 
-    # Send tasks in chunks respecting provider limit
     results = []
     total = len(tasks)
     if total == 0:
@@ -69,26 +66,54 @@ def send_template(request):
     for chunk_index, chunk in enumerate(_chunked(tasks, chunk_size)):
         start_ts = time.time()
         for payload, voter in chunk:
-            res = send_whatapps_request(payload, voter,
-                                        message=template.name,
-                                        message_type="template",
-                                        sender_type=sender_type,
-                                        sender_id=sender_id,
-                                        reply_to_message_id=reply_to)
+            try:
+                res = send_whatapps_request(
+                    payload, voter,
+                    message=template.name,
+                    message_type="template",
+                    sender_type=sender_type,
+                    sender_id=sender_id,
+                    reply_to_message_id=reply_to
+                )
+            except Exception as exc:
+                res = {
+                    "ok": False,
+                    "http_status": 500,
+                    "whatsapp_response": None,
+                    "error": "Internal server error while sending message.",
+                    "db_message_id": None,
+                    "db_status": "failed"
+                }
+
+            wa_resp = res.get("whatsapp_response")
+            http_status = res.get("http_status") or 0
+
+            if http_status >= 400 or (isinstance(wa_resp, dict) and "error" in wa_resp):
+                if not res.get("error"):
+                    try:
+                        src = wa_resp if isinstance(wa_resp, dict) else {"error": {"message": str(wa_resp)}}
+                        res["error"] = parse_whatsapp_error(src)
+                    except Exception:
+                        res["error"] = "WhatsApp API returned an error."
+
+                if not isinstance(res["error"], str):
+                    res["error"] = str(res["error"])
+
             results.append({
                 "recipient_voter_list_id": getattr(voter, "voter_list_id", None),
                 "recipient_phone": payload.get("to"),
                 **res
             })
-        # Enforce per-second rate limit: wait until 1 second elapsed since start of chunk
+
         elapsed = time.time() - start_ts
         if elapsed < 1.0:
-            to_sleep = 1.0 - elapsed
-            # do not sleep after last chunk
             if (chunk_index + 1) * chunk_size < total:
-                time.sleep(to_sleep)
+                time.sleep(1.0 - elapsed)
 
-    return JsonResponse({"status": True, "template": template.name, "errors": errors, "results": results, "sent_count": len(results)}, status=200)
+    return JsonResponse(
+        {"status": True, "template": template.name, "errors": errors, "results": results, "sent_count": len(results)},
+        status=200
+    )
 
 
 @csrf_exempt
