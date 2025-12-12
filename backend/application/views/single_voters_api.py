@@ -373,7 +373,7 @@ def single_voters_info(request, voter_list_id):
     tag_dt = None
     comment_dt = None
     
-    if user and user.role.role_name == "Admin":
+    if user and user.role.role_name == "SuperAdmin":
     
         # TAG LOG
         if lasted_log and lasted_log.user_id:
