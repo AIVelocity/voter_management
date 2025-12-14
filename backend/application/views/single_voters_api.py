@@ -54,6 +54,7 @@ def single_voters_info(request, voter_list_id):
     
     user = None
     user_id = None
+    spouse = None
     
     try:
         auth_header = request.headers.get("Authorization")
@@ -312,7 +313,6 @@ def single_voters_info(request, voter_list_id):
             "voter_list_id": family["husband"]["voter_list_id"],
         })
 
-    spouse = None
 
     if family["wife"]:
         spouse = {
