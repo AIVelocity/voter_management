@@ -152,18 +152,21 @@ def dashboard(request):
     total_visited = VoterList.objects.filter(check_progress=True).count()
     
     return JsonResponse({
-        "golden_voter":golden_color_tags,
-        "guaranteed_voter" :green_color_tags,
-        "unsure_voter" : orange_color_tags,
-        "red_color_tags" : red_color_tags,
-        "total_voters": total_voters,
-        "admins": list(admin_users),  # convert queryset to list
-        "karyakartas": list(karyakarta_users),
-        "daywise_check_progress": list(daywise),
-        "total_visited" : total_visited,
-        "week_difference": difference,
-        "this_week": this_week_count,
-        "last_week": last_week_count
+        "SUCCESS": True,
+        "data" : { 
+                "golden_voter":golden_color_tags,
+                "guaranteed_voter" :green_color_tags,
+                "unsure_voter" : orange_color_tags,
+                "red_color_tags" : red_color_tags,
+                "total_voters": total_voters,
+                "admins": list(admin_users),  # convert queryset to list
+                "karyakartas": list(karyakarta_users),
+                "daywise_check_progress": list(daywise),
+                "total_visited" : total_visited,
+                "week_difference": difference,
+                "this_week": this_week_count,
+                "last_week": last_week_count 
+        }
     })
 
 def admin_allocation_panel(request):
@@ -249,7 +252,7 @@ def unassigned_voters(request):
 
     # -------- GET PARAMS --------
     page = int(request.GET.get("page", 1))
-    page_size = int(request.GET.get("page_size", 30))  # default 20
+    page_size = int(request.GET.get("page_size", 50)) 
 
     # -------- BASE QUERY --------
     queryset = (
