@@ -10,10 +10,10 @@ from django.db import transaction
 import json
 from django.core.paginator import Paginator, EmptyPage
 from collections import defaultdict
-from rest_framework_simplejwt.tokens import AccessToken
+
 
 # main dashboard api
-def admin_dashboard(request):
+def dashboard(request):
 
     # today = timezone.now().date()
     # start_of_week = today - timedelta(days=today.weekday())
@@ -33,40 +33,6 @@ def admin_dashboard(request):
     # ).count()
 
     # difference = this_week_count - last_week_count
-    user = None
-    user_id = None
-    
-    try:
-        auth_header = request.headers.get("Authorization")
-    
-        if auth_header and auth_header.startswith("Bearer "):
-            token_str = auth_header.split(" ")[1]
-            token = AccessToken(token_str)
-            user_id = token.get("user_id")
-    except Exception:
-        pass
-    
-    # user = None
-    if user_id:
-        try:
-            user = VoterUserMaster.objects.get(user_id=user_id)
-        except VoterUserMaster.DoesNotExist:
-            user = None
-    
-    assigned_count = VoterList.objects.filter(user=user).count()
-
-    visited_count = VoterList.objects.filter(
-        user=user_id,
-        check_progress_date__isnull=False
-    ).count()
-
-    # sr_range = VoterList.objects.filter(user=user).aggregate(
-    #     min_sr=Min("sr_no"),
-    #     max_sr=Max("sr_no")
-    # )
-
-    pending_count = assigned_count - visited_count
-    
     today = timezone.now().date()
 
     # Sunday start
@@ -101,6 +67,26 @@ def admin_dashboard(request):
         .values('created_by')
         .annotate(count=Count('*'))
         .values('count')
+    )
+
+    # Fetch all users whose role is Admin AND count how many voters are assigned to them
+    admin_users = (
+        VoterUserMaster.objects
+        .filter(role__role_name="Admin")
+        .annotate(
+            voter_allocated_count=Count("voterlist"),
+            karyakarta_allocated_count=Coalesce(
+            Subquery(created_karyakarta_count, output_field=IntegerField()),
+            Value(0),)
+        )
+        .values(
+            "user_id",
+            "first_name",
+            "last_name",
+            "mobile_no",
+            "voter_allocated_count",
+            "karyakarta_allocated_count"
+        )
     )
 
     karyakarta_users = (
@@ -168,18 +154,12 @@ def admin_dashboard(request):
     return JsonResponse({
         "SUCCESS": True,
         "data" : { 
-                "user_first_name": user.first_name, 
-                "name": f"{user.first_name} {user.last_name}",
-                "mobile": user.mobile_no,
-                "assigned": assigned_count,
-                "visited": visited_count,
-                "pending": pending_count,
-            
                 "golden_voter":golden_color_tags,
                 "guaranteed_voter" :green_color_tags,
                 "unsure_voter" : orange_color_tags,
                 "red_color_tags" : red_color_tags,
-                "total_voters": total_voters,  # convert queryset to list
+                "total_voters": total_voters,
+                "admins": list(admin_users),  # convert queryset to list
                 "karyakartas": list(karyakarta_users),
                 "daywise_check_progress": list(daywise),
                 "total_visited" : total_visited,
@@ -189,9 +169,24 @@ def admin_dashboard(request):
         }
     })
 
-def volunteer_allocation_panel(request):
+def admin_allocation_panel(request):
 
     total_voters = VoterList.objects.count()
+
+    admins = (
+        VoterUserMaster.objects
+        .filter(role__role_name="Admin")
+        .annotate(
+            assigned_count=Count("voterlist")
+        )
+        .values(
+            "user_id",
+            "first_name",
+            "last_name",
+            "mobile_no",
+            "assigned_count"
+        )
+    )
 
     karyakarta_qs = (
         VoterUserMaster.objects
@@ -212,6 +207,21 @@ def volunteer_allocation_panel(request):
     assigned_karyakartas = len([k for k in karyakarta_qs if k["voter_allocated_count"] > 0])
     unassigned_karyakartas = total_karyakartas - assigned_karyakartas
 
+    total_admins = admins.count()
+    assigned_admins = len([a for a in admins if a["assigned_count"] > 0])
+    unassigned_admins = total_admins - assigned_admins
+
+    admin_list = [
+        {
+            "user_id": a["user_id"],
+            "name": f"{a['first_name']} {a['last_name']}",
+            "mobile": a["mobile_no"],
+            "assigned_count": a["assigned_count"],
+            "status": "assigned" if a["assigned_count"] > 0 else "unassigned"
+        }
+        for a in admins
+    ]
+
     karyakarta_list = [
         {
             "user_id": k["user_id"],
@@ -225,11 +235,19 @@ def volunteer_allocation_panel(request):
     
     # ---------------- SECOND SCREEN FILTERS ----------------
 
+    assigned_admin_list = [
+        a for a in admin_list if a["assigned_count"] > 0
+    ]
+
     assigned_karyakarta_list = [
         k for k in karyakarta_list if k["assigned_count"] > 0
     ]
 
     # ---------------- THIRD SCREEN (UNASSIGNED) ----------------
+
+    unassigned_admin_list = [
+        a for a in admin_list if a["assigned_count"] == 0
+    ]
 
     unassigned_karyakarta_list = [
         k for k in karyakarta_list if k["assigned_count"] == 0
@@ -239,6 +257,9 @@ def volunteer_allocation_panel(request):
         "SUCCESS" :True,
         "data":{ 
             "summary": {
+                "total_admins": total_admins,
+                "assigned_admins": assigned_admins,
+                "unassigned_admins": unassigned_admins,
                 "total_voters": total_voters,
                 "total_karyakartas": total_karyakartas,
                 "assigned_karyakartas": assigned_karyakartas,
@@ -246,12 +267,15 @@ def volunteer_allocation_panel(request):
                 },
                 
                 # ---------- FIRST SCREEN ----------
+                "allocated_first_screen_admin": admin_list,
                 "allocated_first_screen_karyakartas": karyakarta_list,
 
                 # ---------- SECOND SCREEN ----------
+                "allocated_second_screen_admin": assigned_admin_list,
                 "allocated_second_screen_karyakartas": assigned_karyakarta_list,
                 
                 # ---------- THIRD SCREEN (UNASSIGNED) ---------
+                "allocated_third_screen_admin": unassigned_admin_list,
                 "allocated_third_screen_karyakartas": unassigned_karyakarta_list
             }
         }
@@ -262,7 +286,7 @@ def unassigned_voters(request):
 
     # -------- GET PARAMS --------
     page = int(request.GET.get("page", 1))
-    page_size = int(request.GET.get("page_size", 50)) 
+    page_size = int(request.GET.get("page_size", 100)) 
 
     # -------- BASE QUERY --------
     queryset = (
