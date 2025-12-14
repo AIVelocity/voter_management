@@ -252,6 +252,42 @@ def admin_allocation_panel(request):
     unassigned_karyakarta_list = [
         k for k in karyakarta_list if k["assigned_count"] == 0
     ]
+    
+    members = []
+
+    # ---------- ADMINS ----------
+    for a in admins:
+        members.append({
+            "user_id": a["user_id"],
+            "name": f"{a['first_name']} {a['last_name']}",
+            "mobile": a["mobile_no"],
+            "assigned_count": a["assigned_count"],
+            "role": "Admin",
+            "status": "assigned" if a["assigned_count"] > 0 else "unassigned"
+        })
+
+    # ---------- KARYAKARTAS ----------
+    for k in karyakarta_qs:
+        members.append({
+            "user_id": k["user_id"],
+            "name": f"{k['first_name']} {k['last_name']}",
+            "mobile": k["mobile_no"],
+            "assigned_count": k["voter_allocated_count"],
+            "role": "Karyakarta",
+            "status": "assigned" if k["voter_allocated_count"] > 0 else "unassigned"
+        })
+
+    allocated_first_screen = members
+
+    # ---------- SECOND SCREEN (ASSIGNED) ----------
+    allocated_second_screen = [
+        m for m in members if m["assigned_count"] > 0
+    ]
+
+    # ---------- THIRD SCREEN (UNASSIGNED) ----------
+    allocated_third_screen = [
+        m for m in members if m["assigned_count"] == 0
+    ]
 
     return JsonResponse({
         "SUCCESS" :True,
@@ -266,18 +302,26 @@ def admin_allocation_panel(request):
                 "unassigned_karyakartas": unassigned_karyakartas
                 },
                 
-                # ---------- FIRST SCREEN ----------
-                "allocated_first_screen_admin": admin_list,
-                "allocated_first_screen_karyakartas": karyakarta_list,
+                # # ---------- FIRST SCREEN ----------
+                # "allocated_first_screen_admin": admin_list,
+                # "allocated_first_screen_karyakartas": karyakarta_list,
 
-                # ---------- SECOND SCREEN ----------
-                "allocated_second_screen_admin": assigned_admin_list,
-                "allocated_second_screen_karyakartas": assigned_karyakarta_list,
+                # # ---------- SECOND SCREEN ----------
+                # "allocated_second_screen_admin": assigned_admin_list,
+                # "allocated_second_screen_karyakartas": assigned_karyakarta_list,
                 
-                # ---------- THIRD SCREEN (UNASSIGNED) ---------
-                "allocated_third_screen_admin": unassigned_admin_list,
-                "allocated_third_screen_karyakartas": unassigned_karyakarta_list
-            }
+                # # ---------- THIRD SCREEN (UNASSIGNED) ---------
+                # "allocated_third_screen_admin": unassigned_admin_list,
+                # "allocated_third_screen_karyakartas": unassigned_karyakarta_list
+             # ---------- ALL MEMBERS ----------
+                "allocated_members": allocated_first_screen,
+
+                # ---------- ASSIGNED ----------
+                "allocated_assigned_members": allocated_second_screen,
+
+                # ---------- UNASSIGNED ----------
+                "allocated_unassigned_members": allocated_third_screen
+    }
         }
     )
 
