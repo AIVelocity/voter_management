@@ -302,7 +302,7 @@ def unassigned_voters(request):
         })
 
     return JsonResponse({
-        "status": True,
+        "SUCCESS": True,
         "count": total_count,
         "page": page,
         "page_size": page_size,
@@ -356,7 +356,7 @@ def assign_voters_to_karyakarta(request):
             )
 
         return JsonResponse({
-            "status": True,
+            "SUCCESS": True,
             "assigned_count": updated_count,
             "message": "Voters assigned successfully"
         })
@@ -404,7 +404,7 @@ def auto_select_unassigned_voters(request):
     )
 
     return JsonResponse({
-        "status": True,
+        "SUCCESS": True,
         "requested_count": count,
         "returned_count": len(voters),
         "voters": list(voters),
