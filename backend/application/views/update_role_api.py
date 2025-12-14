@@ -170,3 +170,27 @@ def promote_user(request):
             "status": False,
             "error": str(e)
         }, status=500)
+
+@csrf_exempt
+def delete_user(request, user_id):
+
+    if request.method != "DELETE":
+        return JsonResponse(
+            {"status": False, "message": "DELETE method required"},
+            status=405
+        )
+
+    try:
+        user = VoterUserMaster.objects.get(user_id=user_id)
+        user.delete()
+
+        return JsonResponse({
+            "status": True,
+            "message": "User deleted successfully"
+        })
+
+    except VoterUserMaster.DoesNotExist:
+        return JsonResponse(
+            {"status": False, "message": "User not found"},
+            status=404
+        )
