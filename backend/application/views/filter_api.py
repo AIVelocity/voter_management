@@ -15,6 +15,24 @@ def apply_multi_filter(qs, field, value):
 
     return qs.filter(**{f"{field}__in": values})
 
+def apply_tag_filter(qs, tag_value):
+    if not tag_value:
+        return qs
+
+    TAG_NAME_TO_ID = {
+        "green": 1,
+        "orange": 2,
+        "red": 3,
+        "golden": 4,
+        "white": 5,
+    }
+
+    tag_names = [t.strip().lower() for t in tag_value.split(",")]
+    tag_ids = [TAG_NAME_TO_ID[t] for t in tag_names if t in TAG_NAME_TO_ID]
+
+    return qs.filter(tag_id__in=tag_ids) if tag_ids else qs
+
+
 
 def filter(request):
 
@@ -171,9 +189,8 @@ def filter(request):
     qs = apply_multi_filter(qs, "cast", request.GET.get("caste"))
     qs = apply_multi_filter(qs, "religion_id", request.GET.get("religion"))
     qs = apply_multi_filter(qs, "occupation", request.GET.get("occupation"))
-    qs = apply_multi_filter(qs, "tag_id", request.GET.get("tag_id"))
     qs = apply_multi_filter(qs, "gender_eng", request.GET.get("gender"))
-
+    qs = apply_tag_filter(qs, request.GET.get("tag_id"))
     
     # Pagination
     paginator = Paginator(qs, size)
