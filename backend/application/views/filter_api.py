@@ -58,10 +58,12 @@ def filter(request):
 
     # ---------- CAST / CASTE ----------
     if caste:
-        if caste.lower() == "null":
+        caste_ids = [c.strip() for c in caste.split(",")]
+        if "null" in [c.lower() for c in caste_ids]:
             qs = qs.filter(cast__isnull=True)
         else:
-            qs = qs.filter(cast=int(caste))
+            qs = qs.filter(cast__in=caste_ids)
+
 
     # ---------- OCCUPATION ----------
     if occupation:
@@ -72,10 +74,13 @@ def filter(request):
 
     # ---------- RELIGION ----------
     if religion:
-        if religion.lower() == "null":
+        religion_ids = [r.strip() for r in religion.split(",")]
+
+        if "null" in [r.lower() for r in religion_ids]:
             qs = qs.filter(religion__isnull=True)
         else:
-            qs = qs.filter(religion_id=int(religion))
+            qs = qs.filter(religion_id__in=religion_ids)
+
 
     # ---------- TAG ----------
     if tag:
