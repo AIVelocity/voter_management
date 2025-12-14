@@ -37,6 +37,7 @@ def filter(request):
     voter_id = request.GET.get("voter_id")
     
     religion = request.GET.get("religion")
+    age_ranges = request.GET.get("age_ranges")
     # caste = request.GET.get("caste")
 
     # badge = request.GET.get("badge")
@@ -105,11 +106,29 @@ def filter(request):
         qs = qs.filter(last_name__istartswith=last_name)
 
 
-    if age_max:
-        qs = qs.filter(age_eng__lte=age_max)
+    from django.db.models import Q
 
-    if age_min:
-        qs = qs.filter(age_eng__gte=age_min)
+    if age_ranges:
+        age_q = Q()
+        ranges = age_ranges.split(",")
+
+        for r in ranges:
+            try:
+                min_age, max_age = r.split("-")
+                age_q |= Q(
+                    age_eng__gte=int(min_age.strip()),
+                    age_eng__lte=int(max_age.strip())
+                )
+            except ValueError:
+                continue  # skip invalid ranges
+
+        qs = qs.filter(age_q)
+
+    # if age_max:
+    #     qs = qs.filter(age_eng__lte=age_max)
+
+    # if age_min:
+    #     qs = qs.filter(age_eng__gte=age_min)
 
     if location:
         qs = qs.filter(location__icontains=location)
