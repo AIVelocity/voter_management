@@ -128,9 +128,9 @@ def update_voter(request, voter_list_id):
             except VoterTag.DoesNotExist:
                 return JsonResponse({"status": False, "message": "Invalid tag_id"}, status=400)
 
-        # If nothing changed, return message
-        if not changed_fields:
-            return JsonResponse({"status": True, "message": "No changes detected"})
+        # # If nothing changed, return message
+        # if not changed_fields:
+        #     return JsonResponse({"status": True, "message": "No changes detected"})
 
         voter.save()
 
