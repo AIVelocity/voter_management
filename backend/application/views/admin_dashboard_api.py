@@ -190,7 +190,7 @@ def admin_allocation_panel(request):
 
     karyakarta_qs = (
         VoterUserMaster.objects
-        .filter(role__role_name="Volenteer")
+        .filter(role__role_name="Volunteer")
         .annotate(
             voter_allocated_count=Count("voterlist")
         )
@@ -232,20 +232,54 @@ def admin_allocation_panel(request):
         }
         for k in karyakarta_qs
     ]
+    
+    # ---------------- SECOND SCREEN FILTERS ----------------
+
+    assigned_admin_list = [
+        a for a in admin_list if a["assigned_count"] > 0
+    ]
+
+    assigned_karyakarta_list = [
+        k for k in karyakarta_list if k["assigned_count"] > 0
+    ]
+
+    # ---------------- THIRD SCREEN (UNASSIGNED) ----------------
+
+    unassigned_admin_list = [
+        a for a in admin_list if a["assigned_count"] == 0
+    ]
+
+    unassigned_karyakarta_list = [
+        k for k in karyakarta_list if k["assigned_count"] == 0
+    ]
 
     return JsonResponse({
-        "summary": {
-            "total_admins": total_admins,
-            "assigned_admins": assigned_admins,
-            "unassigned_admins": unassigned_admins,
-            "total_voters": total_voters,
-            "total_karyakartas": total_karyakartas,
-            "assigned_karyakartas": assigned_karyakartas,
-            "unassigned_karyakartas": unassigned_karyakartas
-        },
-        "allocated_first_screen": admin_list,
-        "allocated_karyakartas": karyakarta_list
-    })
+        "SUCCESS" :True,
+        "data":{ 
+            "summary": {
+                "total_admins": total_admins,
+                "assigned_admins": assigned_admins,
+                "unassigned_admins": unassigned_admins,
+                "total_voters": total_voters,
+                "total_karyakartas": total_karyakartas,
+                "assigned_karyakartas": assigned_karyakartas,
+                "unassigned_karyakartas": unassigned_karyakartas
+                },
+                
+                # ---------- FIRST SCREEN ----------
+                "allocated_first_screen_admin": admin_list,
+                "allocated_first_screen_karyakartas": karyakarta_list,
+
+                # ---------- SECOND SCREEN ----------
+                "allocated_second_screen_admin": assigned_admin_list,
+                "allocated_second_screen_karyakartas": assigned_karyakarta_list,
+                
+                # ---------- THIRD SCREEN (UNASSIGNED) ---------
+                "allocated_third_screen_admin": unassigned_admin_list,
+                "allocated_third_screen_karyakartas": unassigned_karyakarta_list
+            }
+        }
+    )
 
 
 def unassigned_voters(request):
