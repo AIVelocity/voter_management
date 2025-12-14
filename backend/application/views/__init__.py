@@ -11,7 +11,7 @@ from .caste_religion_api import caste_dropdown,religion_dropdown
 from .occupation_api import occupation_dropdown
 from .registration_api import registration
 from .id_validation_api import id_validation
-from .update_role_api import list_volunteers,promote_user,single_volunteer
+from .update_role_api import list_volunteers,promote_user,single_volunteer,delete_user
 from .admin_dashboard_api import admin_dashboard,volunteer_allocation_panel
 from .volunteer_dashboard_api import volunteer_dashboard,volunteer_voters_page
 
@@ -44,5 +44,6 @@ __all__ = [
     "admin_dashboard",
     "volunteer_allocation_panel",
     "volunteer_dashboard",
-    "volunteer_voters_page"
+    "volunteer_voters_page",
+    "delete_user",
 ]
