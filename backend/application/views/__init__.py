@@ -13,6 +13,7 @@ from .registration_api import registration
 from .id_validation_api import id_validation
 from .update_role_api import list_volunteers,promote_user,single_volunteer
 from .admin_dashboard_api import admin_dashboard,volunteer_allocation_panel
+from .volunteer_dashboard_api import volunteer_dashboard,volunteer_voters_page
 
 __all__ = [
     "tags",
@@ -41,5 +42,7 @@ __all__ = [
     "promote_user",
     "single_volunteer",
     "admin_dashboard",
-    "volunteer_allocation_panel"
+    "volunteer_allocation_panel",
+    "volunteer_dashboard",
+    "volunteer_voters_page"
 ]
