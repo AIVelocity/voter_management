@@ -28,6 +28,8 @@ urlpatterns = [
     path("admin/dashboard/list_volunteer/",views.list_volunteers,name="list_volunteers"),
     path("admin/dashboard/volunteers/<int:user_id>/",views.single_volunteer,name="single_volunteer"),
     path("admin/dashboard/assign_role/",views.promote_user,name="promote_user"),
+    path("subadmin/dashboard/",views.admin_dashboard,name="admin_dashboard"),
+    
 
 ]
 
