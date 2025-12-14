@@ -152,9 +152,9 @@ def dashboard(request):
     total_visited = VoterList.objects.filter(check_progress=True).count()
     
     return JsonResponse({
-        "golden_color_tags":golden_color_tags,
-        "green_color_tags" :green_color_tags,
-        "orange_color_tags" : orange_color_tags,
+        "golden_voter":golden_color_tags,
+        "guaranteed_voter" :green_color_tags,
+        "unsure_voter" : orange_color_tags,
         "red_color_tags" : red_color_tags,
         "total_voters": total_voters,
         "admins": list(admin_users),  # convert queryset to list
