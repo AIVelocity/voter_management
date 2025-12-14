@@ -9,6 +9,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.db import transaction
 import json
 from django.core.paginator import Paginator, EmptyPage
+from collections import defaultdict
 
 
 # main dashboard api
@@ -42,12 +43,12 @@ def dashboard(request):
     end_of_last_week = start_of_week - timedelta(days=1)
 
     this_week_count = VoterList.objects.filter(
-        check_progress=True,
+        # check_progress=True,
         check_progress_date__range=(start_of_week, end_of_week)
     ).count()
 
     last_week_count = VoterList.objects.filter(
-        check_progress=True,
+        # check_progress=True,
         check_progress_date__range=(start_of_last_week, end_of_last_week)
     ).count()
 
@@ -122,15 +123,14 @@ def dashboard(request):
     daily_qs = (
         VoterList.objects
         .filter(
-            check_progress=True,
+            # check_progress=True,
             check_progress_date__range=(start_of_week, end_of_week),
-            user__role__role_name="Admin"
+            # user__role__role_name="Admin"
         )
         .values("check_progress_date")
         .annotate(daily_count=Count("voter_list_id"))
     )
 
-    from collections import defaultdict
     daily_map = defaultdict(int)
     for row in daily_qs:
         daily_map[row["check_progress_date"]] = row["daily_count"]
@@ -149,7 +149,7 @@ def dashboard(request):
             "cumulative_count": running_total
         })
 
-    total_visited = VoterList.objects.filter(check_progress=True).count()
+    total_visited = VoterList.objects.filter(check_progress_date__isnull=False).count()
     
     return JsonResponse({
         "SUCCESS": True,
