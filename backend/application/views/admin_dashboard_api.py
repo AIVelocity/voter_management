@@ -90,7 +90,7 @@ def dashboard(request):
 
     karyakarta_users = (
         VoterUserMaster.objects
-        .filter(role__role_name="Volenteer")
+        .filter(role__role_name="Volunteer")
         .annotate(
             voter_allocated_count=Count("voterlist"),
             # karyakarta_allocated_count=Coalesce(
