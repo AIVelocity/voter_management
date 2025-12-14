@@ -107,7 +107,7 @@ def volunteer_dashboard(request):
     # ---------------- RESPONSE ----------------
 
     return JsonResponse({
-        "status": True,
+        "SUCCESS": True,
         "data": {
             "user": user,
             "assigned": assigned_count,
@@ -178,7 +178,7 @@ def volunteer_voters_page(request):
         })
 
     return JsonResponse({
-        "status": True,
+        "SUCCESS": True,
         "page": page,
         "page_size": size,
         "total_pages": paginator.num_pages,
