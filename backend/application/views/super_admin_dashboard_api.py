@@ -666,7 +666,7 @@ def auto_select_unassigned_voters(request):
                 VoterList.objects
                 .select_for_update()               # prevents race condition
                 .filter(user__isnull=True)
-                .order_by("sr_no")
+                .order_by("serial_number")
                 .values_list("voter_list_id", flat=True)[:count]
             )
 
