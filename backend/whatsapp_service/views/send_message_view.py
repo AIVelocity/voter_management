@@ -5,7 +5,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from ..utils.send_messages_handlers import parse_request_body, _chunked, _clean_phone, get_recipients_from_request, send_whatapps_request
 from ..utils.webhook_handler import parse_whatsapp_error
-from application.models import VoterList
+from application.models import VoterList, VoterUserMaster
 from ..models import VoterChatMessage, TemplateName
 
 url = settings.MESSAGE_URL
@@ -477,12 +477,27 @@ def get_messages_for_voter(request):
         .order_by("sent_at")
     )
 
+    user_ids = (
+        messages_qs
+        .filter(sender="user")
+        .values_list("sender_user_id", flat=True)
+        .distinct()
+    )
+
+    users_map = {
+        u.user_id: f"{u.first_name} {u.last_name}".strip()
+        for u in VoterUserMaster.objects.filter(user_id__in=user_ids)
+    }
+
+
     messages = []
     for m in messages_qs:
+        sender_name = users_map.get(m.sender_user_id, "Unknown") if m.sender == "user" else "voter"
         messages.append({
             "id": m.id,
             "message_id": m.message_id,
             "sender": m.sender,
+            "sender_name": sender_name,
             "status": m.status,
             "message": m.message,
             "type": m.type,
