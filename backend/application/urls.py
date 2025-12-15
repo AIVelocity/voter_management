@@ -33,7 +33,7 @@ urlpatterns = [
     path("subadmin/dashboard/allocated/",views.volunteer_allocation_panel,name="volunteer_allocation_panel"),
     path("volunteer/dashboard/",views.volunteer_dashboard,name="volunteer_dashboard"),
     path("volunteer/dashboard/list_voters/",views.volunteer_voters_page,name="volunteer_voters_page"),
-    path("volunteer/dashboard/list_voters/",views.volunteer_voters_page,name="volunteer_voters_page"),
+    # path("volunteer/dashboard/list_voters/",views.volunteer_voters_page,name="volunteer_voters_page"),
     path("volunteer/dashboard/<int:user_id>",views.delete_user,name="delete_user")
     
 ]
