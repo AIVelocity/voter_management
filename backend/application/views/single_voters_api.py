@@ -99,7 +99,9 @@ def single_voters_info(request, voter_list_id):
 
     # ---------------- FATHER ----------------
     def calculate_and_save_family(voter):
-        is_male = voter.gender_eng.lower() == "male"
+        gender = (voter.gender_eng or "").strip().lower()
+        is_male = gender == "male"
+
 
         father = father_name = father_id = None
         mother = mother_name = mother_id = None
