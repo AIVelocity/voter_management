@@ -5,12 +5,17 @@ from .voters_info_api import voters_info
 from .add_voter_api import add_voter
 from .db_list_api import tags ,index , roles
 from .add_relationship_api import add_relation,remove_relation
-from .dashboard_api import dashboard
+from .super_admin_dashboard_api import dashboard,admin_allocation_panel,unassigned_voters,assign_voters_to_karyakarta,auto_select_unassigned_voters
 from .filter_api import filter
 from .caste_religion_api import caste_dropdown,religion_dropdown
 from .occupation_api import occupation_dropdown
 from .registration_api import registration
 from .id_validation_api import id_validation
+from .update_role_api import list_volunteers,promote_user,single_volunteer,delete_user
+from .admin_dashboard_api import admin_dashboard,volunteer_allocation_panel
+from .volunteer_dashboard_api import volunteer_dashboard,volunteer_voters_page
+from .super_admin_comments_api import all_comments
+
 
 __all__ = [
     "tags",
@@ -30,5 +35,18 @@ __all__ = [
     "religion_dropdown",
     "occupation_dropdown",
     "registration",
-    "id_validation"
+    "id_validation",
+    "admin_allocation_panel",
+    "unassigned_voters",
+    "assign_voters_to_karyakarta",
+    "auto_select_unassigned_voters",
+    "list_volunteers",
+    "promote_user",
+    "single_volunteer",
+    "admin_dashboard",
+    "volunteer_allocation_panel",
+    "volunteer_dashboard",
+    "volunteer_voters_page",
+    "delete_user",
+    "all_comments"
 ]

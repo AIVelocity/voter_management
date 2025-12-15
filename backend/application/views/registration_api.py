@@ -85,8 +85,8 @@ def registration(request):
             last_name=last_name,
             mobile_no=mobile_no,
             password=hashed_password,
-            confirm_password=hashed_password
-            # role=role
+            confirm_password=hashed_password,
+            role_id=3
         )
 
         # ---------- RESPONSE ----------
