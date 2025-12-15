@@ -1,6 +1,6 @@
 from django.http import JsonResponse
 from ..models import VoterList,VoterTag
-
+from django.core.cache import cache
 from django.core.paginator import Paginator
 
 def voters_info(request):
@@ -11,6 +11,17 @@ def voters_info(request):
     qs = VoterList.objects.select_related("tag_id") \
             .order_by("ward_no", "voter_list_id")
 
+    cache_key = f"voters:page:{page}:size{size}"
+
+    cache_response = cache.get(cache_key)
+    
+    if cache_response:
+        return JsonResponse({
+            "status" : True,
+            "source":"cache",
+            **cache_response
+        })
+        
     paginator = Paginator(qs, size)
     page_obj = paginator.get_page(page)
 
@@ -33,12 +44,29 @@ def voters_info(request):
             "location": v.location
         })
 
-    return JsonResponse({
-        "status": True,
+    response_data = {
         "page": page,
         "page_size": size,
         "total_pages": paginator.num_pages,
         "total_records": paginator.count,
         "records_returned": len(data),
         "data": data
+    }
+
+    # 🔹 Save to Redis (10 minutes)
+    cache.set(cache_key, response_data, timeout=600)
+
+    return JsonResponse({
+        "status": True,
+        "source": "db",
+        **response_data
     })
+    # return JsonResponse({
+    #     "status": True,
+    #     "page": page,
+    #     "page_size": size,
+    #     "total_pages": paginator.num_pages,
+    #     "total_records": paginator.count,
+    #     "records_returned": len(data),
+    #     "data": data
+    # })
