@@ -51,7 +51,7 @@ def get_family_from_db(voter):
     siblings = []
     children = []
 
-    father_name = mother_name = wife_name = husband_name = None
+    father_name = mother_name = wife_name = husband_name = spouse_name = None
 
     for rel in relations:
         p = rel.related_voter
@@ -68,6 +68,9 @@ def get_family_from_db(voter):
 
         elif rel_type == "mother":
             mother_name = member
+        
+        elif rel_type == "spouse":
+            spouse_name = member
 
         elif rel_type == "wife":
             wife_name = member
@@ -88,4 +91,5 @@ def get_family_from_db(voter):
         "husband": husband_name,
         "siblings": siblings,
         "children": children,
+        "spouse" : spouse_name
     }
