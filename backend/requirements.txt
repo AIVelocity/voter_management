@@ -10,3 +10,4 @@ channels
 channels-redis 
 daphne
 djangorestframework
+django-redis

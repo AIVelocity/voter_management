@@ -15,6 +15,7 @@ from .update_role_api import list_volunteers,promote_user,single_volunteer,delet
 from .admin_dashboard_api import admin_dashboard,volunteer_allocation_panel
 from .volunteer_dashboard_api import volunteer_dashboard,volunteer_voters_page
 from .super_admin_comments_api import all_comments
+from .change_password_api import password_change
 
 
 __all__ = [
@@ -48,5 +49,6 @@ __all__ = [
     "volunteer_dashboard",
     "volunteer_voters_page",
     "delete_user",
-    "all_comments"
+    "all_comments",
+    "password_change"
 ]
