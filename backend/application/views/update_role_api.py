@@ -1,7 +1,7 @@
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.db import transaction
-from ..models import VoterUserMaster, Roles
+from ..models import VoterUserMaster, Roles,VoterList
 import json
 from django.utils import timezone
 from rest_framework_simplejwt.tokens import AccessToken
@@ -28,7 +28,8 @@ def list_volunteers(request):
         "count": volunteers.count(),
         "volunteers": list(volunteers)
     })
-    
+
+
 def single_volunteer(request, user_id):
 
     if request.method != "GET":
@@ -38,37 +39,68 @@ def single_volunteer(request, user_id):
         }, status=405)
 
     try:
-        volunteer = (
+        user = (
             VoterUserMaster.objects
-            .filter(
-                user_id=user_id,
-                role__role_name="Volunteer"
-            )
-            .annotate(
-            allocated_voter_count=Count("voterlist")
-        )
-            .values(
-                "user_id",
-                "first_name",
-                "last_name",
-                "mobile_no",
-                "created_date",
-                "role__role_id",
-                "role__role_name",
-                "allocated_voter_count"
-            )
+            .select_related("role")
+            .filter(user_id=user_id)
             .first()
         )
 
-        if not volunteer:
+        if not user:
             return JsonResponse({
                 "status": False,
-                "message": "Volunteer not found"
+                "message": "User not found"
             }, status=404)
+
+        response = {
+            "user_id": user.user_id,
+            "first_name": user.first_name,
+            "last_name": user.last_name,
+            "mobile_no": user.mobile_no,
+            "role_id": user.role.role_id if user.role else None,
+            "role_name": user.role.role_name if user.role else None,
+            "created_date": user.created_date,
+        }
+
+        # ---------------- ROLE BASED DATA ----------------
+
+        # SUPER ADMIN
+        if user.role and user.role.role_name == "SuperAdmin":
+            response["ward_no"] = 37
+            response["admin_count"] = (
+                VoterUserMaster.objects
+                .filter(role__role_name="Admin")
+                .count()
+            )
+            response["volunteer_count"] = (
+                VoterUserMaster.objects
+                .filter(role__role_name="Volunteer")
+                .count()
+            )
+            response["total_member_count"] = response["admin_count"] + response["volunteer_count"]
+        # ADMIN
+        elif user.role and user.role.role_name == "Admin":
+            response["ward_no"] =37
+            response["volunteer_count"] = (
+                VoterUserMaster.objects
+                .filter(
+                    role__role_name="Volunteer",
+                    # ward_no=user.ward_no
+                )
+                .count()
+            )
+
+        # VOLUNTEER
+        elif user.role and user.role.role_name == "Volunteer":
+            response["allocated_voter_count"] = (
+                VoterList.objects
+                .filter(user=user)
+                .count()
+            )
 
         return JsonResponse({
             "status": True,
-            "volunteer": volunteer
+            "data": response
         })
 
     except Exception as e:
@@ -76,6 +108,9 @@ def single_volunteer(request, user_id):
             "status": False,
             "error": str(e)
         }, status=500)
+
+
+
 
 ROLE_LEVELS = {
     "SuperAdmin": 1,
