@@ -55,7 +55,9 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'application',
     'whatsapp_service',
-    'rest_framework'
+    'rest_framework',
+    "channels",
+    "notifications",
 ]
 
 MIDDLEWARE = [
@@ -86,7 +88,18 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'voter_mang_sys.wsgi.application'
+ASGI_APPLICATION = "voter_mang_sys.asgi.application"
 
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [
+                "redis://:Amit%40123@172.20.1.155:6379/0"
+            ],
+        },
+    },
+}
 
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
