@@ -37,25 +37,6 @@ def single_volunteer(request, user_id):
             "message": "GET method required"
         }, status=405)
         
-    auth_header = request.headers.get("Authorization")
-    logged_in_user_id = None
-
-    if auth_header and auth_header.startswith("Bearer "):
-        try:
-            token = AccessToken(auth_header.split(" ")[1])
-            logged_in_user_id = token["user_id"]
-        except Exception:
-            return JsonResponse(
-                {"status": False, "message": "Invalid or expired token"},
-                status=401
-            )
-
-    if not logged_in_user_id:
-        return JsonResponse(
-            {"status": False, "message": "Unauthorized"},
-            status=401
-        )
-
     try:
         user = (
             VoterUserMaster.objects
