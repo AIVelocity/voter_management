@@ -6,3 +6,7 @@ gunicorn
 boto3
 djangorestframework-simplejwt
 pytz
+channels
+channels-redis 
+daphne
+djangorestframework

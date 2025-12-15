@@ -11,6 +11,7 @@ from application.models import VoterList
 from ..models import VoterChatMessage
 from .download_whatsapp_media import download_whatsapp_media
 from .s3_integration import upload_to_s3
+from notifications.utils import broadcast_to_agent, broadcast_to_admins, send_to_user
 
 logger = logging.getLogger(__name__)
 
@@ -94,6 +95,19 @@ def handle_statuses(statuses):
                     update_fields.append("read_at")
 
                 chat.save(update_fields=update_fields)
+                def _do_broadcast():
+                    try:
+                        meta = {"event": "status_update", "message_id": wa_id, "status": new_status, "db_id": chat.id}
+                        # notify agent assigned to the message (if available)
+                        sender_id = getattr(chat, "sender_user_id", None)
+                        if sender_id:
+                            send_to_user(sender_id, "Message status updated", f"Message {wa_id} -> {new_status}", meta=meta)
+                        else:
+                            broadcast_to_admins("Message status updated", f"{wa_id} -> {new_status}", meta=meta)
+                    except Exception:
+                        logger.exception("Failed to broadcast status update")
+
+                transaction.on_commit(_do_broadcast)
                 logger.info("Updated chat id=%s message_id=%s %s -> %s", chat.id, wa_id, prev, new_status)
                 results.append({"id": wa_id, "updated": True})
         except Exception as e:
@@ -259,16 +273,44 @@ def handle_incoming_messages(messages, contacts=None):
 
             logger.info("Saved incoming msg wa_id=%s db_id=%s from=%s type=%s voter_id=%s",
                         wa_message_id, chat_row.id, raw_from, msg_type, voter_id)
+            
             saved.append({"wa_id": wa_message_id, "db_id": chat_row.id, "voter_id": voter_id})
+            try:
+                
+                def _do_broadcast():
+                    try:
+                        voter_sender_id = chat_row.sender_user_id
+
+                        if not voter_sender_id:
+                            try:
+                                voter_sender_id = getattr(chat_row.voter, "user_id", None)
+                            except Exception:
+                                voter_sender_id = None
+                        meta = {
+                            "event": "new_message",
+                            "voter_id": voter_id,
+                            "message_id": wa_message_id,
+                            "db_id": chat_row.id,
+                            "type": media_type or msg_type,
+                            "media_url": media_url,
+                        }
+                        if voter_sender_id:
+                            send_to_user(voter_sender_id, "New message received", text_body or "New message", meta=meta)
+                        else:
+                            broadcast_to_admins("New incoming message", f"From {raw_from}: {text_body or 'media'}", meta=meta)
+                    except Exception:
+                        logger.exception("Failed to broadcast WS notification")
+
+                transaction.on_commit(_do_broadcast)
+
+            except Exception:
+                logger.exception("Failed to schedule broadcast")
         except Exception as e:
             logger.exception("Failed to save incoming message: %s", e)
             saved.append({"error": str(e), "raw_msg": msg.get("id")})
 
     return {"saved": saved}
 
-
-
-logger = logging.getLogger(__name__)
 
 def parse_whatsapp_error(response_json) -> str:
     """
