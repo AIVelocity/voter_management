@@ -165,9 +165,10 @@ def single_voters_info(request, voter_list_id):
 
     # ---------- FINAL RESPONSE ----------
     data = {
+        "sr_no" : voter.serial_number,
         "voter_list_id": voter.voter_list_id,
         "voter_name_eng": voter.voter_name_eng,
-        "sr_no": voter.sr_no,
+        # "sr_no": voter.sr_no,
         "voter_id": voter.voter_id,
 
         "first_name": voter.first_name,
