@@ -233,6 +233,8 @@ class VoterList(models.Model):
         null=True,
         blank=True
     )
+    serial_number = models.IntegerField(null=True, blank=True)
+
 
     class Meta:
         db_table = "voter_list"

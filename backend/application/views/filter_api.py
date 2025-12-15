@@ -199,6 +199,7 @@ def filter(request):
     data = []
     for v in page_obj:
         data.append({
+            "sr_no" : v.serial_number,
             "voter_list_id": v.voter_list_id,
             "voter_name_eng": v.voter_name_eng,
             "voter_id": v.voter_id,
