@@ -224,7 +224,6 @@ def promote_user(request):
             "error": str(e)
         }, status=500)
 
-@csrf_exempt
 def delete_user(request, user_id):
 
     if request.method != "DELETE":
