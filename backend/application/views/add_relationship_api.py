@@ -18,8 +18,8 @@ REVERSE_MAP = {
     "husband": "wife",
     "wife": "husband",
     "sibling": "sibling",
+    "spouse": "spouse"
 }
-
 
 @csrf_exempt
 def add_relation(request):
@@ -28,7 +28,7 @@ def add_relation(request):
         body = parse_json(request)
         if not body:
             return JsonResponse(
-                {"status": False, "message":"Invalid JSON body"},
+                {"status": False, "message": "Invalid JSON body"},
                 status=400
             )
 
@@ -38,19 +38,17 @@ def add_relation(request):
 
         if not voter_id or not related_id or not relation:
             return JsonResponse(
-                {"status": False, "message":"Missing parameters"},
+                {"status": False, "message": "Missing parameters"},
                 status=400
             )
 
         relation = relation.lower()
 
-        # conflict check
-        conflict = VoterRelationshipDetails.objects.filter(
+        # Conflict check
+        if VoterRelationshipDetails.objects.filter(
             voter_id=voter_id,
             related_voter_id=related_id
-        ).exists()
-
-        if conflict:
+        ).exists():
             return JsonResponse(
                 {
                     "status": False,
@@ -59,26 +57,36 @@ def add_relation(request):
                 status=409
             )
 
+        reverse = REVERSE_MAP.get(relation)
+
+        if not reverse:
+            return JsonResponse(
+                {"status": False, "message": "Invalid relation"},
+                status=400
+            )
+
+        # Create primary relation
         VoterRelationshipDetails.objects.get_or_create(
             voter_id=voter_id,
             related_voter_id=related_id,
             relation_with_voter=relation,
         )
 
-        reverse = REVERSE_MAP.get(relation)
+        # Create reverse relation
+        VoterRelationshipDetails.objects.get_or_create(
+            voter_id=related_id,
+            related_voter_id=voter_id,
+            relation_with_voter=reverse,
+        )
 
-        if reverse:
-            VoterRelationshipDetails.objects.get_or_create(
-                voter_id=related_id,
-                related_voter_id=voter_id,
-                relation_with_voter=reverse,
-            )
-
-        return JsonResponse({"status": True,"message":"Relation added successfully"})
+        return JsonResponse({
+            "status": True,
+            "message": "Relation added successfully"
+        })
 
     except IntegrityError:
         return JsonResponse(
-            {"status":False,"message":"Duplicate or FK violation"},
+            {"status": False, "message": "Duplicate or FK violation"},
             status=400
         )
 
@@ -88,6 +96,7 @@ def add_relation(request):
             {"status": False, "message": "Server error"},
             status=500
         )
+
 
 @csrf_exempt
 def remove_relation(request):
