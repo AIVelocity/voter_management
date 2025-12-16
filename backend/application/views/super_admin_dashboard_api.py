@@ -364,7 +364,7 @@ def unassigned_voters(request):
 
     # badge = request.GET.get("badge")
 
-    qs = VoterList.objects.select_related("tag_id").all()
+    qs = VoterList.objects.select_related("tag_id").filter(user__isnull=True)
     
     # Apply advanced search (name + voter_id)
     if search:
