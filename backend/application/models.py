@@ -345,3 +345,65 @@ class ActivityLog(models.Model):
 
     def __str__(self):
         return f"{self.action} by User {self.user_id}"
+
+
+class VoterModuleMaster(models.Model):
+    module_id = models.AutoField(primary_key=True)
+    module_name = models.CharField(
+        max_length=100,
+        unique=True
+    )
+    module_code = models.CharField(
+        max_length=50,
+        unique=True
+    )
+    is_active = models.BooleanField(default=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "voter_module_master"
+        ordering = ["module_id"]
+        managed = False
+
+    def __str__(self):
+        return f"{self.module_name} ({self.module_code})"
+
+
+class RoleModulePermission(models.Model):
+    id = models.AutoField(primary_key=True)
+
+    role = models.ForeignKey(
+        Roles,        # string reference to avoid circular import
+        on_delete=models.CASCADE,
+        db_column="role_id",
+        related_name="module_permissions"
+    )
+
+    module = models.ForeignKey(
+        VoterModuleMaster,
+        on_delete=models.CASCADE,
+        db_column="module_id",
+        related_name="role_permissions"
+    )
+
+    can_view = models.BooleanField(default=False)
+    can_add = models.BooleanField(default=False)
+    can_edit = models.BooleanField(default=False)
+    can_delete = models.BooleanField(default=False)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "role_module_permission"
+        unique_together = ("role", "module")
+        indexes = [
+            models.Index(fields=["role"]),
+            models.Index(fields=["module"]),
+        ]
+        managed = False
+
+    def __str__(self):
+        return f"{self.role} → {self.module}"
