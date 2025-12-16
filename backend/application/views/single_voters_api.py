@@ -165,10 +165,9 @@ def single_voters_info(request, voter_list_id):
 
     # ---------- FINAL RESPONSE ----------
     data = {
-        "sr_no" : voter.serial_number,
         "voter_list_id": voter.voter_list_id,
         "voter_name_eng": voter.voter_name_eng,
-        # "sr_no": voter.sr_no,
+        "sr_no": voter.sr_no,
         "voter_id": voter.voter_id,
 
         "first_name": voter.first_name,
@@ -179,7 +178,7 @@ def single_voters_info(request, voter_list_id):
         "mobile_no": voter.mobile_no,
         "alternate_mobile_no1": voter.alternate_mobile1,
         "alternate_mobile_no2": voter.alternate_mobile2,
-
+        "kramank": voter.kramank,
         "age": age,
         "gender": voter.gender_eng,
         "ward_id": voter.ward_no,
@@ -212,7 +211,8 @@ def single_voters_info(request, voter_list_id):
         "siblings": siblings,
         "children": children,
         "BloodRelatedFam": BloodRelatedFam,
-        "comments" : voter.comments,
+        
+
         # AUDIT
         "tag_last_updated_by": tag_last_updated_by,
         "tag_last_updated_at": tag_last_updated_at,
