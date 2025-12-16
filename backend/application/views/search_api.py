@@ -69,6 +69,7 @@ def voters_search(request):
     page_obj = paginator.get_page(page)
 
     data = [{
+        "sr_no" : v.serial_number,
         "voter_list_id": v.voter_list_id,
         "voter_id": v.voter_id,
         "voter_name_eng": v.voter_name_eng,
@@ -119,6 +120,7 @@ def family_dropdown_search(request):
     page_obj = paginator.get_page(page)
 
     results = [{
+        "sr_no" : v.serial_number,
         "voter_list_id": v.voter_list_id,
         "voter_id": v.voter_id,
         "voter_name_eng": v.voter_name_eng,

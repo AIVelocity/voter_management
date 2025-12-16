@@ -162,6 +162,7 @@ def volunteer_voters_page(request):
 
     for v in page_obj:
         data.append({
+            "sr_no" : v.serial_number,
             "voter_list_id": v.voter_list_id,
             "voter_id": v.voter_id,
             "first_name":v.first_name,
