@@ -687,7 +687,8 @@ def auto_select_unassigned_voters(request):
         return JsonResponse({
             "status": True,
             "assigned_count": updated,
-            "assigned_voter_ids": voters
+            "assigned_voter_ids": voters,
+            "message" : "Voters Assigned successfully"
         })
 
     except Exception as e:
