@@ -11,3 +11,4 @@ channels-redis
 daphne
 djangorestframework
 django-redis
+openpyxl
