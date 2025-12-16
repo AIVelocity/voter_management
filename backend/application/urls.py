@@ -39,6 +39,7 @@ urlpatterns = [
     path("permissions/all/",views.get_all_roles_permissions,name="get_all_roles_permissions"),
     path("permissions/all/update/",views.bulk_update_permissions,name="bulk_update_permissions"),
     path("voters/export-excel/",views.export_voters_excel,name="export_voters_excel"),
+    path("regirstration/upload_excel/",views.upload_login_credentials_excel,name="upload_login_credentials_excel"),
     
 ]
 
