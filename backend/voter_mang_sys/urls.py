@@ -21,5 +21,5 @@ from django.urls import include
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('app/',include("application.urls")),
-    path('api/',include("whatsapp_service.urls")),
+    path('app/',include("whatsapp_service.urls")),
 ]
