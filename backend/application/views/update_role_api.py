@@ -110,6 +110,7 @@ def single_volunteer(request, user_id):
 
         # VOLUNTEER
         elif user.role and user.role.role_name == "Volunteer":
+            response["ward_no"]=37
             response["allocated_voter_count"] = (
                 VoterList.objects
                 .filter(user=user)
