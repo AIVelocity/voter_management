@@ -510,6 +510,7 @@ def get_messages_for_voter(request):
         })
 
     return JsonResponse({
+        "status": True,
         "messages": messages
     }, safe=False)
 
