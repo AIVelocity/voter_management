@@ -16,7 +16,8 @@ from .admin_dashboard_api import admin_dashboard,volunteer_allocation_panel
 from .volunteer_dashboard_api import volunteer_dashboard,volunteer_voters_page
 from .super_admin_comments_api import all_comments
 from .change_password_api import password_change
-
+from .module_api import get_all_roles_permissions,bulk_update_permissions
+from .excel_report import export_voters_excel
 
 __all__ = [
     "tags",
@@ -50,5 +51,8 @@ __all__ = [
     "volunteer_voters_page",
     "delete_user",
     "all_comments",
-    "password_change"
+    "password_change",
+    "get_all_roles_permissions",
+    "bulk_update_permissions",
+    "export_voters_excel"
 ]

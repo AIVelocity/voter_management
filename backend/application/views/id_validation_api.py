@@ -52,7 +52,41 @@ def id_validation(request):
         else:
             role_name = None
             role_id = None
+    
+    
+                # -------- MODULE PERMISSIONS --------
+        # permissions = []
 
+        # if user.role:
+        #     perms = (
+        #         RoleModulePermission.objects
+        #         .filter(
+        #             role_id=user.role.role_id,
+        #             module__is_active=True
+        #         )
+        #         .select_related("module")
+        #         .values(
+        #             "module__module_name",
+        #             "module__module_code",
+        #             "can_add",
+        #             "can_edit",
+        #             "can_delete"
+        #         )
+        #         .order_by("module__module_name")
+        #     )
+
+        #     permissions = [
+        #         {
+        #             "module": p["module__module_name"],
+        #             "code": p["module__module_code"],
+        #             "add": p["can_add"],
+        #             "edit": p["can_edit"],
+        #             "delete": p["can_delete"]
+        #         }
+        #         for p in perms
+        #     ]
+
+    
         # -------- SUCCESS --------
         return JsonResponse({
             "status": True,
@@ -62,7 +96,8 @@ def id_validation(request):
             "user_name": user_name,
             "role_id": role_id,
             "role_name": role_name,
-            "message": "Login successful"
+            "message": "Login successful",
+            # "permissions": permissions
         })
 
     except json.JSONDecodeError:

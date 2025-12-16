@@ -36,6 +36,10 @@ urlpatterns = [
     path("volunteer/dashboard/list_voters/",views.volunteer_voters_page,name="volunteer_voters_page"),
     path("volunteer/dashboard/delete/<int:user_id>/",views.delete_user,name="delete_user"),
     
+    path("permissions/all/",views.get_all_roles_permissions,name="get_all_roles_permissions"),
+    path("permissions/all/update/",views.bulk_update_permissions,name="bulk_update_permissions"),
+    path("voters/export-excel/",views.export_voters_excel,name="export_voters_excel"),
+    
 ]
 
 # POST /api/voter/relation/add
