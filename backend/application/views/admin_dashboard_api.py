@@ -269,8 +269,9 @@ def unassigned_voters(request):
         VoterList.objects
         .filter(user__isnull=True)
         .values(
+            "serial_number",
             "voter_list_id",
-            "sr_no",
+            # "sr_no",
             "voter_id",
             "voter_name_eng",
             "voter_name_marathi",
