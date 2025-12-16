@@ -139,21 +139,21 @@ def upload_login_credentials_excel(request):
 
         # ---- Normalize headers ----
         raw_headers = [str(cell.value).strip().lower() for cell in sheet[1]]
-        
+
         header_map = {
             "first name": "first_name",
             "last name": "last_name",
             "mobile number": "mobile_no",
             "password": "password",
         }
-        
+
         if not set(header_map.keys()).issubset(set(raw_headers)):
             return JsonResponse({
                 "status": False,
                 "message": "Invalid Excel format",
                 "required_columns": list(header_map.keys())
             }, status=400)
-        
+
 
         created = 0
         skipped = 0
@@ -187,7 +187,8 @@ def upload_login_credentials_excel(request):
                     first_name=first_name,
                     last_name=last_name,
                     mobile_no=mobile_no,
-                    password=make_password(str(password))  
+                    password=make_password(str(password)),
+                    role_id=3
                 )
 
                 created += 1

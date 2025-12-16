@@ -18,6 +18,7 @@ from .super_admin_comments_api import all_comments
 from .change_password_api import password_change
 from .module_api import get_all_roles_permissions,bulk_update_permissions
 from .excel_report import export_voters_excel
+from .contact_match_api import match_contacts_with_users
 
 __all__ = [
     "tags",
@@ -55,5 +56,6 @@ __all__ = [
     "get_all_roles_permissions",
     "bulk_update_permissions",
     "export_voters_excel",
-    "upload_login_credentials_excel"
+    "upload_login_credentials_excel",
+    "match_contacts_with_users"
 ]

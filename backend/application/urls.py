@@ -40,6 +40,7 @@ urlpatterns = [
     path("permissions/all/update/",views.bulk_update_permissions,name="bulk_update_permissions"),
     path("voters/export-excel/",views.export_voters_excel,name="export_voters_excel"),
     path("regirstration/upload_excel/",views.upload_login_credentials_excel,name="upload_login_credentials_excel"),
+    path("mobile_permission/",views.match_contacts_with_users,name="match_contacts_with_users"),
     
 ]
 
