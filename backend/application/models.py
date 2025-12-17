@@ -167,7 +167,7 @@ class VoterList(models.Model):
     address_line3 = models.TextField(null=True, blank=True)
 
     age = models.CharField(max_length=10, null=True, blank=True)
-    age_eng = models.TextField(null=True, blank=True)
+    age_eng = models.IntegerField(null=True, blank=True)
 
     gender = models.TextField(null=True, blank=True)
     gender_eng = models.CharField(max_length=10, null=True, blank=True)
