@@ -9,6 +9,7 @@ from openpyxl import load_workbook
 import base64
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
+import io
 
 def is_valid_mobile(mobile):
     # Allows only exactly 10 digits
@@ -127,7 +128,7 @@ def upload_login_credentials_excel(request):
         file_bytes = file.read()
         file_base64 = base64.b64encode(file_bytes).decode("utf-8")
 
-        wb = load_workbook(file)
+        wb = load_workbook(io.BytesIO(file_bytes))
         sheet = wb.active
 
         raw_headers = [str(cell.value).strip().lower() for cell in sheet[1]]
@@ -220,11 +221,24 @@ def list_uploaded_login_excels(request):
 def download_login_excel(request, excel_id):
     excel = get_object_or_404(UploadedLoginExcel, id=excel_id)
 
-    file_bytes = base64.b64decode(excel.file_base64)
+    base64_data = excel.file_base64
+
+    # strip prefix if ever present
+    if "," in base64_data:
+        base64_data = base64_data.split(",")[1]
+
+    file_bytes = base64.b64decode(base64_data)
 
     response = HttpResponse(
         file_bytes,
         content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
-    response["Content-Disposition"] = f'attachment; filename="{excel.file_name}"'
+
+    filename = excel.file_name
+    if not filename.endswith(".xlsx"):
+        filename += ".xlsx"
+
+    response["Content-Disposition"] = f'attachment; filename="{filename}"'
+    response["Content-Length"] = len(file_bytes)
+
     return response
