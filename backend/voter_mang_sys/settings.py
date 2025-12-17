@@ -143,17 +143,20 @@ DATABASES = {
     }
 }
 
+ACCESS_TOKEN="EAATvXwkH2M4BQHOwksWhXDzIVF86aeClnJWl9rTqjutym9aTCWh9ww2HRQthJHi2c5uyb0RIZCmK3Xnm7eUJw7XyhtLlZC0VHJHejlcnKntIzYzOKHDBaHHzvDufJyLK0RpGa7p2L9t3gRG0QyruH5W4W8XO52HrVm9lF9OeZBb0nchFGI9Y86ORkHPU5Ciz36mkmZCZCxJRlHDUy28KOog3Qf9qsBvGkZCKhy9TZCaxeVB4AlZCgDZCj4KX2zBT7nq55jlnaT18ZAUXrLwNyHt5V6tW9tKbAlh1XvYoXtHAZDZD"
+VERIFY_TOKEN="Toyam_orchid_token"
+MESSAGE_URL="https://graph.facebook.com/v24.0/946219375236764/messages"
+UPLOAD_URL="https://graph.facebook.com/v24.0/946219375236764/media"
+# VERIFY_TOKEN = os.environ.get("WP_VERIFY_TOKEN","my_verify_token_123")
+# MESSAGE_URL = os.environ.get("MESSAGE_URL")
+# UPLOAD_URL = os.environ.get("UPLOAD_URL")
+# ACCESS_TOKEN = os.environ.get("WP_ACCESS_TOKEN")
 
-VERIFY_TOKEN = os.environ.get("WP_VERIFY_TOKEN","my_verify_token_123")
-MESSAGE_URL = os.environ.get("MESSAGE_URL")
-UPLOAD_URL = os.environ.get("UPLOAD_URL")
-ACCESS_TOKEN = os.environ.get("WP_ACCESS_TOKEN")
 
-
-AWS_ACCESS_KEY_ID= os.environ.get("AWS_ACCESS_KEY_ID")
-AWS_SECRET_ACCESS_KEY= os.environ.get("AWS_SECRET_ACCESS_KEY")
-AWS_S3_BUCKET_NAME= os.environ.get("AWS_S3_BUCKET_NAME")
-AWS_S3_REGION_NAME= os.environ.get("AWS_S3_REGION_NAME")
+# AWS_ACCESS_KEY_ID= os.environ.get("AWS_ACCESS_KEY_ID")
+# AWS_SECRET_ACCESS_KEY= os.environ.get("AWS_SECRET_ACCESS_KEY")
+# AWS_S3_BUCKET_NAME= os.environ.get("AWS_S3_BUCKET_NAME")
+# AWS_S3_REGION_NAME= os.environ.get("AWS_S3_REGION_NAME")
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
