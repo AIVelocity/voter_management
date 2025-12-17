@@ -11,10 +11,8 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 from pathlib import Path
-from dotenv import load_dotenv
 import os
 from datetime import timedelta
-load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -146,20 +144,16 @@ DATABASES = {
 }
 
 
-VERIFY_TOKEN = os.getenv("WP_VERIFY_TOKEN")
-MESSAGE_URL = os.getenv("MESSAGE_URL")
-UPLOAD_URL = os.getenv("UPLOAD_URL")
-ACCESS_TOKEN = os.getenv("WP_ACCESS_TOKEN")
+VERIFY_TOKEN = os.environ.get("WP_VERIFY_TOKEN","my_verify_token_123")
+MESSAGE_URL = os.environ.get("MESSAGE_URL")
+UPLOAD_URL = os.environ.get("UPLOAD_URL")
+ACCESS_TOKEN = os.environ.get("WP_ACCESS_TOKEN")
 
 
-WP_ACCESS_TOKEN="EAATvXwkH2M4BQGVUbaqi5gpg2RNMRbj835YCCi9XCzOV3oFEfFTadxx78S9de2eoI1Co8YiZAZCx79MiamrdPl5qNnI0ZAkobZBrljLcWaVoltDDFBFsXZBZBIbUdZBPZAulNqpYneOm8HOv59KZApdIrLKxovZClbwpmtZAHj6BOoz7qQRm4w2ZBaN0wy79t7CuK7xZADZC3ErslLt5GjspwOj8Vb5czkP2EqZAroSiyVJJlH0cSStpoaDVZAbdAkYrbUclBMK8YDW4snDtZA9WNTZCnhsYxvf8znRHdb4sO7JCmB6wZDZD"
-WP_VERIFY_TOKEN="Toyam_orchid_token"
-MESSAGE_URL="https://graph.facebook.com/v24.0/946219375236764/messages"
-UPLOAD_URL="https://graph.facebook.com/v24.0/946219375236764/media"
-AWS_ACCESS_KEY_ID= os.getenv("AWS_ACCESS_KEY_ID")
-AWS_SECRET_ACCESS_KEY= os.getenv("AWS_SECRET_ACCESS_KEY")
-AWS_S3_BUCKET_NAME= os.getenv("AWS_S3_BUCKET_NAME")
-AWS_S3_REGION_NAME= os.getenv("AWS_S3_REGION_NAME")
+AWS_ACCESS_KEY_ID= os.environ.get("AWS_ACCESS_KEY_ID")
+AWS_SECRET_ACCESS_KEY= os.environ.get("AWS_SECRET_ACCESS_KEY")
+AWS_S3_BUCKET_NAME= os.environ.get("AWS_S3_BUCKET_NAME")
+AWS_S3_REGION_NAME= os.environ.get("AWS_S3_REGION_NAME")
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
