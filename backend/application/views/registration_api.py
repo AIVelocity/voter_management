@@ -1,10 +1,14 @@
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.hashers import make_password
-from ..models import VoterUserMaster, Roles
+from ..models import VoterUserMaster, UploadedLoginExcel
 import json
 import re
-
+from django.db import transaction
+from openpyxl import load_workbook
+import base64
+from django.http import HttpResponse
+from django.shortcuts import get_object_or_404
 
 def is_valid_mobile(mobile):
     # Allows only exactly 10 digits
@@ -108,81 +112,66 @@ def registration(request):
             "error": str(e)
         })
         
-from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
-from django.db import transaction
-from django.contrib.auth.hashers import make_password
-from openpyxl import load_workbook
-from ..models import VoterUserMaster
-
-
 @csrf_exempt
 def upload_login_credentials_excel(request):
 
     if request.method != "POST":
-        return JsonResponse(
-            {"status": False, "message": "POST method required"},
-            status=405
-        )
+        return JsonResponse({"status": False, "message": "POST required"}, status=405)
 
     file = request.FILES.get("file")
-
     if not file:
-        return JsonResponse(
-            {"status": False, "message": "Excel file is required"},
-            status=400
-        )
+        return JsonResponse({"status": False, "message": "Excel file required"}, status=400)
 
     try:
+        # ---- Convert file to Base64 ----
+        file_bytes = file.read()
+        file_base64 = base64.b64encode(file_bytes).decode("utf-8")
+
         wb = load_workbook(file)
         sheet = wb.active
 
-        # ---- Normalize headers ----
         raw_headers = [str(cell.value).strip().lower() for cell in sheet[1]]
 
-        header_map = {
-            "first name": "first_name",
-            "last name": "last_name",
-            "mobile number": "mobile_no",
-            "password": "password",
-        }
-
-        if not set(header_map.keys()).issubset(set(raw_headers)):
+        required_headers = {"first name", "last name", "mobile number", "password"}
+        if not required_headers.issubset(set(raw_headers)):
             return JsonResponse({
                 "status": False,
                 "message": "Invalid Excel format",
-                "required_columns": list(header_map.keys())
+                "required_columns": list(required_headers)
             }, status=400)
-
 
         created = 0
         skipped = 0
         errors = []
+
+        # ---- Save Base64 Excel ----
+        uploaded_excel = UploadedLoginExcel.objects.create(
+            file_name=file.name,
+            file_base64=file_base64
+        )
 
         with transaction.atomic():
             for row_index, row in enumerate(
                 sheet.iter_rows(min_row=2, values_only=True),
                 start=2
             ):
-                excel_row = dict(zip(raw_headers, row))
+                row_data = dict(zip(raw_headers, row))
 
-                first_name = excel_row.get("first name")
-                last_name = excel_row.get("last name")
-                mobile_no = str(excel_row.get("mobile number")).strip() if excel_row.get("mobile number") else None
-                password = excel_row.get("password")
+                first_name = row_data.get("first name")
+                last_name = row_data.get("last name")
+                mobile_no = str(row_data.get("mobile number")).strip() if row_data.get("mobile number") else None
+                password = row_data.get("password")
 
-                # ---- Validation ----
                 if not first_name or not mobile_no or not password:
-                    errors.append(f"Row {row_index}: missing required fields")
                     skipped += 1
+                    errors.append(f"Row {row_index}: missing fields")
                     continue
 
                 if VoterUserMaster.objects.filter(mobile_no=mobile_no).exists():
-                    errors.append(f"Row {row_index}: mobile already exists ({mobile_no})")
                     skipped += 1
+                    errors.append(f"Row {row_index}: mobile exists ({mobile_no})")
                     continue
 
-                # ---- Create user ----
                 VoterUserMaster.objects.create(
                     first_name=first_name,
                     last_name=last_name,
@@ -190,19 +179,52 @@ def upload_login_credentials_excel(request):
                     password=make_password(str(password)),
                     role_id=3
                 )
-
                 created += 1
+
+        uploaded_excel.created_count = created
+        uploaded_excel.skipped_count = skipped
+        uploaded_excel.save()
 
         return JsonResponse({
             "status": True,
-            "message": "Login credentials imported successfully",
+            "message": "Excel imported successfully",
+            "excel_id": uploaded_excel.id,
             "created_users": created,
             "skipped_rows": skipped,
             "errors": errors
         })
 
     except Exception as e:
-        return JsonResponse(
-            {"status": False, "error": str(e)},
-            status=500
-        )
+        return JsonResponse({"status": False, "error": str(e)}, status=500)
+
+def list_uploaded_login_excels(request):
+    excels = UploadedLoginExcel.objects.order_by("-uploaded_at")
+
+    data = []
+    for e in excels:
+        data.append({
+            "excel_id": e.id,
+            "file_name": e.file_name,
+            "uploaded_at": e.uploaded_at.strftime("%d-%m-%Y %I:%M %p"),
+            "created_users": e.created_count,
+            "skipped_rows": e.skipped_count
+        })
+
+    return JsonResponse({
+        "status": True,
+        "count": len(data),
+        "data": data
+    })
+
+
+def download_login_excel(request, excel_id):
+    excel = get_object_or_404(UploadedLoginExcel, id=excel_id)
+
+    file_bytes = base64.b64decode(excel.file_base64)
+
+    response = HttpResponse(
+        file_bytes,
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+    response["Content-Disposition"] = f'attachment; filename="{excel.file_name}"'
+    return response
