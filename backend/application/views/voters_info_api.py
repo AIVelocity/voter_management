@@ -1,26 +1,69 @@
 from django.http import JsonResponse
-from ..models import VoterList,VoterTag
+from ..models import VoterList,VoterUserMaster
 from django.core.cache import cache
 from django.core.paginator import Paginator
+from rest_framework_simplejwt.tokens import AccessToken
+
 
 def voters_info(request):
 
     page = int(request.GET.get("page", 1))
     size = int(request.GET.get("size", 100))
 
-    qs = VoterList.objects.select_related("tag_id") \
+    user_id = None
+    auth_header = request.headers.get("Authorization")
+
+    if auth_header and auth_header.startswith("Bearer "):
+        try:
+            token = AccessToken(auth_header.split(" ")[1])
+            user_id = token["user_id"]
+        except Exception:
+            pass
+
+    if not user_id:
+        return JsonResponse(
+            {"status": False, "message": "Unauthorized"},
+            status=401
+        )
+
+    # -------- GET USER & ROLE --------
+    try:
+        user = (
+            VoterUserMaster.objects
+            .select_related("role")
+            .get(user_id=user_id)
+        )
+    except VoterUserMaster.DoesNotExist:
+        return JsonResponse(
+            {"status": False, "message": "User not found"},
+            status=404
+        )
+
+    # -------- ROLE-BASED QUERY --------
+    if user.role.role_name == "SuperAdmin":
+        qs = (
+            VoterList.objects
+            .select_related("tag_id")
             .order_by("ward_no", "voter_list_id")
+        )
+    else:
+        qs = (
+            VoterList.objects
+            .select_related("tag_id")
+            .filter(user_id=user_id)
+            .order_by("ward_no", "voter_list_id")
+        )
 
-    cache_key = f"voters:page:{page}:size{size}"
+    # cache_key = f"voters:page:{page}:size{size}"
 
-    cache_response = cache.get(cache_key)
+    # cache_response = cache.get(cache_key)
     
-    if cache_response:
-        return JsonResponse({
-            "status" : True,
-            "source":"cache",
-            **cache_response
-        })
+    # if cache_response:
+    #     return JsonResponse({
+    #         "status" : True,
+    #         "source":"cache",
+    #         **cache_response
+    #     })
         
     paginator = Paginator(qs, size)
     page_obj = paginator.get_page(page)
@@ -55,7 +98,7 @@ def voters_info(request):
     }
 
     # 🔹 Save to Redis (10 minutes)
-    cache.set(cache_key, response_data, timeout=600)
+    # cache.set(cache_key, response_data, timeout=600)
 
     return JsonResponse({
         "status": True,
