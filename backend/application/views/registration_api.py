@@ -124,8 +124,8 @@ def upload_login_credentials_excel(request):
         )
 
     try:
-        # -------- READ JSON BODY --------
-        body = json.loads(request.body)
+        #  Decode explicitly
+        body = json.loads(request.body.decode("utf-8"))
 
         file_name = body.get("file_name")
         file_base64 = body.get("file_base64")
@@ -139,7 +139,7 @@ def upload_login_credentials_excel(request):
                 status=400
             )
 
-        # -------- DECODE BASE64 --------
+        # -------- DECODE BASE64 --------file_bytes = base64.b64decode(request.json['file_base64'])
         try:
             file_bytes = base64.b64decode(file_base64)
         except Exception:
