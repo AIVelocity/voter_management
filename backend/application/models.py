@@ -406,3 +406,15 @@ class RoleModulePermission(models.Model):
 
     def __str__(self):
         return f"{self.role} → {self.module}"
+
+
+class UploadedLoginExcel(models.Model):
+    file_name = models.CharField(max_length=255)
+    file_base64 = models.TextField()
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    created_count = models.IntegerField(default=0)
+    skipped_count = models.IntegerField(default=0)
+
+    def __str__(self):
+        return f"{self.file_name} ({self.uploaded_at})"
