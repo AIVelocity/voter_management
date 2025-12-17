@@ -40,12 +40,18 @@ urlpatterns = [
     
     path("volunteer/dashboard/",views.volunteer_dashboard,name="volunteer_dashboard"),
     path("volunteer/dashboard/list_voters/",views.volunteer_voters_page,name="volunteer_voters_page"),
+    path("volunteer/dashboard/list_voters/filter/",views.volunteer_voters_page_filter,name="volunteer_voters_page_filter"),
+    
     path("volunteer/dashboard/delete/<int:user_id>/",views.delete_user,name="delete_user"),
     
     path("permissions/all/",views.get_all_roles_permissions,name="get_all_roles_permissions"),
     path("permissions/all/update/",views.bulk_update_permissions,name="bulk_update_permissions"),
     path("voters/export-excel/",views.export_voters_excel,name="export_voters_excel"),
+    
     path("regirstration/upload_excel/",views.upload_login_credentials_excel,name="upload_login_credentials_excel"),
+    path("regirstration/upload_excel/list/",views.list_uploaded_login_excels,name="list_uploaded_login_excels"),
+    path("regirstration/upload_excel/list/download/<int:excel_id>/",views.download_login_excel,name="download_login_excel"),
+    
     path("mobile_permission/",views.match_contacts_with_users,name="match_contacts_with_users"),
     
 ]
