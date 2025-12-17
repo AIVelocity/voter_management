@@ -179,6 +179,7 @@ def single_voters_info(request, voter_list_id):
         "alternate_mobile_no1": voter.alternate_mobile1,
         "alternate_mobile_no2": voter.alternate_mobile2,
         "kramank": voter.kramank,
+        "full_address":voter.address_line1,
         "age": age,
         "gender": voter.gender_eng,
         "ward_id": voter.ward_no,
