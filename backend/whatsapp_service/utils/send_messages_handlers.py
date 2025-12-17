@@ -164,7 +164,7 @@ def send_whatapps_request(payload: dict,
     except Exception:
         pass  # keep role fields empty if resolution fails
 
-    if message_type != "template" and not is_within_reengagement_window(voter):
+    if message_type not in ["text", "template"] and not is_within_reengagement_window(voter):
         db_id = _make_fallback_local_id()
         reply_to_db = _resolve_reply_to(reply_to_message_id)
 
