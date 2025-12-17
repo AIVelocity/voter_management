@@ -369,127 +369,127 @@ def assign_voters_to_karyakarta(request):
         }, status=500)
 
 
-def auto_select_unassigned_voters(request):
-
-    try:
-        count = int(request.GET.get("count", 0))
-    except ValueError:
-        return JsonResponse({
-            "status": False,
-            "message": "Invalid count"
-        }, status=400)
-
-    if count <= 0:
-        return JsonResponse({
-            "status": False,
-            "message": "Count must be greater than 0"
-        }, status=400)
-
-    voters = (
-        VoterList.objects
-        .filter(user__isnull=True)
-        .order_by("sr_no")
-        .values(
-            "voter_list_id",
-            "sr_no",
-            "voter_id",
-            "voter_name_eng",
-            "voter_name_marathi",
-            "mobile_no",
-            "ward_no",
-            "age",
-            "gender_eng",
-            "badge",
-            "location"
-        )[:count]
-    )
-
-    return JsonResponse({
-        "SUCCESS": True,
-        "requested_count": count,
-        "returned_count": len(voters),
-        "voters": list(voters),
-        "voter_ids": [v["voter_list_id"] for v in voters]
-    })
-
-
-# from django.http import JsonResponse
-# from django.views.decorators.csrf import csrf_exempt
-# from django.db import transaction
-# from ..models import VoterList, VoterUserMaster
-# import json
-
-
-# @csrf_exempt
-# def auto_assign_unassigned_voters(request):
-
-#     if request.method != "POST":
-#         return JsonResponse({
-#             "status": False,
-#             "message": "POST method required"
-#         }, status=405)
+# def auto_select_unassigned_voters(request):
 
 #     try:
-#         body = json.loads(request.body)
-
-#         karyakarta_user_id = body.get("karyakarta_user_id")
-#         count = body.get("count")
-
-#         if not karyakarta_user_id or not count:
-#             return JsonResponse({
-#                 "status": False,
-#                 "message": "karyakarta_user_id and count are required"
-#             }, status=400)
-
-#         count = int(count)
-#         if count <= 0:
-#             return JsonResponse({
-#                 "status": False,
-#                 "message": "Count must be greater than 0"
-#             }, status=400)
-
-#         #  validate karyakarta
-#         try:
-#             karyakarta = VoterUserMaster.objects.get(user_id=karyakarta_user_id)
-#         except VoterUserMaster.DoesNotExist:
-#             return JsonResponse({
-#                 "status": False,
-#                 "message": "Karyakarta not found"
-#             }, status=404)
-
-#         with transaction.atomic():
-
-#             # fetch first N unassigned voters
-#             voters = list(
-#                 VoterList.objects
-#                 .select_for_update()               # prevents race condition
-#                 .filter(user__isnull=True)
-#                 .order_by("sr_no")
-#                 .values_list("voter_list_id", flat=True)[:count]
-#             )
-
-#             if not voters:
-#                 return JsonResponse({
-#                     "status": True,
-#                     "assigned_count": 0,
-#                     "message": "No unassigned voters available"
-#                 })
-
-#             # assign them
-#             updated = (
-#                 VoterList.objects
-#                 .filter(voter_list_id__in=voters, user__isnull=True)
-#                 .update(user=karyakarta)
-#             )
-
-#         return JsonResponse({
-#             "status": True,
-#             "assigned_count": updated,
-#             "assigned_voter_ids": voters
-#         })
-
-#     except Exception as e:
+#         count = int(request.GET.get("count", 0))
+#     except ValueError:
 #         return JsonResponse({
 #             "status": False,
-#             "error": str(e)
-#         }, status=500)
+#             "message": "Invalid count"
+#         }, status=400)
+
+#     if count <= 0:
+#         return JsonResponse({
+#             "status": False,
+#             "message": "Count must be greater than 0"
+#         }, status=400)
+
+#     voters = (
+#         VoterList.objects
+#         .filter(user__isnull=True)
+#         .order_by("sr_no")
+#         .values(
+#             "voter_list_id",
+#             "sr_no",
+#             "voter_id",
+#             "voter_name_eng",
+#             "voter_name_marathi",
+#             "mobile_no",
+#             "ward_no",
+#             "age",
+#             "gender_eng",
+#             "badge",
+#             "location"
+#         )[:count]
+#     )
+
+#     return JsonResponse({
+#         "SUCCESS": True,
+#         "requested_count": count,
+#         "returned_count": len(voters),
+#         "voters": list(voters),
+#         "voter_ids": [v["voter_list_id"] for v in voters]
+#     })
+
+
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.db import transaction
+from ..models import VoterList, VoterUserMaster
+import json
+
+
+@csrf_exempt
+def auto_assign_unassigned_voters(request):
+
+    if request.method != "POST":
+        return JsonResponse({
+            "status": False,
+            "message": "POST method required"
+        }, status=405)
+
+    try:
+        body = json.loads(request.body)
+
+        karyakarta_user_id = body.get("karyakarta_user_id")
+        count = body.get("count")
+
+        if not karyakarta_user_id or not count:
+            return JsonResponse({
+                "status": False,
+                "message": "karyakarta_user_id and count are required"
+            }, status=400)
+
+        count = int(count)
+        if count <= 0:
+            return JsonResponse({
+                "status": False,
+                "message": "Count must be greater than 0"
+            }, status=400)
+
+        #  validate karyakarta
+        try:
+            karyakarta = VoterUserMaster.objects.get(user_id=karyakarta_user_id)
+        except VoterUserMaster.DoesNotExist:
+            return JsonResponse({
+                "status": False,
+                "message": "Karyakarta not found"
+            }, status=404)
+
+        with transaction.atomic():
+
+            # fetch first N unassigned voters
+            voters = list(
+                VoterList.objects
+                .select_for_update()               # prevents race condition
+                .filter(user__isnull=True)
+                .order_by("sr_no")
+                .values_list("voter_list_id", flat=True)[:count]
+            )
+
+            if not voters:
+                return JsonResponse({
+                    "status": True,
+                    "assigned_count": 0,
+                    "message": "No unassigned voters available"
+                })
+
+            # assign them
+            updated = (
+                VoterList.objects
+                .filter(voter_list_id__in=voters, user__isnull=True)
+                .update(user=karyakarta)
+            )
+
+        return JsonResponse({
+            "status": True,
+            "assigned_count": updated,
+            "assigned_voter_ids": voters
+        })
+
+    except Exception as e:
+        return JsonResponse({
+            "status": False,
+            "error": str(e)
+        }, status=500)
