@@ -21,17 +21,23 @@ urlpatterns = [
     path('registration/',views.registration,name="registration"),
     path("registration/login/",views.id_validation,name="id_validation"),
     path("registration/change_password/",views.password_change,name="password_change"),
+    
     path("admin/dashboard/",views.dashboard,name="dashboard"),# dashboard 
+    
     path("admin/dashboard/allocated/",views.admin_allocation_panel,name="allocated_screen"),
     path("admin/dashboard/unassigned_list/",views.unassigned_voters,name="unassigned_voters"),
+    
     path("admin/dashboard/assign/",views.assign_voters_to_karyakarta,name="assign_voters_to_karyakarta"),
     path("admin/dashboard/auto_assign/",views.auto_select_unassigned_voters,name="auto_select_unassigned_voters"),
     path("admin/dashboard/list_volunteer/",views.list_volunteers,name="list_volunteers"),
+    
     path("admin/dashboard/volunteers/<int:user_id>/",views.single_volunteer,name="single_volunteer"),
     path("admin/dashboard/assign_role/",views.promote_user,name="promote_user"),
+    
     path("admin/dashboard/comments/",views.all_comments,name="all_comments"),
     path("subadmin/dashboard/",views.admin_dashboard,name="admin_dashboard"),
     path("subadmin/dashboard/allocated/",views.volunteer_allocation_panel,name="volunteer_allocation_panel"),
+    
     path("volunteer/dashboard/",views.volunteer_dashboard,name="volunteer_dashboard"),
     path("volunteer/dashboard/list_voters/",views.volunteer_voters_page,name="volunteer_voters_page"),
     path("volunteer/dashboard/delete/<int:user_id>/",views.delete_user,name="delete_user"),
