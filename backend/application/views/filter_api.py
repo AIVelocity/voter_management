@@ -1,5 +1,6 @@
-from ..models import VoterList
+from ..models import VoterList,VoterUserMaster
 from django.db.models import Q
+from rest_framework_simplejwt.tokens import AccessToken
 from django.core.paginator import Paginator
 from django.http import JsonResponse
 from .search_api import apply_dynamic_initial_search
@@ -51,13 +52,6 @@ def filter(request):
     location = request.GET.get("location")
     tag = request.GET.get("tag_id")
     gender = request.GET.get("gender")
-
-    # STARTS WITH filters
-    # first_starts = request.GET.get("first_starts")
-    # middle_starts = request.GET.get("middle_starts")
-    # last_starts = request.GET.get("last_starts")
-
-    # ENDS WITH filters
     first_ends = request.GET.get("first_ends")
     middle_ends = request.GET.get("middle_ends")
     last_ends = request.GET.get("last_ends")
@@ -71,53 +65,50 @@ def filter(request):
 
     # badge = request.GET.get("badge")
 
-    qs = VoterList.objects.select_related("tag_id").all()
+    user_id = None
+    auth_header = request.headers.get("Authorization")
+
+    if auth_header and auth_header.startswith("Bearer "):
+        try:
+            token = AccessToken(auth_header.split(" ")[1])
+            user_id = token["user_id"]
+        except Exception:
+            pass
+
+    if not user_id:
+        return JsonResponse(
+            {"status": False, "message": "Unauthorized"},
+            status=401
+        )
+
+    # -------- USER & ROLE --------
+    try:
+        user = (
+            VoterUserMaster.objects
+            .select_related("role")
+            .get(user_id=user_id)
+        )
+    except VoterUserMaster.DoesNotExist:
+        return JsonResponse(
+            {"status": False, "message": "User not found"},
+            status=404
+        )
+
+    # -------- BASE QUERY (ROLE BASED) --------
+    if user.role.role_name == "SuperAdmin":
+        qs = VoterList.objects.select_related("tag_id").all()
+    else:
+        qs = (
+            VoterList.objects
+            .select_related("tag_id")
+            .filter(user_id=user_id)
+        )
+
     
     # Apply advanced search (name + voter_id)
     if search:
         qs = apply_dynamic_initial_search(qs, search)
 
-    # If Python converted to list → sort manually
-    if isinstance(qs, list):
-        qs.sort(key=lambda x: x.voter_list_id)
-
-
-    # caste = request.GET.get("caste")
-    # occupation = request.GET.get("occupation")
-
-    # ---------- CAST / CASTE ----------
-    # if caste:
-    #     caste_ids = [c.strip() for c in caste.split(",")]
-    #     if "null" in [c.lower() for c in caste_ids]:
-    #         qs = qs.filter(cast__isnull=True)
-    #     else:
-    #         qs = qs.filter(cast__in=caste_ids)
-
-
-    # # ---------- OCCUPATION ----------
-    # if occupation:
-    #     if occupation.lower() == "null":
-    #         qs = qs.filter(occupation__isnull=True)
-    #     else:
-    #         qs = qs.filter(occupation=int(occupation))
-
-    # # ---------- RELIGION ----------
-    # if religion:
-    #     religion_ids = [r.strip() for r in religion.split(",")]
-
-    #     if "null" in [r.lower() for r in religion_ids]:
-    #         qs = qs.filter(religion__isnull=True)
-    #     else:
-    #         qs = qs.filter(religion_id__in=religion_ids)
-
-
-    # ---------- TAG ----------
-    # if tag:
-    #     qs = qs.filter(tag_id=int(tag))
-
-    # if badge:
-    #     qs = qs.filter(badge__icontains=badge)
-    
     if voter_id:
         qs = qs.filter(voter_id__icontains=voter_id)
     
@@ -158,23 +149,12 @@ def filter(request):
 
         qs = qs.filter(age_q)
 
-    # if age_max:
-    #     qs = qs.filter(age_eng__lte=age_max)
-
-    # if age_min:
-    #     qs = qs.filter(age_eng__gte=age_min)
-
     if location:
         qs = qs.filter(location__icontains=location)
      
     
     if sort:
         qs = qs.order_by(sort)
-    # else:
-    #     qs = qs.order_by(voter)
-
-    # if gender:
-    #     qs = qs.filter(gender_eng__iexact=gender)
 
     # Apply ENDS WITH filters
     if first_ends:

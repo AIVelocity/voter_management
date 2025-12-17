@@ -52,14 +52,5 @@ urlpatterns = [
     path("regirstration/upload_excel/list/",views.list_uploaded_login_excels,name="list_uploaded_login_excels"),
     path("regirstration/upload_excel/list/download/<int:excel_id>/",views.download_login_excel,name="download_login_excel"),
     
-    path("mobile_permission/",views.match_contacts_with_users,name="match_contacts_with_users"),
-    
+    path("mobile_permission/",views.match_contacts_with_users,name="match_contacts_with_users"),   
 ]
-
-# POST /api/voter/relation/add
-# {
-#   "voter_id": 100,
-#   "related_voter_id": 200,
-#   "relation": "child"
-# }
-

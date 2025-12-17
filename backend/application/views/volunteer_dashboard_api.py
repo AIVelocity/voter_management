@@ -216,6 +216,7 @@ def volunteer_voters_page_filter(request):
         VoterList.objects
         .select_related("tag_id")
         .filter(user_id=user_id)
+        .order_by("voter_list_id")
     )
     
     search = request.GET.get("search")
@@ -362,5 +363,3 @@ def volunteer_voters_page_filter(request):
         "records_returned": len(data),
         "data": data
     })
-    
-    
