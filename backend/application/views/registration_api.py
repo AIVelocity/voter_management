@@ -113,44 +113,78 @@ def registration(request):
             "error": str(e)
         })
         
+        
 @csrf_exempt
 def upload_login_credentials_excel(request):
 
     if request.method != "POST":
-        return JsonResponse({"status": False, "message": "POST required"}, status=405)
-
-    file = request.FILES.get("file")
-    if not file:
-        return JsonResponse({"status": False, "message": "Excel file required"}, status=400)
+        return JsonResponse(
+            {"status": False, "message": "POST required"},
+            status=405
+        )
 
     try:
-        # ---- Convert file to Base64 ----
-        file_bytes = file.read()
-        file_base64 = base64.b64encode(file_bytes).decode("utf-8")
+        # -------- READ JSON BODY --------
+        body = json.loads(request.body)
 
+        file_name = body.get("file_name")
+        file_base64 = body.get("file_base64")
+
+        if not file_name or not file_base64:
+            return JsonResponse(
+                {
+                    "status": False,
+                    "message": "file_name and file_base64 are required"
+                },
+                status=400
+            )
+
+        # -------- DECODE BASE64 --------
+        try:
+            file_bytes = base64.b64decode(file_base64)
+        except Exception:
+            return JsonResponse(
+                {"status": False, "message": "Invalid base64 file"},
+                status=400
+            )
+
+        # -------- LOAD EXCEL --------
         wb = load_workbook(io.BytesIO(file_bytes))
         sheet = wb.active
 
-        raw_headers = [str(cell.value).strip().lower() for cell in sheet[1]]
+        raw_headers = [
+            str(cell.value).strip().lower()
+            for cell in sheet[1]
+        ]
 
-        required_headers = {"first name", "last name", "mobile number", "password"}
+        required_headers = {
+            "first name",
+            "last name",
+            "mobile number",
+            "password"
+        }
+
         if not required_headers.issubset(set(raw_headers)):
-            return JsonResponse({
-                "status": False,
-                "message": "Invalid Excel format",
-                "required_columns": list(required_headers)
-            }, status=400)
+            return JsonResponse(
+                {
+                    "status": False,
+                    "message": "Invalid Excel format",
+                    "required_columns": list(required_headers)
+                },
+                status=400
+            )
 
         created = 0
         skipped = 0
         errors = []
 
-        # ---- Save Base64 Excel ----
+        # -------- SAVE EXCEL RECORD --------
         uploaded_excel = UploadedLoginExcel.objects.create(
-            file_name=file.name,
+            file_name=file_name,
             file_base64=file_base64
         )
 
+        # -------- PROCESS ROWS --------
         with transaction.atomic():
             for row_index, row in enumerate(
                 sheet.iter_rows(min_row=2, values_only=True),
@@ -160,26 +194,30 @@ def upload_login_credentials_excel(request):
 
                 first_name = row_data.get("first name")
                 last_name = row_data.get("last name")
-                mobile_no = str(row_data.get("mobile number")).strip() if row_data.get("mobile number") else None
+                mobile_no = (
+                    str(row_data.get("mobile number")).strip()
+                    if row_data.get("mobile number") else None
+                )
                 password = row_data.get("password")
 
                 if not first_name or not mobile_no or not password:
                     skipped += 1
-                    errors.append(f"Row {row_index}: missing fields")
+                    errors.append(f"Row {row_index}: missing required fields")
                     continue
 
                 if VoterUserMaster.objects.filter(mobile_no=mobile_no).exists():
                     skipped += 1
-                    errors.append(f"Row {row_index}: mobile exists ({mobile_no})")
+                    errors.append(f"Row {row_index}: mobile already exists ({mobile_no})")
                     continue
 
                 VoterUserMaster.objects.create(
-                    first_name=first_name,
-                    last_name=last_name,
+                    first_name=str(first_name).strip(),
+                    last_name=str(last_name).strip() if last_name else "",
                     mobile_no=mobile_no,
                     password=make_password(str(password)),
                     role_id=3
                 )
+
                 created += 1
 
         uploaded_excel.created_count = created
@@ -196,7 +234,11 @@ def upload_login_credentials_excel(request):
         })
 
     except Exception as e:
-        return JsonResponse({"status": False, "error": str(e)}, status=500)
+        return JsonResponse(
+            {"status": False, "error": str(e)},
+            status=500
+        )
+
 
 def list_uploaded_login_excels(request):
     excels = UploadedLoginExcel.objects.order_by("-uploaded_at")
