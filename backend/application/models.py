@@ -483,3 +483,33 @@ class VoterPrintDetails(models.Model):
 
     def __str__(self):
         return str(self.voter.voter_list_id)
+
+class UserVoterContact(models.Model):
+    user = models.ForeignKey(
+        VoterUserMaster,
+        on_delete=models.CASCADE,
+        related_name="matched_voters"
+    )
+
+    voter = models.ForeignKey(
+        VoterList,
+        on_delete=models.CASCADE,
+        related_name="contact_matches"
+    )
+
+    contact_name = models.CharField(
+        max_length=255,
+        null=True,
+        blank=True
+    )  # name from mobile
+
+    voter_name = models.CharField(
+        max_length=255
+    )  # snapshot from VoterList
+
+    mobile_no = models.CharField(max_length=15)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ("user", "mobile_no")
