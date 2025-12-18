@@ -99,13 +99,18 @@ def filter(request):
         )
 
     # -------- BASE QUERY (ROLE BASED) --------
-    if user.role.role_name == "SuperAdmin":
-        qs = VoterList.objects.select_related("tag_id").all()
+    if user.role.role_name in ["SuperAdmin", "Admin"]:
+        qs = (
+            VoterList.objects
+            .select_related("tag_id")
+            .order_by("ward_no", "voter_list_id")
+        )
     else:
         qs = (
             VoterList.objects
             .select_related("tag_id")
             .filter(user_id=user_id)
+            .order_by("ward_no", "voter_list_id")
         )
 
     
