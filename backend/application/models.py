@@ -234,6 +234,9 @@ class VoterList(models.Model):
         blank=True
     )
     serial_number = models.IntegerField(null=True, blank=True)
+    yadivibagh = models.IntegerField(null=True,blank=True)
+    anukramank = models.IntegerField(null=True,blank=True)
+    matdankendra = models.TextField(null=True,blank=True)
 
 
     class Meta:
