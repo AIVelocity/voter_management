@@ -1,16 +1,21 @@
-from django.http import JsonResponse
+
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework_simplejwt.tokens import AccessToken
 from ..models import VoterList
 import json
 
 
-@csrf_exempt
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
 def print_voters_by_ids(request):
     pass
 
     if request.method != "POST":
-        return JsonResponse(
+        return Response(
             {"status": False, "message": "POST method required"},
             status=405
         )
@@ -27,16 +32,16 @@ def print_voters_by_ids(request):
             pass
 
     if not user_id:
-        return JsonResponse(
+        return Response(
             {"status": False, "message": "Unauthorized"},
             status=401
         )
 
     # ---------- READ BODY ----------
     try:
-        body = json.loads(request.body)
+        body = request.data
     except json.JSONDecodeError:
-        return JsonResponse(
+        return Response(
             {"status": False, "message": "Invalid JSON"},
             status=400
         )
@@ -44,7 +49,7 @@ def print_voters_by_ids(request):
     voter_list_ids = body.get("voter_list_ids")
 
     if not isinstance(voter_list_ids, list) or not voter_list_ids:
-        return JsonResponse(
+        return Response(
             {"status": False, "message": "voter_list_ids must be a non-empty list"},
             status=400
         )
@@ -66,7 +71,7 @@ def print_voters_by_ids(request):
 
 
     if not voters_qs.exists():
-        return JsonResponse(
+        return Response(
             {"status": False, "message": "No voters found"},
             status=404
         )
@@ -83,7 +88,7 @@ def print_voters_by_ids(request):
             "voting_address": v["print_details__voting_center_address"]
         })
 
-    return JsonResponse({
+    return Response({
         "status": True,
         "count": len(voters),
         "voters": voters

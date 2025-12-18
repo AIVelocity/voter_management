@@ -1,6 +1,5 @@
 from ..models import VoterList,VoterRelationshipDetails,VoterUserMaster
 from django.db.models import Count
-from django.http import JsonResponse
 from django.utils import timezone
 from datetime import timedelta
 from django.db.models import Count, OuterRef, Subquery, IntegerField, Value
@@ -12,7 +11,12 @@ from django.core.paginator import Paginator, EmptyPage
 from collections import defaultdict
 from rest_framework_simplejwt.tokens import AccessToken
 
-# main dashboard api
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
 def admin_dashboard(request):
 
     # today = timezone.now().date()
@@ -165,7 +169,7 @@ def admin_dashboard(request):
 
     total_visited = VoterList.objects.filter(check_progress_date__isnull=False).count()
     
-    return JsonResponse({
+    return Response({
         "SUCCESS": True,
         "data" : { 
                 "user_first_name": user.first_name, 
@@ -189,6 +193,8 @@ def admin_dashboard(request):
         }
     })
 
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
 def volunteer_allocation_panel(request):
 
     total_voters = VoterList.objects.count()
@@ -235,7 +241,7 @@ def volunteer_allocation_panel(request):
         k for k in karyakarta_list if k["assigned_count"] == 0
     ]
 
-    return JsonResponse({
+    return Response({
         "SUCCESS" :True,
         "data":{ 
             "summary": {
@@ -257,7 +263,8 @@ def volunteer_allocation_panel(request):
         }
     )
 
-
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
 def unassigned_voters(request):
 
     # -------- GET PARAMS --------
@@ -293,7 +300,7 @@ def unassigned_voters(request):
     try:
         page_obj = paginator.page(page)
     except EmptyPage:
-        return JsonResponse({
+        return Response({
             "status": True,
             "count": total_count,
             "page": page,
@@ -302,7 +309,7 @@ def unassigned_voters(request):
             "voters": []
         })
 
-    return JsonResponse({
+    return Response({
         "SUCCESS": True,
         "count": total_count,
         "page": page,
@@ -314,23 +321,24 @@ def unassigned_voters(request):
     })
 
 
-@csrf_exempt
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
 def assign_voters_to_karyakarta(request):
 
     if request.method != "POST":
-        return JsonResponse({
+        return Response({
             "status": False,
             "message": "POST method required"
         }, status=405)
 
     try:
-        body = json.loads(request.body)
+        body = request.data
 
         karyakarta_user_id = body.get("karyakarta_user_id")
         voter_ids = body.get("voter_ids", [])
 
         if not karyakarta_user_id or not voter_ids:
-            return JsonResponse({
+            return Response({
                 "status": False,
                 "message": "karyakarta_user_id and voter_ids are required"
             }, status=400)
@@ -341,7 +349,7 @@ def assign_voters_to_karyakarta(request):
                 user_id=karyakarta_user_id
             )
         except VoterUserMaster.DoesNotExist:
-            return JsonResponse({
+            return Response({
                 "status": False,
                 "message": "Karyakarta not found"
             }, status=404)
@@ -356,14 +364,14 @@ def assign_voters_to_karyakarta(request):
                 .update(user=karyakarta)
             )
 
-        return JsonResponse({
+        return Response({
             "SUCCESS": True,
             "assigned_count": updated_count,
             "message": "Voters assigned successfully"
         })
 
     except Exception as e:
-        return JsonResponse({
+        return Response({
             "status": False,
             "error": str(e)
         }, status=500)
@@ -374,13 +382,13 @@ def assign_voters_to_karyakarta(request):
 #     try:
 #         count = int(request.GET.get("count", 0))
 #     except ValueError:
-#         return JsonResponse({
+#         return Response({
 #             "status": False,
 #             "message": "Invalid count"
 #         }, status=400)
 
 #     if count <= 0:
-#         return JsonResponse({
+#         return Response({
 #             "status": False,
 #             "message": "Count must be greater than 0"
 #         }, status=400)
@@ -404,7 +412,7 @@ def assign_voters_to_karyakarta(request):
 #         )[:count]
 #     )
 
-#     return JsonResponse({
+#     return Response({
 #         "SUCCESS": True,
 #         "requested_count": count,
 #         "returned_count": len(voters),
@@ -412,38 +420,40 @@ def assign_voters_to_karyakarta(request):
 #         "voter_ids": [v["voter_list_id"] for v in voters]
 #     })
 
-
-from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
 from django.db import transaction
 from ..models import VoterList, VoterUserMaster
 import json
 
 
-@csrf_exempt
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
 def auto_assign_unassigned_voters(request):
 
     if request.method != "POST":
-        return JsonResponse({
+        return Response({
             "status": False,
             "message": "POST method required"
         }, status=405)
 
     try:
-        body = json.loads(request.body)
+        body = request.data
 
         karyakarta_user_id = body.get("karyakarta_user_id")
         count = body.get("count")
 
         if not karyakarta_user_id or not count:
-            return JsonResponse({
+            return Response({
                 "status": False,
                 "message": "karyakarta_user_id and count are required"
             }, status=400)
 
         count = int(count)
         if count <= 0:
-            return JsonResponse({
+            return Response({
                 "status": False,
                 "message": "Count must be greater than 0"
             }, status=400)
@@ -452,7 +462,7 @@ def auto_assign_unassigned_voters(request):
         try:
             karyakarta = VoterUserMaster.objects.get(user_id=karyakarta_user_id)
         except VoterUserMaster.DoesNotExist:
-            return JsonResponse({
+            return Response({
                 "status": False,
                 "message": "Karyakarta not found"
             }, status=404)
@@ -469,7 +479,7 @@ def auto_assign_unassigned_voters(request):
             )
 
             if not voters:
-                return JsonResponse({
+                return Response({
                     "status": True,
                     "assigned_count": 0,
                     "message": "No unassigned voters available"
@@ -482,14 +492,14 @@ def auto_assign_unassigned_voters(request):
                 .update(user=karyakarta)
             )
 
-        return JsonResponse({
+        return Response({
             "status": True,
             "assigned_count": updated,
             "assigned_voter_ids": voters
         })
 
     except Exception as e:
-        return JsonResponse({
+        return Response({
             "status": False,
             "error": str(e)
         }, status=500)

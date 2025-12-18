@@ -1,4 +1,4 @@
-from django.http import JsonResponse
+
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.hashers import check_password
 from rest_framework_simplejwt.tokens import AccessToken
@@ -6,36 +6,42 @@ from ..models import VoterUserMaster
 import json
 
 
-@csrf_exempt
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.permissions import AllowAny
+
+@api_view(["POST"])
+@permission_classes([AllowAny])
 def id_validation(request):
 
     if request.method != "POST":
-        return JsonResponse({
+        return Response({
             "status": False,
             "message": "POST method required"
         }, status=405)
 
     try:
-        body = json.loads(request.body)
+        body = request.data
 
         mobile_no = body.get("mobile_no")
         password = body.get("password")
 
         # -------- VALIDATIONS --------
         if not mobile_no:
-            return JsonResponse({"status": False, "message": "Mobile number is required"}, status=400)
+            return Response({"status": False, "message": "Mobile number is required"}, status=400)
         if not password:
-            return JsonResponse({"status": False, "message": "Password is required"}, status=400)
+            return Response({"status": False, "message": "Password is required"}, status=400)
 
         # -------- FIND USER --------
         user = VoterUserMaster.objects.filter(mobile_no=mobile_no).select_related("role").first()
 
         if not user:
-            return JsonResponse({"status": False, "message": "User not found"}, status=404)
+            return Response({"status": False, "message": "User not found"}, status=404)
 
         # -------- PASSWORD CHECK --------
         if not check_password(password, user.password):
-            return JsonResponse({"status": False, "message": "Invalid mobile number or password"}, status=401)
+            return Response({"status": False, "message": "Invalid mobile number or password"}, status=401)
 
         # -------- GENERATE ACCESS TOKEN --------
         access_token = str(AccessToken.for_user(user))
@@ -88,7 +94,7 @@ def id_validation(request):
 
     
         # -------- SUCCESS --------
-        return JsonResponse({
+        return Response({
             "status": True,
             "access_token": access_token,
             "token_type": "Bearer",
@@ -101,7 +107,7 @@ def id_validation(request):
         })
 
     except json.JSONDecodeError:
-        return JsonResponse({"status": False, "message": "Invalid JSON"}, status=400)
+        return Response({"status": False, "message": "Invalid JSON"}, status=400)
 
     except Exception as e:
-        return JsonResponse({"status": False, "message": str(e)}, status=500)
+        return Response({"status": False, "message": str(e)}, status=500)

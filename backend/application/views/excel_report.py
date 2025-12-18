@@ -1,4 +1,4 @@
-from django.http import HttpResponse, JsonResponse
+from django.http import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.db.models import Count, Sum, IntegerField
 from django.db.models.functions import Cast
@@ -8,24 +8,29 @@ from ..models import VoterList
 import json
 
 
-@csrf_exempt
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
 def export_voters_excel(request):
 
     if request.method != "POST":
-        return JsonResponse(
+        return Response(
             {"status": False, "message": "POST method required"},
             status=405
         )
 
     try:
-        body = json.loads(request.body)
+        body = request.data
 
         fields = body.get("fields", [])
         filters = body.get("filters", {})
         summary = body.get("summary", {})
 
         if not fields:
-            return JsonResponse(
+            return Response(
                 {"status": False, "message": "fields are required"},
                 status=400
             )
@@ -35,7 +40,7 @@ def export_voters_excel(request):
         invalid = [f for f in fields if f not in valid_fields]
 
         if invalid:
-            return JsonResponse(
+            return Response(
                 {"status": False, "invalid_fields": invalid},
                 status=400
             )
@@ -112,7 +117,7 @@ def export_voters_excel(request):
         return response
 
     except Exception as e:
-        return JsonResponse(
+        return Response(
             {"status": False, "error": str(e)},
             status=500
         )

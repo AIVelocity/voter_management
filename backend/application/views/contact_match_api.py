@@ -1,4 +1,4 @@
-from django.http import JsonResponse
+
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework_simplejwt.tokens import AccessToken
 from ..models import VoterList
@@ -12,8 +12,6 @@ def normalize_mobile(number):
     digits = re.sub(r"\D", "", number)
     return digits[-10:] if len(digits) >= 10 else None
 
-from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
 from rest_framework_simplejwt.tokens import AccessToken
 from ..models import VoterUserMaster
 import json
@@ -26,11 +24,16 @@ def normalize_phone(number):
     return digits[-10:] if len(digits) >= 10 else None
 
 
-@csrf_exempt
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
 def match_contacts_with_users(request):
 
     if request.method != "POST":
-        return JsonResponse(
+        return Response(
             {"status": False, "message": "POST method required"},
             status=405
         )
@@ -47,23 +50,23 @@ def match_contacts_with_users(request):
             pass
 
     if not user_id:
-        return JsonResponse(
+        return Response(
             {"status": False, "message": "Unauthorized"},
             status=401
         )
 
     # -------- READ BODY --------
     try:
-        body = json.loads(request.body)
+        body = request.data
         contacts = body.get("contacts", [])
     except json.JSONDecodeError:
-        return JsonResponse(
+        return Response(
             {"status": False, "message": "Invalid JSON"},
             status=400
         )
 
     if not isinstance(contacts, list):
-        return JsonResponse(
+        return Response(
             {"status": False, "message": "contacts must be a list"},
             status=400
         )
@@ -86,7 +89,7 @@ def match_contacts_with_users(request):
                 })
 
     if not all_numbers:
-        return JsonResponse({
+        return Response({
             "status": True,
             "matched": [],
             "count": 0
@@ -120,7 +123,7 @@ def match_contacts_with_users(request):
                 "last_name": user["last_name"]
             })
 
-    return JsonResponse({
+    return Response({
         "status": True,
         "count": len(matched_contacts),
         "matched": matched_contacts
