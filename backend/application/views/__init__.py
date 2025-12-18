@@ -19,6 +19,7 @@ from .change_password_api import password_change
 from .module_api import get_all_roles_permissions,bulk_update_permissions
 from .excel_report import export_voters_excel
 from .contact_match_api import match_contacts_with_users
+from .print_api import print_voters_by_ids
 
 __all__ = [
     "tags",
@@ -60,5 +61,6 @@ __all__ = [
     "match_contacts_with_users",
     "volunteer_voters_page_filter",
     "list_uploaded_login_excels",
-    "download_login_excel"
+    "download_login_excel",
+    "print_voters_by_ids"
 ]

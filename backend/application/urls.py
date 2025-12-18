@@ -53,4 +53,5 @@ urlpatterns = [
     path("regirstration/upload_excel/list/download/<int:excel_id>/",views.download_login_excel,name="download_login_excel"),
     
     path("mobile_permission/",views.match_contacts_with_users,name="match_contacts_with_users"),   
+    path("mobile/print/",views.print_voters_by_ids,name="print_voters_by_ids"),
 ]
