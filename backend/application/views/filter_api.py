@@ -2,7 +2,6 @@ from ..models import VoterList,VoterUserMaster
 from django.db.models import Q
 from rest_framework_simplejwt.tokens import AccessToken
 from django.core.paginator import Paginator
-from django.http import JsonResponse
 from .search_api import apply_dynamic_initial_search
 
 def apply_multi_filter(qs, field, value):
@@ -34,7 +33,12 @@ def apply_tag_filter(qs, tag_value):
     return qs.filter(tag_id__in=tag_ids) if tag_ids else qs
 
 
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
 def filter(request):
 
     page = int(request.GET.get("page", 1))
@@ -76,7 +80,7 @@ def filter(request):
             pass
 
     if not user_id:
-        return JsonResponse(
+        return Response(
             {"status": False, "message": "Unauthorized"},
             status=401
         )
@@ -89,7 +93,7 @@ def filter(request):
             .get(user_id=user_id)
         )
     except VoterUserMaster.DoesNotExist:
-        return JsonResponse(
+        return Response(
             {"status": False, "message": "User not found"},
             status=404
         )
@@ -192,7 +196,7 @@ def filter(request):
             "ward_id": v.ward_no
         })
 
-    return JsonResponse({
+    return Response({
         "status": True,
         "page": page,
         "page_size": size,

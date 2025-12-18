@@ -1,10 +1,16 @@
-from django.http import JsonResponse
+
 from ..models import VoterList,VoterUserMaster
 from django.core.cache import cache
 from django.core.paginator import Paginator
 from rest_framework_simplejwt.tokens import AccessToken
 
 
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
 def voters_info(request):
 
     page = int(request.GET.get("page", 1))
@@ -21,7 +27,7 @@ def voters_info(request):
             pass
 
     if not user_id:
-        return JsonResponse(
+        return Response(
             {"status": False, "message": "Unauthorized"},
             status=401
         )
@@ -34,7 +40,7 @@ def voters_info(request):
             .get(user_id=user_id)
         )
     except VoterUserMaster.DoesNotExist:
-        return JsonResponse(
+        return Response(
             {"status": False, "message": "User not found"},
             status=404
         )
@@ -59,7 +65,7 @@ def voters_info(request):
     # cache_response = cache.get(cache_key)
     
     # if cache_response:
-    #     return JsonResponse({
+    #     return Response({
     #         "status" : True,
     #         "source":"cache",
     #         **cache_response
@@ -100,12 +106,12 @@ def voters_info(request):
     # 🔹 Save to Redis (10 minutes)
     # cache.set(cache_key, response_data, timeout=600)
 
-    return JsonResponse({
+    return Response({
         "status": True,
         "source": "db",
         **response_data
     })
-    # return JsonResponse({
+    # return Response({
     #     "status": True,
     #     "page": page,
     #     "page_size": size,

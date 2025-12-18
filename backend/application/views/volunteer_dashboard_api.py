@@ -1,6 +1,5 @@
 from ..models import VoterList, VoterUserMaster
 from django.db.models import Count
-from django.http import JsonResponse
 from rest_framework_simplejwt.tokens import AccessToken
 from django.utils import timezone
 from datetime import timedelta
@@ -9,6 +8,13 @@ from django.core.paginator import Paginator
 from .search_api import apply_dynamic_initial_search
 from .filter_api import apply_multi_filter,apply_tag_filter
 
+
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
 def volunteer_dashboard(request):
 
     # ---------------- AUTH ----------------
@@ -23,7 +29,7 @@ def volunteer_dashboard(request):
             pass
 
     if not user_id:
-        return JsonResponse(
+        return Response(
             {"status": False, "message": "Unauthorized"},
             status=401
         )
@@ -108,7 +114,7 @@ def volunteer_dashboard(request):
 
     # ---------------- RESPONSE ----------------
 
-    return JsonResponse({
+    return Response({
         "SUCCESS": True,
         "data": {
             "user": user,
@@ -129,6 +135,12 @@ def volunteer_dashboard(request):
     })
 
 
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
 def volunteer_voters_page(request):
     page = int(request.GET.get("page", 1))
     size = int(request.GET.get("size", 100))
@@ -144,7 +156,7 @@ def volunteer_voters_page(request):
             pass
 
     if not user_id:
-        return JsonResponse(
+        return Response(
             {"status": False, "message": "Unauthorized"},
             status=401
         )
@@ -180,7 +192,7 @@ def volunteer_voters_page(request):
             "location": v.location
         })
 
-    return JsonResponse({
+    return Response({
         "SUCCESS": True,
         "page": page,
         "page_size": size,
@@ -190,6 +202,13 @@ def volunteer_voters_page(request):
         "data": data
     })
 
+
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
 def volunteer_voters_page_filter(request):
     page = int(request.GET.get("page", 1))
     size = int(request.GET.get("size", 100))
@@ -206,7 +225,7 @@ def volunteer_voters_page_filter(request):
             pass
 
     if not user_id:
-        return JsonResponse(
+        return Response(
             {"status": False, "message": "Unauthorized"},
             status=401
         )
@@ -354,7 +373,7 @@ def volunteer_voters_page_filter(request):
             "ward_id": v.ward_no
         })
 
-    return JsonResponse({
+    return Response({
         "status": True,
         "page": page,
         "page_size": size,
