@@ -1,14 +1,11 @@
 
 from collections import defaultdict
-from django.views.decorators.csrf import csrf_exempt
 from django.db import transaction
 from ..models import (
     Roles,
     VoterModuleMaster,
     RoleModulePermission
 )
-import json
-
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -50,14 +47,10 @@ def get_all_roles_permissions(request):
     })
 
 
-from collections import defaultdict
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.response import Response
-
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def get_roles_permissions(request):
+
 
     role_id = request.query_params.get("role_id")
 
@@ -99,11 +92,6 @@ def get_roles_permissions(request):
         "data": data
     })
 
-
-
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.response import Response
 
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
