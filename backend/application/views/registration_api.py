@@ -1,33 +1,41 @@
-from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.hashers import make_password
 from ..models import VoterUserMaster, UploadedLoginExcel
-import json
 import re
 from django.db import transaction
 from openpyxl import load_workbook
 import base64
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
-import io
 from rest_framework.parsers import MultiPartParser, FormParser
-from rest_framework.decorators import parser_classes
-
-
+from rest_framework.permissions import AllowAny,IsAuthenticated
+from django.contrib.auth.hashers import make_password
+from application.models import VoterUserMaster
+import io
+from rest_framework.decorators import api_view, permission_classes, parser_classes
+from rest_framework.response import Response
 
 def is_valid_mobile(mobile):
     # Allows only exactly 10 digits
     pattern = r'^[6-9]\d{9}$'
     return bool(re.match(pattern, mobile))
 
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import AllowAny,IsAuthenticated
-from rest_framework.response import Response
-from django.contrib.auth.hashers import make_password
-from application.models import VoterUserMaster
-import re
+# ---------- DROP-IN HELPER (REQUIRED) ----------
+def normalize_mobile(mobile):
+    if mobile is None:
+        return None
 
-def is_valid_mobile(mobile):
-    return bool(re.match(r'^[6-9]\d{9}$', mobile))
+    if isinstance(mobile, float):
+        return str(int(mobile))
+
+    if isinstance(mobile, int):
+        return str(mobile)
+
+    mobile = str(mobile).strip()
+
+    if mobile.endswith(".0"):
+        mobile = mobile[:-2]
+
+    return mobile
 
 
 @api_view(["POST"])
@@ -77,12 +85,6 @@ def registration(request):
             }
         })        
         
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.response import Response
-from django.db import transaction
-from openpyxl import load_workbook
-import io
 
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
@@ -106,6 +108,7 @@ def upload_login_credentials_excel(request):
 
         file_name = excel_file.name
         file_bytes = excel_file.read()
+        file_base64 = base64.b64encode(file_bytes).decode("utf-8")
 
         # -------- LOAD EXCEL --------
         wb = load_workbook(io.BytesIO(file_bytes))
@@ -140,7 +143,8 @@ def upload_login_credentials_excel(request):
 
         # -------- SAVE EXCEL META --------
         uploaded_excel = UploadedLoginExcel.objects.create(
-            file_name=file_name
+            file_name=file_name,
+            file_base64=file_base64
         )
 
         header_index = {h: i for i, h in enumerate(raw_headers)}
@@ -157,18 +161,30 @@ def upload_login_credentials_excel(request):
                 mobile_no = row[header_index["mobile number"]]
                 password = row[header_index["password"]]
 
-                mobile_no = str(mobile_no).strip() if mobile_no else None
+                # ---------- DROP-IN FIX ----------
+                mobile_no = normalize_mobile(mobile_no)
 
-                if not first_name or not mobile_no or not password:
+                # ---------- HARD STOP ----------
+                if not mobile_no or not mobile_no.isdigit() or len(mobile_no) != 10:
+                    skipped += 1
+                    errors.append(
+                        f"Row {row_no}: invalid mobile number ({mobile_no})"
+                    )
+                    continue
+
+                if not first_name or not password:
                     skipped += 1
                     errors.append(f"Row {row_no}: missing required fields")
                     continue
 
                 if VoterUserMaster.objects.filter(mobile_no=mobile_no).exists():
                     skipped += 1
-                    errors.append(f"Row {row_no}: mobile already exists ({mobile_no})")
+                    errors.append(
+                        f"Row {row_no}: mobile already exists ({mobile_no})"
+                    )
                     continue
 
+                # ---------- INSERT ----------
                 VoterUserMaster.objects.create(
                     first_name=str(first_name).strip(),
                     last_name=str(last_name).strip() if last_name else "",
@@ -219,19 +235,56 @@ def list_uploaded_login_excels(request):
         "count": len(data),
         "data": data
     })
+    
+@api_view(["DELETE"])
+@permission_classes([IsAuthenticated])
+def delete_uploaded_login_excel(request, excel_id):
 
-@api_view(["POST"])
+    try:
+        excel = UploadedLoginExcel.objects.get(id=excel_id)
+    except UploadedLoginExcel.DoesNotExist:
+        return Response(
+            {
+                "status": False,
+                "message": "Excel record not found"
+            },
+            status=404
+        )
+
+    excel.delete()
+
+    return Response(
+        {
+            "status": True,
+            "message": "Excel record deleted successfully",
+            "excel_id": excel_id
+        },
+        status=200
+    )
+
+@api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def download_login_excel(request, excel_id):
     excel = get_object_or_404(UploadedLoginExcel, id=excel_id)
 
     base64_data = excel.file_base64
 
-    # strip prefix if ever present
+    # remove data URI prefix if present
     if "," in base64_data:
-        base64_data = base64_data.split(",")[1]
+        base64_data = base64_data.split(",", 1)[1]
 
+    # remove whitespace / newlines
+    base64_data = "".join(base64_data.split())
+
+    #  DECODE EXACTLY ONCE
     file_bytes = base64.b64decode(base64_data)
+
+    #  sanity check (must be ZIP)
+    if not file_bytes.startswith(b"PK"):
+        return Response(
+            {"status": False, "message": "Not a valid Excel file"},
+            status=400
+        )
 
     response = HttpResponse(
         file_bytes,
@@ -239,7 +292,7 @@ def download_login_excel(request, excel_id):
     )
 
     filename = excel.file_name
-    if not filename.endswith(".xlsx"):
+    if not filename.lower().endswith(".xlsx"):
         filename += ".xlsx"
 
     response["Content-Disposition"] = f'attachment; filename="{filename}"'
