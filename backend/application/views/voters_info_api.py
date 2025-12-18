@@ -46,7 +46,7 @@ def voters_info(request):
         )
 
     # -------- ROLE-BASED QUERY --------
-    if user.role.role_name == "SuperAdmin":
+    if user.role.role_name in ["SuperAdmin", "Admin"]:
         qs = (
             VoterList.objects
             .select_related("tag_id")
@@ -59,6 +59,7 @@ def voters_info(request):
             .filter(user_id=user_id)
             .order_by("ward_no", "voter_list_id")
         )
+    
 
     # cache_key = f"voters:page:{page}:size{size}"
 
