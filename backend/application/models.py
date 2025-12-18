@@ -418,3 +418,30 @@ class UploadedLoginExcel(models.Model):
 
     def __str__(self):
         return f"{self.file_name} ({self.uploaded_at})"
+
+class VoterPrintDetails(models.Model):
+
+    voter = models.OneToOneField(
+        "VoterList",
+        on_delete=models.CASCADE,
+        related_name="print_details"
+    )
+
+    voter_name_marathi = models.TextField(null=True, blank=True)
+    yadivibhag = models.CharField(max_length=20, null=True, blank=True)
+    anukramank = models.CharField(max_length=20, null=True, blank=True)
+    voterid = models.CharField(max_length=20, null=True, blank=True)
+
+    voting_center_name = models.TextField(null=True, blank=True)
+    voting_center_address = models.TextField(null=True, blank=True)
+    room_no = models.CharField(max_length=10, null=True, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "voter_print_details"
+        managed = False
+
+    def __str__(self):
+        return str(self.voter.voter_list_id)
