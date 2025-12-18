@@ -29,7 +29,7 @@ DEBUG = True
 
 # ALLOWED_HOSTS = eval(os.getenv("ALLOWED_HOSTS"))
 
-ALLOWED_HOSTS = ["172.20.1.101","59.95.99.182","127.0.0.1", "localhost", "172.20.1.155", ".ngrok-free.app", ".ngrok-free.dev"]
+ALLOWED_HOSTS = ["https://vms.rntsecops.com/","172.25.240.1","172.20.1.101","59.95.99.182","127.0.0.1", "localhost", "172.20.1.155", ".ngrok-free.app", ".ngrok-free.dev"]
 
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(hours=18),

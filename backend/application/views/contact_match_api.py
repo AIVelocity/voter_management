@@ -12,6 +12,19 @@ def normalize_mobile(number):
     digits = re.sub(r"\D", "", number)
     return digits[-10:] if len(digits) >= 10 else None
 
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from rest_framework_simplejwt.tokens import AccessToken
+from ..models import VoterUserMaster
+import json
+import re
+
+def normalize_phone(number):
+    if not number:
+        return None
+    digits = re.sub(r"\D", "", number)
+    return digits[-10:] if len(digits) >= 10 else None
+
 
 @csrf_exempt
 def match_contacts_with_users(request):
@@ -27,8 +40,11 @@ def match_contacts_with_users(request):
     user_id = None
 
     if auth_header and auth_header.startswith("Bearer "):
-        token = AccessToken(auth_header.split(" ")[1])
-        user_id = token.get("user_id")
+        try:
+            token = AccessToken(auth_header.split(" ")[1])
+            user_id = token.get("user_id")
+        except Exception:
+            pass
 
     if not user_id:
         return JsonResponse(
@@ -36,61 +52,76 @@ def match_contacts_with_users(request):
             status=401
         )
 
+    # -------- READ BODY --------
     try:
         body = json.loads(request.body)
-        phone_numbers = body.get("phone_numbers", [])
-
-        if not isinstance(phone_numbers, list):
-            return JsonResponse(
-                {"status": False, "message": "phone_numbers must be a list"},
-                status=400
-            )
-
-        # -------- Normalize numbers --------
-        normalized_numbers = list(
-            set(filter(None, map(normalize_mobile, phone_numbers)))
+        contacts = body.get("contacts", [])
+    except json.JSONDecodeError:
+        return JsonResponse(
+            {"status": False, "message": "Invalid JSON"},
+            status=400
         )
 
-        if not normalized_numbers:
-            return JsonResponse({
-                "status": True,
-                "matched_count": 0,
-                "data": []
-            })
-
-        # -------- DB MATCH + JOIN --------
-        voters = (
-            VoterList.objects
-            .select_related("user")   # FK → VoterUserMaster
-            .filter(mobile_no__in=normalized_numbers)
+    if not isinstance(contacts, list):
+        return JsonResponse(
+            {"status": False, "message": "contacts must be a list"},
+            status=400
         )
 
-        result = []
-        for v in voters:
-            user = v.user  # VoterUserMaster object
+    # -------- EXTRACT NUMBERS --------
+    contact_map = []   # keeps contact → number mapping
+    all_numbers = set()
 
-            result.append({
-                "contact_mobile": v.mobile_no,
-                "voter_list_id": v.voter_list_id,
-                "voter_name": v.voter_name_eng,
-                "assigned_user_id": user.user_id if user else None,
-                "assigned_user_name": (
-                    f"{user.first_name} {user.last_name}"
-                    if user else None
-                ),
-                "assigned_user_mobile": user.mobile_no if user else None
-            })
+    for contact in contacts:
+        display_name = contact.get("displayName")
+        phone_entries = contact.get("phoneNumbers", [])
 
+        for p in phone_entries:
+            normalized = normalize_phone(p.get("number"))
+            if normalized:
+                all_numbers.add(normalized)
+                contact_map.append({
+                    "display_name": display_name,
+                    "mobile_no": normalized
+                })
+
+    if not all_numbers:
         return JsonResponse({
             "status": True,
-            "requested_by_user_id": user_id,
-            "uploaded_numbers": len(phone_numbers),
-            "matched_count": len(result),
-            "data": result
+            "matched": [],
+            "count": 0
         })
 
-    except Exception as e:
-        return JsonResponse(
-            {"status": False, "error": str(e)},
-            status=500
+    # -------- DB MATCH --------
+    users = (
+        VoterUserMaster.objects
+        .filter(mobile_no__in=all_numbers)
+        .values(
+            "user_id",
+            "first_name",
+            "last_name",
+            "mobile_no"
         )
+    )
+
+    user_map = {u["mobile_no"]: u for u in users}
+
+    # -------- BUILD RESPONSE --------
+    matched_contacts = []
+
+    for item in contact_map:
+        user = user_map.get(item["mobile_no"])
+        if user:
+            matched_contacts.append({
+                "contact_name": item["display_name"],
+                "mobile_no": item["mobile_no"],
+                "user_id": user["user_id"],
+                "first_name": user["first_name"],
+                "last_name": user["last_name"]
+            })
+
+    return JsonResponse({
+        "status": True,
+        "count": len(matched_contacts),
+        "matched": matched_contacts
+    })
