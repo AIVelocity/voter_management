@@ -81,11 +81,11 @@ def print_voters_by_ids(request):
     for v in voters_qs:
         voters.append({
             "voter_list_id": v["voter_list_id"],
-            "voter_name_mar": v["print_details__voter_name_marathi"],
-            "yadivibhag": v["print_details__yadivibhag"],
-            "anukramank": v["print_details__anukramank"],
-            "voter_id": v["print_details__voterid"],
-            "voting_address": v["print_details__voting_center_address"]
+            "voter_name_mar": v["voter_name_marathi"],
+            "yadivibhag": v["yadivibagh"],
+            "anukramank": v["anukramank"],
+            "voter_id": v["voter_id"],
+            "voting_address": v["matdankendra"]
         })
 
     return Response({
