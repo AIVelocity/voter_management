@@ -16,7 +16,7 @@ from .admin_dashboard_api import admin_dashboard,volunteer_allocation_panel
 from .volunteer_dashboard_api import volunteer_dashboard,volunteer_voters_page,volunteer_voters_page_filter
 from .super_admin_comments_api import all_comments
 from .change_password_api import password_change
-from .module_api import get_all_roles_permissions,bulk_update_permissions
+from .module_api import get_all_roles_permissions,bulk_update_permissions,get_roles_permissions
 from .excel_report import export_voters_excel
 from .contact_match_api import match_contacts_with_users
 from .print_api import print_voters_by_ids
@@ -62,5 +62,6 @@ __all__ = [
     "volunteer_voters_page_filter",
     "list_uploaded_login_excels",
     "download_login_excel",
-    "print_voters_by_ids"
+    "print_voters_by_ids",
+    "get_roles_permissions"
 ]

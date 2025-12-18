@@ -49,6 +49,58 @@ def get_all_roles_permissions(request):
         "data": list(role_map.values())
     })
 
+
+from collections import defaultdict
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def get_roles_permissions(request):
+
+    role_id = request.query_params.get("role_id")
+
+    qs = (
+        RoleModulePermission.objects
+        .select_related("role", "module")
+    )
+
+    if role_id:
+        qs = qs.filter(role__role_id=role_id)
+
+    qs = qs.order_by("module__module_name")
+
+    if not qs.exists():
+        return Response({
+            "status": False,
+            "message": "No permissions found for this role"
+        }, status=404)
+
+    role = qs.first().role
+
+    data = {
+        "role_id": role.role_id,
+        "role_name": role.role_name,
+        "permissions": []
+    }
+
+    for rp in qs:
+        data["permissions"].append({
+            "module": rp.module.module_name,
+            "view": rp.can_view,
+            "add": rp.can_add,
+            "edit": rp.can_edit,
+            "delete": rp.can_delete
+        })
+
+    return Response({
+        "status": True,
+        "data": data
+    })
+
+
+
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
