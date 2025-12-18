@@ -12,3 +12,4 @@ daphne
 djangorestframework
 django-redis
 openpyxl
+django-cors-headers
