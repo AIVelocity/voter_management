@@ -9,7 +9,7 @@ from .super_admin_dashboard_api import dashboard,admin_allocation_panel,unassign
 from .filter_api import filter
 from .caste_religion_api import caste_dropdown,religion_dropdown
 from .occupation_api import occupation_dropdown
-from .registration_api import registration,upload_login_credentials_excel,list_uploaded_login_excels,download_login_excel
+from .registration_api import registration,upload_login_credentials_excel,list_uploaded_login_excels,download_login_excel,delete_uploaded_login_excel
 from .id_validation_api import id_validation
 from .update_role_api import list_volunteers,promote_user,single_volunteer,delete_user
 from .admin_dashboard_api import admin_dashboard,volunteer_allocation_panel
@@ -63,5 +63,6 @@ __all__ = [
     "list_uploaded_login_excels",
     "download_login_excel",
     "print_voters_by_ids",
-    "get_roles_permissions"
+    "get_roles_permissions",
+    "delete_uploaded_login_excel"
 ]
