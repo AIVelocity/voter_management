@@ -1,4 +1,3 @@
-
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.hashers import make_password
 from ..models import VoterUserMaster, UploadedLoginExcel
@@ -10,6 +9,10 @@ import base64
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 import io
+from rest_framework.parsers import MultiPartParser, FormParser
+from rest_framework.decorators import parser_classes
+
+
 
 def is_valid_mobile(mobile):
     # Allows only exactly 10 digits
@@ -17,7 +20,7 @@ def is_valid_mobile(mobile):
     return bool(re.match(pattern, mobile))
 
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny,IsAuthenticated
 from rest_framework.response import Response
 from django.contrib.auth.hashers import make_password
 from application.models import VoterUserMaster
@@ -74,8 +77,16 @@ def registration(request):
             }
         })        
         
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from django.db import transaction
+from openpyxl import load_workbook
+import io
+
 @api_view(["POST"])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
+@parser_classes([MultiPartParser, FormParser])
 def upload_login_credentials_excel(request):
 
     if request.method != "POST":
@@ -85,29 +96,16 @@ def upload_login_credentials_excel(request):
         )
 
     try:
-        #  Decode explicitly
-        body = json.loads(request.body.decode("utf-8"))
+        excel_file = request.FILES.get("file")
 
-        file_name = body.get("file_name")
-        file_base64 = body.get("file_base64")
-
-        if not file_name or not file_base64:
+        if not excel_file:
             return Response(
-                {
-                    "status": False,
-                    "message": "file_name and file_base64 are required"
-                },
+                {"status": False, "message": "Excel file is required"},
                 status=400
             )
 
-        # -------- DECODE BASE64 --------file_bytes = base64.b64decode(request.json['file_base64'])
-        try:
-            file_bytes = base64.b64decode(file_base64)
-        except Exception:
-            return Response(
-                {"status": False, "message": "Invalid base64 file"},
-                status=400
-            )
+        file_name = excel_file.name
+        file_bytes = excel_file.read()
 
         # -------- LOAD EXCEL --------
         wb = load_workbook(io.BytesIO(file_bytes))
@@ -116,6 +114,7 @@ def upload_login_credentials_excel(request):
         raw_headers = [
             str(cell.value).strip().lower()
             for cell in sheet[1]
+            if cell.value
         ]
 
         required_headers = {
@@ -139,36 +138,35 @@ def upload_login_credentials_excel(request):
         skipped = 0
         errors = []
 
-        # -------- SAVE EXCEL RECORD --------
+        # -------- SAVE EXCEL META --------
         uploaded_excel = UploadedLoginExcel.objects.create(
-            file_name=file_name,
-            file_base64=file_base64
+            file_name=file_name
         )
+
+        header_index = {h: i for i, h in enumerate(raw_headers)}
 
         # -------- PROCESS ROWS --------
         with transaction.atomic():
-            for row_index, row in enumerate(
+            for row_no, row in enumerate(
                 sheet.iter_rows(min_row=2, values_only=True),
                 start=2
             ):
-                row_data = dict(zip(raw_headers, row))
 
-                first_name = row_data.get("first name")
-                last_name = row_data.get("last name")
-                mobile_no = (
-                    str(row_data.get("mobile number")).strip()
-                    if row_data.get("mobile number") else None
-                )
-                password = row_data.get("password")
+                first_name = row[header_index["first name"]]
+                last_name = row[header_index["last name"]]
+                mobile_no = row[header_index["mobile number"]]
+                password = row[header_index["password"]]
+
+                mobile_no = str(mobile_no).strip() if mobile_no else None
 
                 if not first_name or not mobile_no or not password:
                     skipped += 1
-                    errors.append(f"Row {row_index}: missing required fields")
+                    errors.append(f"Row {row_no}: missing required fields")
                     continue
 
                 if VoterUserMaster.objects.filter(mobile_no=mobile_no).exists():
                     skipped += 1
-                    errors.append(f"Row {row_index}: mobile already exists ({mobile_no})")
+                    errors.append(f"Row {row_no}: mobile already exists ({mobile_no})")
                     continue
 
                 VoterUserMaster.objects.create(
@@ -200,8 +198,9 @@ def upload_login_credentials_excel(request):
             status=500
         )
 
+
 @api_view(["GET"])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def list_uploaded_login_excels(request):
     excels = UploadedLoginExcel.objects.order_by("-uploaded_at")
 
@@ -222,7 +221,7 @@ def list_uploaded_login_excels(request):
     })
 
 @api_view(["POST"])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def download_login_excel(request, excel_id):
     excel = get_object_or_404(UploadedLoginExcel, id=excel_id)
 
