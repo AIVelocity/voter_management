@@ -33,9 +33,12 @@ ALLOWED_HOSTS = ["vms.rntsecops.com","172.25.240.1","172.20.1.101","59.95.99.182
 
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(hours=18),
-    "REFRESH_TOKEN_LIFETIME": timedelta(days=0),     # effectively disable refresh
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
     "AUTH_HEADER_TYPES": ("Bearer",),
+    "USER_ID_FIELD": "user_id",
+    "USER_ID_CLAIM": "user_id",
 }
+
 
 # Application definition
 REST_FRAMEWORK = {
@@ -77,6 +80,7 @@ CORS_ALLOW_HEADERS = [
 ]
 
 CORS_ALLOW_ALL_ORIGINS = True   # OK for now (tighten later)
+AUTH_USER_MODEL = "application.VoterUserMaster"
 
 
 MIDDLEWARE = [
