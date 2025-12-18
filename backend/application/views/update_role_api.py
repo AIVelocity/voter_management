@@ -1,4 +1,4 @@
-from django.http import JsonResponse
+
 from django.views.decorators.csrf import csrf_exempt
 from django.db import transaction
 from ..models import VoterUserMaster, Roles,VoterList
@@ -7,6 +7,12 @@ from django.utils import timezone
 from rest_framework_simplejwt.tokens import AccessToken
 from django.db.models import Count
 
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
 def list_volunteers(request):
 
     volunteers = (
@@ -22,7 +28,7 @@ def list_volunteers(request):
         .order_by("created_date")
     )
 
-    return JsonResponse({
+    return Response({
         "status": True,
         "count": volunteers.count(),
         "volunteers": list(volunteers)
@@ -37,7 +43,7 @@ from rest_framework.response import Response
 def single_volunteer(request, user_id):
 
     if request.method != "GET":
-        return JsonResponse({
+        return Response({
             "status": False,
             "message": "GET method required"
         }, status=405)
@@ -52,13 +58,13 @@ def single_volunteer(request, user_id):
             token = AccessToken(auth_header.split(" ")[1])
             logged_in_user_id = token["user_id"]
         except Exception:
-            return JsonResponse(
+            return Response(
                 {"status": False, "message": "Invalid or expired token"},
                 status=401
             )
 
     if not logged_in_user_id:
-        return JsonResponse(
+        return Response(
             {"status": False, "message": "Unauthorized"},
             status=401
         )
@@ -72,7 +78,7 @@ def single_volunteer(request, user_id):
         )
 
         if not user:
-            return JsonResponse({
+            return Response({
                 "status": False,
                 "message": "User not found"
             }, status=404)
@@ -124,13 +130,13 @@ def single_volunteer(request, user_id):
                 .count()
             )
 
-        return JsonResponse({
+        return Response({
             "status": True,
             "data": response
         })
 
     except Exception as e:
-        return JsonResponse({
+        return Response({
             "status": False,
             "error": str(e)
         }, status=500)
@@ -144,74 +150,46 @@ ROLE_LEVELS = {
     "Volunteer": 3,
 }
 
-@csrf_exempt
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
 def promote_user(request):
 
     if request.method != "POST":
-        return JsonResponse({
+        return Response({
             "status": False,
             "message": "POST method required"
         }, status=405)
 
     try:
         # auth_header = request.headers.get("Authorization")
-        body = json.loads(request.body)
+        body = request.data
 
         target_user_id = body.get("target_user_id")
         new_role_name = body.get("new_role")
 
         if not target_user_id or not new_role_name:
-            return JsonResponse({
+            return Response({
                 "status": False,
                 "message": "target_user_id and new_role are required"
             }, status=400)
-
-        # if auth_header and auth_header.startswith("Bearer "):
-        #     token_str = auth_header.split(" ")[1]
-        #     try:
-        #         token = AccessToken(token_str)
-        #         user_id = token["user_id"]
-        #         # user = VoterUserMaster.objects.get(user_id=user_id)
-        #     except Exception:
-        #         pass
-            
-        # if not logged_in_user or not logged_in_user.role:
-        #     return JsonResponse({
-        #         "status": False,
-        #         "message": "Unauthorized"
-        #     }, status=401)
-
-        # logged_role = logged_in_user.role.role_name
-
-        # if logged_role not in ROLE_LEVELS:
-        #     return JsonResponse({
-        #         "status": False,
-        #         "message": "Invalid logged-in role"
-        #     }, status=403)
-
-        # 🔍 target user
         try:
             target_user = VoterUserMaster.objects.get(user_id=target_user_id)
         except VoterUserMaster.DoesNotExist:
-            return JsonResponse({
+            return Response({
                 "status": False,
                 "message": "Target user not found"
             }, status=404)
 
         if new_role_name not in ROLE_LEVELS:
-            return JsonResponse({
+            return Response({
                 "status": False,
                 "message": "Invalid target role"
             }, status=400)
 
-        # rule: only ONE LEVEL DOWN
-        # if ROLE_LEVELS[new_role_name] != ROLE_LEVELS[logged_role] + 1:
-        #     return JsonResponse({
-        #         "status": False,
-        #         "message": "You can only promote one level down"
-        #     }, status=403)
-
-        # fetch role
         new_role = Roles.objects.get(role_name=new_role_name)
 
         with transaction.atomic():
@@ -220,26 +198,25 @@ def promote_user(request):
             target_user.updated_date = timezone.now()
             target_user.save()
 
-        return JsonResponse({
+        return Response({
             "status": True,
             "message": f"User promoted to {new_role_name}",
             "user_id": target_user.user_id
         })
 
     except Exception as e:
-        return JsonResponse({
+        return Response({
             "status": False,
             "error": str(e)
         }, status=500)
 
-@csrf_exempt
-def delete_user(request, user_id):
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 
-    if request.method != "DELETE":
-        return JsonResponse(
-            {"status": False, "message": "DELETE method required"},
-            status=405
-        )
+@api_view(["DELETE"])
+@permission_classes([IsAuthenticated])
+def delete_user(request, user_id):
 
     # ---------------- AUTH ----------------
     auth_header = request.headers.get("Authorization")
@@ -250,13 +227,13 @@ def delete_user(request, user_id):
             token = AccessToken(auth_header.split(" ")[1])
             logged_in_user_id = token["user_id"]
         except Exception:
-            return JsonResponse(
+            return Response(
                 {"status": False, "message": "Invalid or expired token"},
                 status=401
             )
 
     if not logged_in_user_id:
-        return JsonResponse(
+        return Response(
             {"status": False, "message": "Unauthorized"},
             status=401
         )
@@ -265,13 +242,13 @@ def delete_user(request, user_id):
         target_user = VoterUserMaster.objects.get(user_id=user_id)
         target_user.delete()
 
-        return JsonResponse({
+        return Response({
             "status": True,
             "message": "User deleted successfully"
         })
 
     except VoterUserMaster.DoesNotExist:
-        return JsonResponse(
+        return Response(
             {"status": False, "message": "User not found"},
             status=404
         )

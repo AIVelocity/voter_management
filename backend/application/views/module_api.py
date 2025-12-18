@@ -1,4 +1,4 @@
-from django.http import JsonResponse
+
 from collections import defaultdict
 from django.views.decorators.csrf import csrf_exempt
 from django.db import transaction
@@ -9,6 +9,12 @@ from ..models import (
 )
 import json
 
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
 def get_all_roles_permissions(request):
 
     permissions_qs = (
@@ -37,28 +43,32 @@ def get_all_roles_permissions(request):
             "delete": rp.can_delete
         })
 
-    return JsonResponse({
+    return Response({
         "status": True,
         "count": len(role_map),
         "data": list(role_map.values())
     })
 
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 
-@csrf_exempt
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
 def bulk_update_permissions(request):
 
     if request.method != "POST":
-        return JsonResponse(
+        return Response(
             {"status": False, "message": "POST method required"},
             status=405
         )
 
     try:
-        body = json.loads(request.body)
+        body = request.data
         data = body.get("data")
 
         if not data or not isinstance(data, list):
-            return JsonResponse(
+            return Response(
                 {"status": False, "message": "data must be a list"},
                 status=400
             )
@@ -103,7 +113,7 @@ def bulk_update_permissions(request):
 
                     updated_rows += updated
 
-        return JsonResponse({
+        return Response({
             "status": True,
             "message": "Permissions updated successfully",
             "roles_processed": len(data),
@@ -111,7 +121,7 @@ def bulk_update_permissions(request):
         })
 
     except Exception as e:
-        return JsonResponse(
+        return Response(
             {"status": False, "error": str(e)},
             status=500
         )

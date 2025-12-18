@@ -1,5 +1,3 @@
-from django.views.decorators.csrf import csrf_exempt
-from django.http import JsonResponse
 from django.db import IntegrityError
 from ..models import VoterRelationshipDetails
 import json
@@ -21,13 +19,19 @@ REVERSE_MAP = {
     "spouse": "spouse"
 }
 
-@csrf_exempt
+
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
 def add_relation(request):
 
     try:
-        body = parse_json(request)
+        body = request.data
         if not body:
-            return JsonResponse(
+            return Response(
                 {"status": False, "message": "Invalid JSON body"},
                 status=400
             )
@@ -37,7 +41,7 @@ def add_relation(request):
         relation = body.get("relation")
 
         if not voter_id or not related_id or not relation:
-            return JsonResponse(
+            return Response(
                 {"status": False, "message": "Missing parameters"},
                 status=400
             )
@@ -49,7 +53,7 @@ def add_relation(request):
             voter_id=voter_id,
             related_voter_id=related_id
         ).exists():
-            return JsonResponse(
+            return Response(
                 {
                     "status": False,
                     "message": "Relation already exists between voters"
@@ -60,7 +64,7 @@ def add_relation(request):
         reverse = REVERSE_MAP.get(relation)
 
         if not reverse:
-            return JsonResponse(
+            return Response(
                 {"status": False, "message": "Invalid relation"},
                 status=400
             )
@@ -79,32 +83,33 @@ def add_relation(request):
             relation_with_voter=reverse,
         )
 
-        return JsonResponse({
+        return Response({
             "status": True,
             "message": "Relation added successfully"
         })
 
     except IntegrityError:
-        return JsonResponse(
+        return Response(
             {"status": False, "message": "Duplicate or FK violation"},
             status=400
         )
 
     except Exception as e:
         print("ADD RELATION ERROR:", str(e))
-        return JsonResponse(
+        return Response(
             {"status": False, "message": "Server error"},
             status=500
         )
 
 
-@csrf_exempt
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
 def remove_relation(request):
 
     try:
-        body = parse_json(request)
+        body = request.data
         if not body:
-            return JsonResponse(
+            return Response(
                 {"status": False, "message":"Invalid JSON body"},
                 status=400
             )
@@ -114,7 +119,7 @@ def remove_relation(request):
         relation = body.get("relation")
 
         if not voter_id or not related_id or not relation:
-            return JsonResponse(
+            return Response(
                 {"status": False, "message":"Missing parameters"},
                 status=400
             )
@@ -136,11 +141,11 @@ def remove_relation(request):
                 relation_with_voter=reverse
             ).delete()
 
-        return JsonResponse({"status": True,"message":"Deleted successfully"})
+        return Response({"status": True,"message":"Deleted successfully"})
 
     except Exception as e:
         print("REMOVE RELATION ERROR:", str(e))
-        return JsonResponse(
+        return Response(
             {"status": False, "message": "Server error"},
             status=500
         )

@@ -1,4 +1,4 @@
-from django.http import JsonResponse
+
 from ..models import VoterList,VoterTag,ActivityLog,VoterUserMaster,Caste,Religion,Occupation
 from .view_utils import save_relation,get_family_from_db
 from rest_framework_simplejwt.tokens import AccessToken
@@ -34,10 +34,16 @@ def format_indian_datetime(dt):
 # ---------------------------------------------
 # SINGLE VOTER INFO
 # ---------------------------------------------
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
 def single_voters_info(request, voter_list_id):
 
     if request.method != "GET":
-        return JsonResponse({
+        return Response({
             "status": False,
             "message": "GET method required"
         }, status=405)
@@ -50,7 +56,7 @@ def single_voters_info(request, voter_list_id):
             .get(voter_list_id=voter_list_id)
         )
     except VoterList.DoesNotExist:
-        return JsonResponse({
+        return Response({
             "status": False,
             "message": "Voter not found"
         }, status=404)
@@ -223,7 +229,7 @@ def single_voters_info(request, voter_list_id):
         "check_progress": voter.check_progress
     }
 
-    return JsonResponse({
+    return Response({
         "status": True,
         "data": data
     })

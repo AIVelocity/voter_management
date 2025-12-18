@@ -1,8 +1,14 @@
-from django.http import JsonResponse
+
 from ..models import ActivityLog
 from .single_voters_api import format_indian_datetime
 
 
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
 def all_comments(request):
 
     logs = (
@@ -45,7 +51,7 @@ def all_comments(request):
             )
         })
 
-    return JsonResponse({
+    return Response({
         "status": True,
         "count": len(data),
         "data": data

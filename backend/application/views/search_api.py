@@ -1,4 +1,4 @@
-from django.http import JsonResponse
+
 from ..models import VoterList,VoterTag
 
 import re
@@ -49,7 +49,12 @@ def apply_dynamic_initial_search(qs, search):
 
     return final_results
 
-# search api
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
 def voters_search(request):
 
     search = request.GET.get("search", "").strip()
@@ -82,7 +87,7 @@ def voters_search(request):
         # "badge":v.badge
     } for v in page_obj]
 
-    return JsonResponse({
+    return Response({
         "status": True,
         "query": search,
         "page": page,
@@ -133,7 +138,7 @@ def family_dropdown_search(request):
         "tag": str(v.tag_id) if v.tag_id else None
     } for v in page_obj]
 
-    return JsonResponse({
+    return Response({
         "status": True,
         "query": search,
         "exclude_id": exclude_id,
@@ -173,7 +178,7 @@ def family_dropdown_search(request):
 #         "ward": v.ward_no,
 #     } for v in page_obj]
 
-#     return JsonResponse({
+#     return Response({
 #         "status": True,
 #         "query": search,
 #         "limit": 30,
