@@ -1,4 +1,3 @@
-
 from ..models import VoterList,VoterTag,ActivityLog,VoterUserMaster,Caste,Religion,Occupation
 from .view_utils import save_relation,get_family_from_db
 from rest_framework_simplejwt.tokens import AccessToken
