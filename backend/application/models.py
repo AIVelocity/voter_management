@@ -94,17 +94,40 @@ class Caste(models.Model):
         db_table = "voter_caste_master"
         managed = False
 
+from django.db import models
+from django.contrib.auth.models import (
+    AbstractBaseUser,
+    PermissionsMixin,
+    BaseUserManager
+)
 
-class VoterUserMaster(models.Model):
+class VoterUserManager(BaseUserManager):
+    def create_user(self, mobile_no, password=None, **extra_fields):
+        if not mobile_no:
+            raise ValueError("Mobile number is required")
+
+        user = self.model(mobile_no=mobile_no, **extra_fields)
+        user.set_password(password)   #  HASHED
+        user.save(using=self._db)
+        return user
+
+    def create_superuser(self, mobile_no, password=None, **extra_fields):
+        extra_fields.setdefault("is_staff", True)
+        extra_fields.setdefault("is_superuser", True)
+        return self.create_user(mobile_no, password, **extra_fields)
+
+
+class VoterUserMaster(AbstractBaseUser, PermissionsMixin):
     user_id = models.AutoField(primary_key=True)
 
     first_name = models.TextField(null=True, blank=True)
     last_name = models.TextField(null=True, blank=True)
 
-    mobile_no = models.TextField(null=False,validators=[mobile_validator],unique=True)
-
-    password = models.TextField(null=True, blank=True)
-    confirm_password = models.TextField(null=True, blank=True)
+    mobile_no = models.CharField(
+        max_length=15,
+        unique=True,
+        validators=[mobile_validator]
+    )
 
     role = models.ForeignKey(
         Roles,
@@ -114,32 +137,44 @@ class VoterUserMaster(models.Model):
     )
 
     created_by = models.ForeignKey(
-    "VoterUserMaster",
-    on_delete=models.SET_NULL,
-    null=True,
-    blank=True,
-    db_column="created_by",
-    related_name="created_karyakartas"
+        "self",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        db_column="created_by",
+        related_name="created_karyakartas"
     )
 
     created_date = models.DateTimeField(auto_now_add=True)
-
-    updated_by = models.IntegerField(null=True, blank=True)
     updated_date = models.DateTimeField(null=True, blank=True)
-
-    deleted_by = models.IntegerField(null=True, blank=True)
     deleted_date = models.DateTimeField(null=True, blank=True)
 
+    is_active = models.BooleanField(default=True)
+    is_staff = models.BooleanField(default=False)
+
+    objects = VoterUserManager()
+
+    USERNAME_FIELD = "mobile_no"
+    REQUIRED_FIELDS = []
+
+    groups = models.ManyToManyField(
+        "auth.Group",
+        blank=True,
+        related_name="voter_users"
+    )
+
+    user_permissions = models.ManyToManyField(
+        "auth.Permission",
+        blank=True,
+        related_name="voter_users_permissions"
+    )
     class Meta:
         db_table = "voter_user_master"
-        managed = False
+        managed = False   #  IMPORTANT: existing table
 
     def __str__(self):
         return f"{self.first_name or ''} {self.last_name or ''} - {self.mobile_no}"
-    
-    @property
-    def id(self):
-        return self.user_id
+
 
 class VoterList(models.Model):
 
