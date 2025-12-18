@@ -28,7 +28,12 @@ def list_volunteers(request):
         "volunteers": list(volunteers)
     })
 
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
 def single_volunteer(request, user_id):
 
     if request.method != "GET":
@@ -37,6 +42,8 @@ def single_volunteer(request, user_id):
             "message": "GET method required"
         }, status=405)
         
+    print("AUTH HEADER:", request.headers.get("Authorization"))
+
     auth_header = request.headers.get("Authorization")
     logged_in_user_id = None
 
