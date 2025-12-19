@@ -18,6 +18,9 @@ def error_resp(msg="error", status=400):
     return JsonResponse({"status": False, "message": msg}, status=status)
 
 
+# ------------------------------
+# GET HANDLER (unchanged)
+# ------------------------------
 def verify_webhook(request):
     hub_mode = request.GET.get("hub.mode")
     hub_token = request.GET.get("hub.verify_token")
@@ -31,6 +34,9 @@ def verify_webhook(request):
     return error_resp("Invalid verification token", status=403)
 
 
+# ------------------------------
+# POST HANDLER (unchanged)
+# ------------------------------
 def receive_webhook(request):
     try:
         body = json.loads(request.body.decode("utf-8") or "{}")
@@ -80,6 +86,9 @@ def receive_webhook(request):
     return ok_resp()
 
 
+# ------------------------------
+# MAIN WRAPPER (this is the ONLY new thing)
+# ------------------------------
 @csrf_exempt
 def whatsapp_webhook(request):
     """

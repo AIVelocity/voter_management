@@ -162,6 +162,10 @@ VERIFY_TOKEN="Toyam_orchid_token"
 MESSAGE_URL="https://graph.facebook.com/v24.0/946219375236764/messages"
 UPLOAD_URL="https://graph.facebook.com/v24.0/946219375236764/media"
 
+# AWS_ACCESS_KEY_ID= os.environ.get("AWS_ACCESS_KEY_ID")
+# AWS_SECRET_ACCESS_KEY= os.environ.get("AWS_SECRET_ACCESS_KEY")
+# AWS_S3_BUCKET_NAME= os.environ.get("AWS_S3_BUCKET_NAME")
+# AWS_S3_REGION_NAME= os.environ.get("AWS_S3_REGION_NAME")
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
