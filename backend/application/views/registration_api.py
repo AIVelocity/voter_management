@@ -37,7 +37,6 @@ def normalize_mobile(mobile):
 
     return mobile
 
-
 @api_view(["POST"])
 @permission_classes([AllowAny])
 def registration(request):
@@ -49,6 +48,10 @@ def registration(request):
     password = data.get("password")
     confirm_password = data.get("confirm_password")
 
+    # role will come as string: superadmin / admin / volunteer
+    role_str = data.get("role")  # optional
+
+    # ---------- VALIDATIONS ----------
     if not first_name:
         return Response({"status": False, "message": "First Name is required"}, status=400)
 
@@ -64,26 +67,40 @@ def registration(request):
     if VoterUserMaster.objects.filter(mobile_no=mobile_no).exists():
         return Response({"status": False, "message": "Mobile already registered"}, status=400)
 
+    # ---------- ROLE LOGIC ----------
+    ROLE_MAP = {
+        "superadmin": 1,
+        "admin": 2,
+        "volunteer": 3,
+    }
+
+    # default role = volunteer (3)
+    role_id = ROLE_MAP.get(
+        role_str.lower(), 3
+    ) if role_str else 3
+
+    # ---------- CREATE USER ----------
     user = VoterUserMaster.objects.create(
         first_name=first_name,
         last_name=last_name,
         mobile_no=mobile_no,
         password=make_password(password),
-        role_id=3
+        role_id=role_id
     )
 
-        # ---------- RESPONSE ----------
+    # ---------- RESPONSE ----------
     return Response({
-            "status": True,
-            "message": "Registration successful",
-            "data": {
-                "user_id": user.user_id,
-                "first_name": user.first_name,
-                "last_name": user.last_name,
-                "mobile_no": user.mobile_no
-                # "role_id": user.role.role_id
-            }
-        })        
+        "status": True,
+        "message": "Registration successful",
+        "data": {
+            "user_id": user.user_id,
+            "first_name": user.first_name,
+            "last_name": user.last_name,
+            "mobile_no": user.mobile_no,
+            "role_id": role_id
+        }
+    }, status=201)
+    
         
 
 @api_view(["POST"])
