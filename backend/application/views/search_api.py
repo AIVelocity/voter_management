@@ -97,7 +97,9 @@ def voters_search(request):
         "records_returned": len(data),
         "data": data
     })
-    
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated]) 
 def family_dropdown_search(request):
     search = request.GET.get("search", "").strip()
     print(search)
