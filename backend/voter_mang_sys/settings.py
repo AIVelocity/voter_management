@@ -25,7 +25,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-w^w75v0)bmgunxwhmmagl0bp*1rf$p^u9q-ca$2!%+q%(8f7=&'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
 # ALLOWED_HOSTS = eval(os.getenv("ALLOWED_HOSTS"))
 
@@ -157,8 +157,8 @@ DATABASES = {
     }
 }
 
-ACCESS_TOKEN="EAATvXwkH2M4BQK4No9gUopAOZBetUyPGHORZBNY0KcMpTdsaU4lRxIxS1SK7M39gza7TebyJGlziSeb8s9941G8ZBZCXW8f1v8VqEZA7FDFBh4ZAP5ufRkSecMBnzLoRzSwvqZBBwXUYVfEsl373JLuWNsnLaQGZCiXjEXCZB9B8RkRPZAKa4P8ZBRjLKPW3Q5iLmZA9r7MzTiQtCerBZBBke2eli4f649UsOVeOUOjzbhsTpgprpKUWVdxJ2nkr2m6Pv05kZCopsl5OgdvTJmdyZB7sXAs56T6lQBRf5ayJQ9UTgZDZD"
-VERIFY_TOKEN="Toyam_orchid_token"
+ACCESS_TOKEN="EAATvXwkH2M4BQOUrLA03kl8bFAMsWq07KtszfRVXf1IEZB54ZB9vufzbOkbc7WeZBlUeBclC00qHyuZBg0ZAZC3o9V9EpxwsqwQfKKKYqOvkitoGj2coRSCh0cXDJS6Cwd3d2FI0F3XFYj2ecqHV607uZBH1BhSAPjU6l2aO02jzaqvNqLZC0cF9Dg9MfYJ4mDoydAZDZD"
+VERIFY_TOKEN="Toyamorchidtoken"
 MESSAGE_URL="https://graph.facebook.com/v24.0/946219375236764/messages"
 UPLOAD_URL="https://graph.facebook.com/v24.0/946219375236764/media"
 
