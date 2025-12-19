@@ -94,17 +94,40 @@ class Caste(models.Model):
         db_table = "voter_caste_master"
         managed = False
 
+from django.db import models
+from django.contrib.auth.models import (
+    AbstractBaseUser,
+    PermissionsMixin,
+    BaseUserManager
+)
 
-class VoterUserMaster(models.Model):
+class VoterUserManager(BaseUserManager):
+    def create_user(self, mobile_no, password=None, **extra_fields):
+        if not mobile_no:
+            raise ValueError("Mobile number is required")
+
+        user = self.model(mobile_no=mobile_no, **extra_fields)
+        user.set_password(password)   #  HASHED
+        user.save(using=self._db)
+        return user
+
+    def create_superuser(self, mobile_no, password=None, **extra_fields):
+        extra_fields.setdefault("is_staff", True)
+        extra_fields.setdefault("is_superuser", True)
+        return self.create_user(mobile_no, password, **extra_fields)
+
+
+class VoterUserMaster(AbstractBaseUser):
     user_id = models.AutoField(primary_key=True)
 
     first_name = models.TextField(null=True, blank=True)
     last_name = models.TextField(null=True, blank=True)
 
-    mobile_no = models.TextField(null=False,validators=[mobile_validator],unique=True)
-
-    password = models.TextField(null=True, blank=True)
-    confirm_password = models.TextField(null=True, blank=True)
+    mobile_no = models.CharField(
+        max_length=15,
+        unique=True,
+        validators=[mobile_validator]
+    )
 
     role = models.ForeignKey(
         Roles,
@@ -114,32 +137,44 @@ class VoterUserMaster(models.Model):
     )
 
     created_by = models.ForeignKey(
-    "VoterUserMaster",
-    on_delete=models.SET_NULL,
-    null=True,
-    blank=True,
-    db_column="created_by",
-    related_name="created_karyakartas"
+        "self",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        db_column="created_by",
+        related_name="created_karyakartas"
     )
 
     created_date = models.DateTimeField(auto_now_add=True)
-
-    updated_by = models.IntegerField(null=True, blank=True)
     updated_date = models.DateTimeField(null=True, blank=True)
-
-    deleted_by = models.IntegerField(null=True, blank=True)
     deleted_date = models.DateTimeField(null=True, blank=True)
 
+    is_active = models.BooleanField(default=True)
+    is_staff = models.BooleanField(default=False)
+
+    objects = VoterUserManager()
+
+    USERNAME_FIELD = "mobile_no"
+    REQUIRED_FIELDS = []
+
+    # groups = models.ManyToManyField(
+    #     "auth.Group",
+    #     blank=True,
+    #     related_name="voter_users"
+    # )
+
+    # user_permissions = models.ManyToManyField(
+    #     "auth.Permission",
+    #     blank=True,
+    #     related_name="voter_users_permissions"
+    # )
     class Meta:
         db_table = "voter_user_master"
-        managed = False
+        managed = False   #  IMPORTANT: existing table
 
     def __str__(self):
         return f"{self.first_name or ''} {self.last_name or ''} - {self.mobile_no}"
-    
-    @property
-    def id(self):
-        return self.user_id
+
 
 class VoterList(models.Model):
 
@@ -234,6 +269,9 @@ class VoterList(models.Model):
         blank=True
     )
     serial_number = models.IntegerField(null=True, blank=True)
+    yadivibagh = models.IntegerField(null=True,blank=True)
+    anukramank = models.IntegerField(null=True,blank=True)
+    matdankendra = models.TextField(null=True,blank=True)
 
 
     class Meta:
@@ -406,3 +444,140 @@ class RoleModulePermission(models.Model):
 
     def __str__(self):
         return f"{self.role} → {self.module}"
+
+
+class UploadedLoginExcel(models.Model):
+    file_name = models.CharField(max_length=255)
+    file_base64 = models.TextField()
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    created_count = models.IntegerField(default=0)
+    skipped_count = models.IntegerField(default=0)
+
+    def __str__(self):
+        return f"{self.file_name} ({self.uploaded_at})"
+
+class VoterPrintDetails(models.Model):
+
+    voter = models.OneToOneField(
+        "VoterList",
+        on_delete=models.CASCADE,
+        related_name="print_details"
+    )
+
+    voter_name_marathi = models.TextField(null=True, blank=True)
+    yadivibhag = models.CharField(max_length=20, null=True, blank=True)
+    anukramank = models.CharField(max_length=20, null=True, blank=True)
+    voterid = models.CharField(max_length=20, null=True, blank=True)
+
+    voting_center_name = models.TextField(null=True, blank=True)
+    voting_center_address = models.TextField(null=True, blank=True)
+    room_no = models.CharField(max_length=10, null=True, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "voter_print_details"
+        managed = False
+
+    def __str__(self):
+        return str(self.voter.voter_list_id)
+
+class UserVoterContact(models.Model):
+    user = models.ForeignKey(
+        VoterUserMaster,
+        on_delete=models.CASCADE,
+        related_name="matched_voters"
+    )
+
+    voter = models.ForeignKey(
+        VoterList,
+        on_delete=models.CASCADE,
+        related_name="contact_matches"
+    )
+
+    contact_name = models.CharField(
+        max_length=255,
+        null=True,
+        blank=True
+    )  # name from mobile
+
+    voter_name = models.CharField(
+        max_length=255
+    )  # snapshot from VoterList
+
+    mobile_no = models.CharField(max_length=15)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ("user", "mobile_no")
+from django.db import models
+
+
+class VoterList2(models.Model):
+    sr_no = models.IntegerField(primary_key=True)
+
+    voter_id = models.CharField(
+        max_length=200,
+        null=True,
+        blank=True
+    )
+
+    voter_name_marathi = models.CharField(
+        max_length=1000,
+        null=True,
+        blank=True
+    )
+
+    voter_name_english = models.CharField(
+        max_length=1000,
+        null=True,
+        blank=True
+    )
+
+    kramank = models.CharField(
+        max_length=200,
+        null=True,
+        blank=True
+    )
+
+    address = models.CharField(
+        max_length=1000,
+        null=True,
+        blank=True
+    )
+
+    age_marathi = models.CharField(
+        max_length=50,
+        null=True,
+        blank=True
+    )
+
+    age_english = models.CharField(
+        max_length=50,
+        null=True,
+        blank=True
+    )
+
+    gender_marathi = models.CharField(
+        max_length=50,
+        null=True,
+        blank=True
+    )
+
+    gender_english = models.CharField(
+        max_length=50,
+        null=True,
+        blank=True
+    )
+
+    created_date = models.DateTimeField(
+        auto_now_add=False,
+        auto_now=False
+    )
+
+    class Meta:
+        db_table = "voter_list_2"
+        managed = False   # VERY IMPORTANT (table already exists)

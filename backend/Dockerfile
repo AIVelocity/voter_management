@@ -38,10 +38,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-EXPOSE 8086
+EXPOSE 80
 
 CMD ["gunicorn", "voter_mang_sys.wsgi:application", \
-     "--bind", "0.0.0.0:8086", \
+     "--bind", "0.0.0.0:80", \
      "--workers", "4", \
      "--threads", "2", \
      "--timeout", "120"]

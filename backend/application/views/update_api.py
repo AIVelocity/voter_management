@@ -1,4 +1,4 @@
-from django.http import JsonResponse
+
 from ..models import VoterList,VoterTag,VoterUserMaster,Occupation,Religion,Caste
 from django.views.decorators.csrf import csrf_exempt
 import json
@@ -6,15 +6,20 @@ from django.db import IntegrityError
 from .view_utils import log_user_update
 from rest_framework_simplejwt.tokens import AccessToken
 
-@csrf_exempt
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+
+@api_view(["PUT"])
+@permission_classes([IsAuthenticated])
 def update_voter(request, voter_list_id):
 
     if request.method != "PUT":
-        return JsonResponse({"status": False, "message": "PUT method required"}, status=405)
+        return Response({"status": False, "message": "PUT method required"}, status=405)
 
     try:
         auth_header = request.headers.get("Authorization")
-        body = json.loads(request.body)
+        body = request.data
         
         user_id = None
 
@@ -43,7 +48,7 @@ def update_voter(request, voter_list_id):
         try:
             voter = VoterList.objects.get(voter_list_id=voter_list_id)
         except VoterList.DoesNotExist:
-            return JsonResponse({"status": False, "message": "Voter not found"}, status=404)
+            return Response({"status": False, "message": "Voter not found"}, status=404)
 
         # Track changed fields
         changed_fields = {}
@@ -78,7 +83,7 @@ def update_voter(request, voter_list_id):
                     voter.occupation = new_occupation
 
             except Occupation.DoesNotExist:
-                return JsonResponse({"status": False, "message": "Invalid occupation"}, status=400)
+                return Response({"status": False, "message": "Invalid occupation"}, status=400)
 
         # RELIGION update (ForeignKey)
         religion_id = body.get("religion_id")
@@ -94,7 +99,7 @@ def update_voter(request, voter_list_id):
                     voter.religion = new_religion
 
             except Religion.DoesNotExist:
-                return JsonResponse({"status": False, "message": "Invalid religion_id"}, status=400)
+                return Response({"status": False, "message": "Invalid religion_id"}, status=400)
 
         # CAST update (ForeignKey)
         caste_id = body.get("cast")
@@ -110,7 +115,7 @@ def update_voter(request, voter_list_id):
                     voter.cast = new_caste
 
             except Caste.DoesNotExist:
-                return JsonResponse({"status": False, "message": "Invalid cast"}, status=400)
+                return Response({"status": False, "message": "Invalid cast"}, status=400)
 
         # TAG update
         tag_id = body.get("tag_id")
@@ -126,11 +131,11 @@ def update_voter(request, voter_list_id):
                     voter.tag_id = new_tag
 
             except VoterTag.DoesNotExist:
-                return JsonResponse({"status": False, "message": "Invalid tag_id"}, status=400)
+                return Response({"status": False, "message": "Invalid tag_id"}, status=400)
 
         # # If nothing changed, return message
         # if not changed_fields:
-        #     return JsonResponse({"status": True, "message": "No changes detected"})
+        #     return Response({"status": True, "message": "No changes detected"})
 
         voter.save()
 
@@ -156,11 +161,11 @@ def update_voter(request, voter_list_id):
             
         )
 
-        return JsonResponse({
+        return Response({
             "status": True,
             "message": "Voter updated successfully",
             "updated_fields": changed_fields
         })
 
     except Exception as e:
-        return JsonResponse({"status": False, "error": str(e)}, status=500)
+        return Response({"status": False, "error": str(e)}, status=500)

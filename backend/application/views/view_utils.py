@@ -93,3 +93,4 @@ def get_family_from_db(voter):
         "children": children,
         "spouse" : spouse_name
     }
+    
