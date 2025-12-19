@@ -59,4 +59,6 @@ urlpatterns = [
     
     path("mobile_permission/",views.match_contacts_with_users,name="match_contacts_with_users"),   
     path("mobile/print/",views.print_voters_by_ids,name="print_voters_by_ids"),
+    path("voters/image/",views.voters_info_photo,name="voters_info_photo"),
+    
 ]
