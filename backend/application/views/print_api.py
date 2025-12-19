@@ -1,6 +1,6 @@
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework_simplejwt.tokens import AccessToken
-from ..models import VoterList
+from ..models import VoterList,UserVoterContact
 import json
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
@@ -90,3 +90,37 @@ def print_voters_by_ids(request):
         "count": len(voters),
         "voters": voters
     })
+    
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def matched_contacts_list(request):
+    # user = request.user
+
+    qs = (
+        UserVoterContact.objects
+        .select_related("user", "voter")
+        # .filter(user=user)
+        .order_by("-created_at")
+    )
+
+    data = []
+    for obj in qs:
+        data.append({
+            "id": obj.id,
+            "user_name": f"{obj.user.first_name} {obj.user.last_name}".strip(),
+            "user_id": obj.user.id,
+            "voter_id": obj.voter.voter_id,
+            "voter_name": obj.voter.voter_name_eng or obj.voter.voter_name_marathi,
+            "contact_name": obj.contact_name,
+            "mobile_no": obj.mobile_no,
+            "created_at": obj.created_at,
+        })
+
+    return Response({
+        "status": True,
+        "message": ("Matched voter contacts fetched successfully"),
+        "count": qs.count(),
+        "data": data
+    })
+   # This

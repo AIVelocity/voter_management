@@ -1,4 +1,15 @@
 from ..models import VoterRelationshipDetails,ActivityLog
+from deep_translator import GoogleTranslator
+
+class Translator:
+    def __init__(self, source="auto"):
+        self.source = source
+
+    def translate(self, text, target_lang):
+        return GoogleTranslator(
+            source=self.source,
+            target=target_lang
+        ).translate(text)
 
 
 def log_user_update(user, action, description, changed_fields, ip,voter_list_id):

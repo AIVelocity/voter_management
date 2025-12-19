@@ -3,18 +3,20 @@ from ..models import VoterList,VoterUserMaster
 from django.core.cache import cache
 from django.core.paginator import Paginator
 from rest_framework_simplejwt.tokens import AccessToken
-
-
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from .view_utils import Translator
+
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def voters_info(request):
-
+    lang = request.headers.get("Accept-Language", "en")
+    print(lang)
     page = int(request.GET.get("page", 1))
     size = int(request.GET.get("size", 100))
+    translator = Translator()
 
     user_id = None
     auth_header = request.headers.get("Authorization")
@@ -31,6 +33,7 @@ def voters_info(request):
             {"status": False, "message": "Unauthorized"},
             status=401
         )
+    
 
     # -------- GET USER & ROLE --------
     try:
@@ -82,9 +85,9 @@ def voters_info(request):
             "sr_no" : v.serial_number,
             "voter_list_id": v.voter_list_id,
             "voter_id": v.voter_id,
-            "first_name":v.first_name,
-            "last_name" : v.last_name,
-            "voter_name_marathi": v.voter_name_marathi,
+            "first_name": v.first_name,
+            "last_name": v.last_name,
+            # "voter_name_marathi": translator.translate(v.voter_name_marathi, lang),
             "voter_name_eng": v.voter_name_eng,
             "kramank": v.kramank,
             "age": v.age_eng,

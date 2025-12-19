@@ -13,3 +13,4 @@ djangorestframework
 django-redis
 openpyxl
 django-cors-headers
+deep-translator

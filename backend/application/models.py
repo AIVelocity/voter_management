@@ -272,7 +272,7 @@ class VoterList(models.Model):
     yadivibagh = models.IntegerField(null=True,blank=True)
     anukramank = models.IntegerField(null=True,blank=True)
     matdankendra = models.TextField(null=True,blank=True)
-
+    address_marathi = models.TextField(null=True, blank=True)
 
     class Meta:
         db_table = "voter_list"
@@ -513,7 +513,6 @@ class UserVoterContact(models.Model):
 
     class Meta:
         unique_together = ("user", "mobile_no")
-from django.db import models
 
 
 class VoterList2(models.Model):
