@@ -10,6 +10,7 @@ from ..models import VoterChatMessage, TemplateName
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+
 url = settings.MESSAGE_URL
 token = settings.ACCESS_TOKEN
 
@@ -192,6 +193,7 @@ def send_text(request):
 
 # @api_view(["POST"])
 # @permission_classes([IsAuthenticated])
+# --- Media send endpoints (image/audio/video/document) ---
 @csrf_exempt
 def send_image(request):
     if request.method != "POST":
