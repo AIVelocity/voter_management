@@ -117,7 +117,7 @@ class VoterUserManager(BaseUserManager):
         return self.create_user(mobile_no, password, **extra_fields)
 
 
-class VoterUserMaster(AbstractBaseUser, PermissionsMixin):
+class VoterUserMaster(AbstractBaseUser):
     user_id = models.AutoField(primary_key=True)
 
     first_name = models.TextField(null=True, blank=True)
@@ -157,17 +157,17 @@ class VoterUserMaster(AbstractBaseUser, PermissionsMixin):
     USERNAME_FIELD = "mobile_no"
     REQUIRED_FIELDS = []
 
-    groups = models.ManyToManyField(
-        "auth.Group",
-        blank=True,
-        related_name="voter_users"
-    )
+    # groups = models.ManyToManyField(
+    #     "auth.Group",
+    #     blank=True,
+    #     related_name="voter_users"
+    # )
 
-    user_permissions = models.ManyToManyField(
-        "auth.Permission",
-        blank=True,
-        related_name="voter_users_permissions"
-    )
+    # user_permissions = models.ManyToManyField(
+    #     "auth.Permission",
+    #     blank=True,
+    #     related_name="voter_users_permissions"
+    # )
     class Meta:
         db_table = "voter_user_master"
         managed = False   #  IMPORTANT: existing table
@@ -513,3 +513,71 @@ class UserVoterContact(models.Model):
 
     class Meta:
         unique_together = ("user", "mobile_no")
+from django.db import models
+
+
+class VoterList2(models.Model):
+    sr_no = models.IntegerField(primary_key=True)
+
+    voter_id = models.CharField(
+        max_length=200,
+        null=True,
+        blank=True
+    )
+
+    voter_name_marathi = models.CharField(
+        max_length=1000,
+        null=True,
+        blank=True
+    )
+
+    voter_name_english = models.CharField(
+        max_length=1000,
+        null=True,
+        blank=True
+    )
+
+    kramank = models.CharField(
+        max_length=200,
+        null=True,
+        blank=True
+    )
+
+    address = models.CharField(
+        max_length=1000,
+        null=True,
+        blank=True
+    )
+
+    age_marathi = models.CharField(
+        max_length=50,
+        null=True,
+        blank=True
+    )
+
+    age_english = models.CharField(
+        max_length=50,
+        null=True,
+        blank=True
+    )
+
+    gender_marathi = models.CharField(
+        max_length=50,
+        null=True,
+        blank=True
+    )
+
+    gender_english = models.CharField(
+        max_length=50,
+        null=True,
+        blank=True
+    )
+
+    created_date = models.DateTimeField(
+        auto_now_add=False,
+        auto_now=False
+    )
+
+    class Meta:
+        db_table = "voter_list_2"
+        managed = False   # VERY IMPORTANT (table already exists)
