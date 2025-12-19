@@ -217,7 +217,7 @@ def single_voters_info(request, voter_list_id):
         "siblings": siblings,
         "children": children,
         "BloodRelatedFam": BloodRelatedFam,
-"comments":voter.comments,
+        "comments":voter.comments,
         
 
         # AUDIT
