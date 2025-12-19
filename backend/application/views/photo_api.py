@@ -55,11 +55,15 @@ def voters_info_photo(request):
         image_full_path = os.path.join(BASE_DIR,'images','Cropped_detected_boxes',image_name)
         print(image_full_path)
         
-        if not os.path.exists(image_full_path):
-            raise Exception("Image not found")
+        with open(image_full_path, "rb") as img_file:
+            encoded_image = base64.b64encode(img_file.read()).decode("utf-8")
         
-        return FileResponse(open(image_full_path, "rb"), content_type="image/png")
-    
+        # ---------- RESPONSE ----------
+        return Response({
+            "status": True,
+            "voter_id": voter.voter_list_id,
+            "image_base64": f"data:image/png;base64,{encoded_image}"
+        })
     except Exception as e:
         return Response({"status": False, "message": str(e)}, status=500)
     
