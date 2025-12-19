@@ -3,6 +3,7 @@ import logging
 from django.conf import settings
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_http_methods
 from ..utils.webhook_handler import handle_incoming_messages, handle_statuses, parse_whatsapp_error
 
 logger = logging.getLogger(__name__)
@@ -17,9 +18,6 @@ def error_resp(msg="error", status=400):
     return JsonResponse({"status": False, "message": msg}, status=status)
 
 
-# ------------------------------
-# GET HANDLER (unchanged)
-# ------------------------------
 def verify_webhook(request):
     hub_mode = request.GET.get("hub.mode")
     hub_token = request.GET.get("hub.verify_token")
@@ -33,9 +31,6 @@ def verify_webhook(request):
     return error_resp("Invalid verification token", status=403)
 
 
-# ------------------------------
-# POST HANDLER (unchanged)
-# ------------------------------
 def receive_webhook(request):
     try:
         body = json.loads(request.body.decode("utf-8") or "{}")
@@ -85,9 +80,6 @@ def receive_webhook(request):
     return ok_resp()
 
 
-# ------------------------------
-# MAIN WRAPPER (this is the ONLY new thing)
-# ------------------------------
 @csrf_exempt
 def whatsapp_webhook(request):
     """

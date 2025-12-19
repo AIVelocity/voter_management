@@ -7,6 +7,9 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from ..utils.s3_integration import upload_to_s3
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 
 Upload_Url = getattr(settings, "UPLOAD_URL", None)
 token = getattr(settings, "ACCESS_TOKEN", None)
@@ -55,6 +58,8 @@ def _bytes_human(n: int) -> str:
         return f"{round(n / MB)} MB"
     return f"{n} bytes"
 
+# @api_view(["POST"])
+# @permission_classes([IsAuthenticated])
 @csrf_exempt
 @require_http_methods(["POST"])
 def upload_media(request):
