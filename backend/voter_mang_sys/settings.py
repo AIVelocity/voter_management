@@ -161,11 +161,6 @@ ACCESS_TOKEN="EAATvXwkH2M4BQK4No9gUopAOZBetUyPGHORZBNY0KcMpTdsaU4lRxIxS1SK7M39gz
 VERIFY_TOKEN="Toyam_orchid_token"
 MESSAGE_URL="https://graph.facebook.com/v24.0/946219375236764/messages"
 UPLOAD_URL="https://graph.facebook.com/v24.0/946219375236764/media"
-# VERIFY_TOKEN = os.environ.get("WP_VERIFY_TOKEN","my_verify_token_123")
-# MESSAGE_URL = os.environ.get("MESSAGE_URL")
-# UPLOAD_URL = os.environ.get("UPLOAD_URL")
-# ACCESS_TOKEN = os.environ.get("WP_ACCESS_TOKEN")
-
 
 # AWS_ACCESS_KEY_ID= os.environ.get("AWS_ACCESS_KEY_ID")
 # AWS_SECRET_ACCESS_KEY= os.environ.get("AWS_SECRET_ACCESS_KEY")

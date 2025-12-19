@@ -7,6 +7,9 @@ from ..utils.send_messages_handlers import parse_request_body, _chunked, _clean_
 from ..utils.webhook_handler import parse_whatsapp_error
 from application.models import VoterList, VoterUserMaster
 from ..models import VoterChatMessage, TemplateName
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 
 url = settings.MESSAGE_URL
 token = settings.ACCESS_TOKEN
@@ -17,6 +20,8 @@ DEFAULT_CHUNK_SIZE = PROVIDER_MAX_PER_SECOND  # how many messages to send per se
 country_code = "91"
 
 # --- Views that use chunking to obey provider rate limits ---
+# @api_view(["POST"])
+# @permission_classes([IsAuthenticated])
 @csrf_exempt
 def send_template(request):
     if request.method != "POST":
@@ -116,6 +121,9 @@ def send_template(request):
     )
 
 
+
+# @api_view(["POST"])
+# @permission_classes([IsAuthenticated])
 @csrf_exempt
 def send_text(request):
     if request.method != "POST":
@@ -181,6 +189,10 @@ def send_text(request):
     return JsonResponse({"status": True, "message_text": message, "errors": errors, "results": results, "sent_count": len(results)}, status=200)
 
 
+# --- Media send endpoints (image/audio/video/document) --
+
+# @api_view(["POST"])
+# @permission_classes([IsAuthenticated])
 # --- Media send endpoints (image/audio/video/document) ---
 @csrf_exempt
 def send_image(request):
@@ -252,6 +264,9 @@ def send_image(request):
     return JsonResponse({"status": True, "message_type": "image", "errors": errors, "results": results, "sent_count": len(results)}, status=200)
 
 
+
+# @api_view(["POST"])
+# @permission_classes([IsAuthenticated])
 @csrf_exempt
 def send_audio(request):
     if request.method != "POST":
@@ -317,6 +332,9 @@ def send_audio(request):
     return JsonResponse({"status": True, "message_type": "audio", "errors": errors, "results": results, "sent_count": len(results)}, status=200)
 
 
+
+# @api_view(["POST"])
+# @permission_classes([IsAuthenticated])
 @csrf_exempt
 def send_document(request):
     if request.method != "POST":
@@ -390,6 +408,9 @@ def send_document(request):
     return JsonResponse({"status": True, "message_type": "document", "errors": errors, "results": results, "sent_count": len(results)}, status=200)
 
 
+
+# @api_view(["POST"])
+# @permission_classes([IsAuthenticated])
 @csrf_exempt
 def send_video(request):
     if request.method != "POST":
@@ -458,6 +479,9 @@ def send_video(request):
     return JsonResponse({"status": True, "message_type": "video", "errors": errors, "results": results, "sent_count": len(results)}, status=200)
 
 
+
+# @api_view(["GET"])
+# @permission_classes([IsAuthenticated])
 @require_http_methods(["GET"])
 def get_messages_for_voter(request):
     voter_list_id = request.GET.get("voter_list_id")
@@ -515,6 +539,9 @@ def get_messages_for_voter(request):
     }, safe=False)
 
 
+
+# @api_view(["POST"])
+# @permission_classes([IsAuthenticated])
 @csrf_exempt
 def get_all_templates(request):
     if request.method != "GET":
