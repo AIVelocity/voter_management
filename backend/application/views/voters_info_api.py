@@ -76,27 +76,26 @@ def voters_info(request):
     paginator = Paginator(qs, size)
     page_obj = paginator.get_page(page)
 
-    data = []
-
-    if is_marathi:
-        first_name, middle_name, last_name = split_marathi_name(
-            v.voter_name_marathi
-        )
-
-        voter_name_eng = v.voter_name_marathi
-        age_eng = v.age_marathi
-        gender_eng = v.gender_marathi
-    else:
-        first_name = v.first_name
-        middle_name = v.middle_name
-        last_name = v.last_name
-
-        voter_name_eng = v.voter_name_eng
-        age_eng = v.age_eng
-        gender_eng = v.gender_eng
-    
+    data = []   
 
     for v in page_obj:
+        if is_marathi:
+            first_name, middle_name, last_name = split_marathi_name(
+                v.voter_name_marathi
+            )
+
+            voter_name_eng = v.voter_name_marathi
+            age_eng = v.age
+            gender_eng = v.gender
+        else:
+            first_name = v.first_name
+            middle_name = v.middle_name
+            last_name = v.last_name
+
+            voter_name_eng = v.voter_name_eng
+            age_eng = v.age_eng
+            gender_eng = v.gender_eng
+            
         has_whatsapp = any([
         bool(v.mobile_no),
         bool(v.alternate_mobile1),
