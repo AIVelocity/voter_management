@@ -23,11 +23,11 @@ def split_marathi_name(full_name):
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def voters_info(request):
-    # lang = request.headers.get("Accept-Language", "en")
-    # print(lang)
+    lang = request.headers.get("Accept-Language", "en")
+    print(lang)
     page = int(request.GET.get("page", 1))
     size = int(request.GET.get("size", 100))
-    # is_marathi = lang in ["mr", "mr-in", "marathi"]
+    is_marathi = lang in ["mr", "mr-in", "marathi"]
     user_id = None
     auth_header = request.headers.get("Authorization")
 
@@ -78,22 +78,22 @@ def voters_info(request):
 
     data = []
 
-    # if is_marathi:
-    #     first_name, middle_name, last_name = split_marathi_name(
-    #         v.voter_name_marathi
-    #     )
+    if is_marathi:
+        first_name, middle_name, last_name = split_marathi_name(
+            v.voter_name_marathi
+        )
 
-    #     voter_name_eng = v.voter_name_marathi
-    #     age = v.age_marathi
-    #     gender = v.gender_marathi
-    # else:
-    #     first_name = v.first_name
-    #     middle_name = v.middle_name
-    #     last_name = v.last_name
+        voter_name_eng = v.voter_name_marathi
+        age_eng = v.age_marathi
+        gender_eng = v.gender_marathi
+    else:
+        first_name = v.first_name
+        middle_name = v.middle_name
+        last_name = v.last_name
 
-    #     voter_name_eng = v.voter_name_eng
-    #     age_eng = v.age_eng
-    #     gender_eng = v.gender_eng
+        voter_name_eng = v.voter_name_eng
+        age_eng = v.age_eng
+        gender_eng = v.gender_eng
     
 
     for v in page_obj:
@@ -106,13 +106,13 @@ def voters_info(request):
             "sr_no" : v.serial_number,
             "voter_list_id": v.voter_list_id,
             "voter_id": v.voter_id,
-            "first_name": v.first_name,
-            "last_name": v.last_name,
+            "first_name": first_name,
+            "last_name": last_name,
             # "voter_name_marathi": translator.translate(v.voter_name_marathi, lang),
-            "voter_name_eng": v.voter_name_eng,
+            "voter_name_eng": voter_name_eng,
             "kramank": v.kramank,
-            "age": v.age_eng,
-            "gender": v.gender_eng,
+            "age": age_eng,
+            "gender": gender_eng,
             "ward_id": v.ward_no,
             "tag": v.tag_id.tag_name if v.tag_id else None,
             "badge": v.badge,

@@ -13,8 +13,6 @@ from application.models import VoterUserMaster
 import io
 from rest_framework.decorators import api_view, permission_classes, parser_classes
 from rest_framework.response import Response
-from application.utils.password_crypto import encrypt_password
-
 
 def is_valid_mobile(mobile):
     # Allows only exactly 10 digits
@@ -80,15 +78,14 @@ def registration(request):
     role_id = ROLE_MAP.get(
         role_str.lower(), 3
     ) if role_str else 3
-    encrypted_password = encrypt_password(password)
 
     # ---------- CREATE USER ----------
     user = VoterUserMaster.objects.create(
         first_name=first_name,
         last_name=last_name,
         mobile_no=mobile_no,
-        password=encrypted_password,
-
+        password=make_password(password),
+        
         role_id=role_id
     )
 
@@ -204,13 +201,13 @@ def upload_login_credentials_excel(request):
                         f"Row {row_no}: mobile already exists ({mobile_no})"
                     )
                     continue
-                
+
                 # ---------- INSERT ----------
                 VoterUserMaster.objects.create(
                     first_name=str(first_name).strip(),
                     last_name=str(last_name).strip() if last_name else "",
                     mobile_no=mobile_no,
-                    password=encrypt_password(str(password)), 
+                    password=make_password(str(password)),
                     role_id=3
                 )
 
