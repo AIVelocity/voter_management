@@ -24,8 +24,8 @@ def id_validation(request):
     try:
         body = request.data
 
-        mobile_no = body.get("mobile_no")
-        password = body.get("password")
+        mobile_no = (body.get("mobile_no") or "").strip()
+        password = (body.get("password") or "").strip()
 
         # -------- VALIDATIONS --------
         if not mobile_no:
