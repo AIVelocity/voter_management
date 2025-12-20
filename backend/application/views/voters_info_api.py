@@ -81,6 +81,11 @@ def voters_info(request):
     data = []
 
     for v in page_obj:
+        has_whatsapp = any([
+        bool(v.mobile_no),
+        bool(v.alternate_mobile1),
+        bool(v.alternate_mobile2),
+    ])
         data.append({
             "sr_no" : v.serial_number,
             "voter_list_id": v.voter_list_id,
@@ -95,7 +100,8 @@ def voters_info(request):
             "ward_id": v.ward_no,
             "tag": v.tag_id.tag_name if v.tag_id else None,
             "badge": v.badge,
-            "location": v.location
+            "location": v.location,
+            "show_whatsapp": has_whatsapp
         })
 
     response_data = {
