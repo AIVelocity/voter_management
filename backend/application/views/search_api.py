@@ -1,6 +1,6 @@
 
 from ..models import VoterList,VoterTag
-
+from .voters_info_api import split_marathi_name
 import re
 from collections import Counter
 
@@ -56,7 +56,9 @@ from rest_framework.response import Response
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def voters_search(request):
-
+    lang = request.headers.get("Accept-Language", "en")
+    print(lang)
+    is_marathi = lang in ["mr", "mr-in", "marathi"]
     search = request.GET.get("search", "").strip()
     page = int(request.GET.get("page", 1))
     size = int(request.GET.get("size", 100))
@@ -72,20 +74,47 @@ def voters_search(request):
 
     paginator = Paginator(qs, size)
     page_obj = paginator.get_page(page)
+    data=[]
+    for v in page_obj:
+        if is_marathi:
+            first_name, middle_name, last_name = split_marathi_name(
+                v.voter_name_marathi
+            )
 
-    data = [{
-        "sr_no" : v.serial_number,
-        "voter_list_id": v.voter_list_id,
-        "voter_id": v.voter_id,
-        "voter_name_eng": v.voter_name_eng,
-        "age": v.age_eng,
-        "gender": v.gender_eng,
-        "ward_id": v.ward_no,
-        "badge": v.badge,
-        "tag": str(v.tag_id) if v.tag_id else None,
-        "location" : v.location
-        # "badge":v.badge
-    } for v in page_obj]
+            voter_name_eng = v.voter_name_marathi
+            age_eng = v.age
+            gender_eng = v.gender
+        else:
+            first_name = v.first_name
+            middle_name = v.middle_name
+            last_name = v.last_name
+
+            voter_name_eng = v.voter_name_eng
+            age_eng = v.age_eng
+            gender_eng = v.gender_eng
+            
+        has_whatsapp = any([
+        bool(v.mobile_no),
+        bool(v.alternate_mobile1),
+        bool(v.alternate_mobile2),
+    ])
+        data.append({
+            "sr_no" : v.serial_number,
+            "voter_list_id": v.voter_list_id,
+            "voter_id": v.voter_id,
+            "first_name": first_name,
+            "last_name": last_name,
+            # "voter_name_marathi": translator.translate(v.voter_name_marathi, lang),
+            "voter_name_eng": voter_name_eng,
+            "kramank": v.kramank,
+            "age": age_eng,
+            "gender": gender_eng,
+            "ward_id": v.ward_no,
+            "tag": v.tag_id.tag_name if v.tag_id else None,
+            "badge": v.badge,
+            "location": v.location,
+            "show_whatsapp": has_whatsapp
+        })
 
     return Response({
         "status": True,
@@ -103,6 +132,10 @@ def voters_search(request):
 def family_dropdown_search(request):
     search = request.GET.get("search", "").strip()
     print(search)
+    
+    lang = request.headers.get("Accept-Language", "en")
+    is_marathi = lang in ["mr", "mr-in", "marathi"]
+    
     exclude_id = request.GET.get("exclude_id")   
     print(exclude_id)
     page = int(request.GET.get("page", 1))
@@ -126,20 +159,47 @@ def family_dropdown_search(request):
     paginator = Paginator(qs, size)
     page_obj = paginator.get_page(page)
 
-    results = [{
-        "sr_no" : v.serial_number,
-        "voter_list_id": v.voter_list_id,
-        "voter_id": v.voter_id,
-        "voter_name_eng": v.voter_name_eng,
-        "age": v.age_eng,
-        "gender": v.gender_eng,
-        "ward": v.ward_no,
-        "location":v.location,
-        "badge" : v.badge,
-        "kramank": v.kramank,
-        "tag": str(v.tag_id) if v.tag_id else None
-    } for v in page_obj]
+    data=[]
+    for v in page_obj:
+        if is_marathi:
+            first_name, middle_name, last_name = split_marathi_name(
+                v.voter_name_marathi
+            )
 
+            voter_name_eng = v.voter_name_marathi
+            age_eng = v.age
+            gender_eng = v.gender
+        else:
+            first_name = v.first_name
+            middle_name = v.middle_name
+            last_name = v.last_name
+
+            voter_name_eng = v.voter_name_eng
+            age_eng = v.age_eng
+            gender_eng = v.gender_eng
+            
+        has_whatsapp = any([
+        bool(v.mobile_no),
+        bool(v.alternate_mobile1),
+        bool(v.alternate_mobile2),
+    ])
+        data.append({
+            "sr_no" : v.serial_number,
+            "voter_list_id": v.voter_list_id,
+            "voter_id": v.voter_id,
+            "first_name": first_name,
+            "last_name": last_name,
+            # "voter_name_marathi": translator.translate(v.voter_name_marathi, lang),
+            "voter_name_eng": voter_name_eng,
+            "kramank": v.kramank,
+            "age": age_eng,
+            "gender": gender_eng,
+            "ward_id": v.ward_no,
+            "tag": v.tag_id.tag_name if v.tag_id else None,
+            "badge": v.badge,
+            "location": v.location,
+            "show_whatsapp": has_whatsapp
+        })
     return Response({
         "status": True,
         "query": search,
@@ -148,7 +208,7 @@ def family_dropdown_search(request):
         "page_size": size,
         "total_pages": paginator.num_pages,
         "total_records": paginator.count,
-        "results": results
+        "results": data
     })
 
   

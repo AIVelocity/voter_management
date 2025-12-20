@@ -8,7 +8,7 @@ import json
 from django.core.paginator import Paginator, EmptyPage
 from collections import defaultdict
 from rest_framework_simplejwt.tokens import AccessToken
-
+from .voters_info_api import split_marathi_name
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -247,6 +247,8 @@ def volunteer_allocation_panel(request):
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def unassigned_voters(request):
+    lang = request.headers.get("Accept-Language", "en")
+    is_marathi = lang.lower().startswith("mr")
 
     # -------- GET PARAMS --------
     page = int(request.GET.get("page", 1))
@@ -280,6 +282,51 @@ def unassigned_voters(request):
 
     try:
         page_obj = paginator.page(page)
+        voters = []
+
+        for v in page_obj.object_list:
+            if is_marathi:
+                first_name, middle_name, last_name = split_marathi_name(
+                    v.get("voter_name_marathi")
+                )
+
+                voters.append({
+                    "serial_number": v["serial_number"],
+                    "voter_list_id": v["voter_list_id"],
+                    "voter_id": v["voter_id"],
+
+                    "voter_name": v["voter_name_marathi"],
+                    "first_name": first_name,
+                    "middle_name": middle_name,
+                    "last_name": last_name,
+
+                    "mobile_no": v["mobile_no"],
+                    "ward_no": v["ward_no"],
+                    "age": v["age"],
+                    "gender": v.get("gender"),   # Marathi gender
+                    "badge": v["badge"],
+                    "location": v["location"],
+                })
+
+            else:
+                voters.append({
+                    "serial_number": v["serial_number"],
+                    "voter_list_id": v["voter_list_id"],
+                    "voter_id": v["voter_id"],
+
+                    "voter_name": v["voter_name_eng"],
+                    "first_name": v["first_name"],
+                    "middle_name": v["middle_name"],
+                    "last_name": v["last_name"],
+
+                    "mobile_no": v["mobile_no"],
+                    "ward_no": v["ward_no"],
+                    "age": v["age"],
+                    "gender": v["gender_eng"],
+                    "badge": v["badge"],
+                    "location": v["location"],
+                })
+
     except EmptyPage:
         return Response({
             "status": True,
@@ -298,7 +345,7 @@ def unassigned_voters(request):
         "total_pages": paginator.num_pages,
         "has_next": page_obj.has_next(),
         "has_previous": page_obj.has_previous(),
-        "voters": list(page_obj.object_list)
+        "voters": voters
     })
 
 

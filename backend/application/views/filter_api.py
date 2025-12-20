@@ -3,6 +3,7 @@ from django.db.models import Q
 from rest_framework_simplejwt.tokens import AccessToken
 from django.core.paginator import Paginator
 from .search_api import apply_dynamic_initial_search
+from .voters_info_api import split_marathi_name
 
 def apply_multi_filter(qs, field, value):
     if not value:
@@ -40,7 +41,8 @@ from rest_framework.response import Response
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def filter(request):
-
+    lang = request.headers.get("Accept-Language", "en")
+    is_marathi = lang.lower().startswith("mr")
     page = int(request.GET.get("page", 1))
     size = int(request.GET.get("size", 100))
     sort = request.GET.get("sort")
@@ -187,17 +189,34 @@ def filter(request):
 
     data = []
     for v in page_obj:
+        if is_marathi:
+            first_name, middle_name, last_name = split_marathi_name(
+                v.voter_name_marathi
+            )
+
+            voter_name_eng = v.voter_name_marathi
+            age_eng = v.age
+            gender_eng = v.gender
+        else:
+            first_name = v.first_name
+            middle_name = v.middle_name
+            last_name = v.last_name
+
+            voter_name_eng = v.voter_name_eng
+            age_eng = v.age_eng
+            gender_eng = v.gender_eng
+            
         data.append({
             "sr_no" : v.serial_number,
             "voter_list_id": v.voter_list_id,
-            "voter_name_eng": v.voter_name_eng,
+            "voter_name_eng": voter_name_eng,
             "voter_id": v.voter_id,
-            "gender": v.gender_eng,
+            "gender": gender_eng,
             "location": v.location,
             "badge": v.badge,
             "tag": v.tag_id.tag_name if v.tag_id else None,
             "kramank": v.kramank,
-            "age":v.age_eng,
+            "age":age_eng,
             "ward_id": v.ward_no
         })
 

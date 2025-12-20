@@ -1,3 +1,4 @@
+from .voters_info_api import split_marathi_name
 from ..models import VoterList,VoterRelationshipDetails,VoterUserMaster
 from django.db.models import Count
 from django.utils import timezone
@@ -346,7 +347,8 @@ from rest_framework.response import Response
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def unassigned_voters(request):
-
+    lang = request.headers.get("Accept-Language", "en")
+    is_marathi = lang.lower().startswith("mr")
     page = int(request.GET.get("page", 1))
     size = int(request.GET.get("size", 100))
     sort = request.GET.get("sort")
@@ -385,43 +387,6 @@ def unassigned_voters(request):
     # If Python converted to list → sort manually
     if isinstance(qs, list):
         qs.sort(key=lambda x: x.voter_list_id)
-
-
-    # caste = request.GET.get("caste")
-    # occupation = request.GET.get("occupation")
-
-    # ---------- CAST / CASTE ----------
-    # if caste:
-    #     caste_ids = [c.strip() for c in caste.split(",")]
-    #     if "null" in [c.lower() for c in caste_ids]:
-    #         qs = qs.filter(cast__isnull=True)
-    #     else:
-    #         qs = qs.filter(cast__in=caste_ids)
-
-
-    # # ---------- OCCUPATION ----------
-    # if occupation:
-    #     if occupation.lower() == "null":
-    #         qs = qs.filter(occupation__isnull=True)
-    #     else:
-    #         qs = qs.filter(occupation=int(occupation))
-
-    # # ---------- RELIGION ----------
-    # if religion:
-    #     religion_ids = [r.strip() for r in religion.split(",")]
-
-    #     if "null" in [r.lower() for r in religion_ids]:
-    #         qs = qs.filter(religion__isnull=True)
-    #     else:
-    #         qs = qs.filter(religion_id__in=religion_ids)
-
-
-    # ---------- TAG ----------
-    # if tag:
-    #     qs = qs.filter(tag_id=int(tag))
-
-    # if badge:
-    #     qs = qs.filter(badge__icontains=badge)
     
     if voter_id:
         qs = qs.filter(voter_id__icontains=voter_id)
@@ -463,25 +428,12 @@ def unassigned_voters(request):
 
         qs = qs.filter(age_q)
 
-    # if age_max:
-    #     qs = qs.filter(age_eng__lte=age_max)
-
-    # if age_min:
-    #     qs = qs.filter(age_eng__gte=age_min)
-
     if location:
         qs = qs.filter(location__icontains=location)
-     
     
     if sort:
         qs = qs.order_by(sort)
-    # else:
-    #     qs = qs.order_by(voter)
 
-    # if gender:
-    #     qs = qs.filter(gender_eng__iexact=gender)
-
-    # Apply ENDS WITH filters
     if first_ends:
         qs = qs.filter(first_name__iendswith=first_ends)
     
@@ -503,17 +455,34 @@ def unassigned_voters(request):
 
     data = []
     for v in page_obj:
+        if is_marathi:
+            first_name, middle_name, last_name = split_marathi_name(
+                v.voter_name_marathi
+            )
+
+            voter_name_eng = v.voter_name_marathi
+            age_eng = v.age
+            gender_eng = v.gender
+        else:
+            first_name = v.first_name
+            middle_name = v.middle_name
+            last_name = v.last_name
+
+            voter_name_eng = v.voter_name_eng
+            age_eng = v.age_eng
+            gender_eng = v.gender_eng
+            
         data.append({
             "sr_no" : v.serial_number,
             "voter_list_id": v.voter_list_id,
-            "voter_name_eng": v.voter_name_eng,
+            "voter_name_eng": voter_name_eng,
             "voter_id": v.voter_id,
-            "gender": v.gender_eng,
+            "gender": gender_eng,
             "location": v.location,
             "badge": v.badge,
             "tag": v.tag_id.tag_name if v.tag_id else None,
             "kramank": v.kramank,
-            "age":v.age_eng,
+            "age":age_eng,
             "ward_id": v.ward_no
         })
 
@@ -587,60 +556,6 @@ def assign_voters_to_karyakarta(request):
             "error": str(e)
         }, status=500)
 
-
-# def auto_select_unassigned_voters(request):
-
-#     try:
-#         count = int(request.GET.get("count", 0))
-#     except ValueError:
-#         return Response({
-#             "status": False,
-#             "message": "Invalid count"
-#         }, status=400)
-
-#     if count <= 0:
-#         return Response({
-#             "status": False,
-#             "message": "Count must be greater than 0"
-#         }, status=400)
-
-#     voters = (
-#         VoterList.objects
-#         .filter(user__isnull=True)
-#         .order_by("serial_number,")
-#         .values(
-#             "voter_list_id",
-#             "serial_number",
-#             "voter_id",
-#             "voter_name_eng",
-#             "voter_name_marathi",
-#             "mobile_no",
-#             "ward_no",
-#             "age",
-#             "gender_eng",
-#             "badge",
-#             "location"
-#         )[:count]
-#     )
-
-#     return Response({
-#         "status": True,
-#         "requested_count": count,
-#         "returned_count": len(voters),
-#         "voters": list(voters),
-#         "voter_ids": [v["voter_list_id"] for v in voters]
-#     })
-
-
-from django.views.decorators.csrf import csrf_exempt
-from django.db import transaction
-from ..models import VoterList, VoterUserMaster
-import json
-
-
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.response import Response
 
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])

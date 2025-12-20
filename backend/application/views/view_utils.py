@@ -50,8 +50,19 @@ def save_relation(voter, relation, related_voter_id):
         relation_with_voter=relation.lower(),
     )
     
+def build_member(p, is_marathi):
+    if is_marathi and p.voter_name_marathi:
+        return {
+            "name": p.voter_name_marathi,
+            "voter_list_id": p.voter_list_id,
+        }
 
-def get_family_from_db(voter):
+    # fallback to English
+    return {
+        "name": p.voter_name_eng,
+        "voter_list_id": p.voter_list_id,
+    }
+def get_family_from_db(voter, is_marathi=False):
 
     relations = (
         VoterRelationshipDetails.objects
@@ -62,32 +73,28 @@ def get_family_from_db(voter):
     siblings = []
     children = []
 
-    father_name = mother_name = wife_name = husband_name = spouse_name = None
+    father = mother = spouse = wife = husband = None
 
     for rel in relations:
         p = rel.related_voter
-
-        member = {
-            "name": f"{p.first_name} {p.middle_name} {p.last_name}",
-            "voter_list_id": p.voter_list_id,
-        }
+        member = build_member(p, is_marathi)
 
         rel_type = rel.relation_with_voter
 
         if rel_type == "father":
-            father_name = member
+            father = member
 
         elif rel_type == "mother":
-            mother_name = member
-        
+            mother = member
+
         elif rel_type == "spouse":
-            spouse_name = member
+            spouse = member
 
         elif rel_type == "wife":
-            wife_name = member
+            wife = member
 
         elif rel_type == "husband":
-            husband_name = member
+            husband = member
 
         elif rel_type == "child":
             children.append(member)
@@ -96,12 +103,11 @@ def get_family_from_db(voter):
             siblings.append(member)
 
     return {
-        "father": father_name,
-        "mother": mother_name,
-        "wife": wife_name,
-        "husband": husband_name,
+        "father": father,
+        "mother": mother,
+        "wife": wife,
+        "husband": husband,
+        "spouse": spouse,
         "siblings": siblings,
         "children": children,
-        "spouse" : spouse_name
     }
-    

@@ -282,15 +282,28 @@ class VoterList(models.Model):
         return str(self.voter_id)
     
     def save(self, *args, **kwargs):
-        # If check_progress becomes True AND no date set → set today
-        if self.tag_id and not self.check_progress_date:
-            self.check_progress_date = timezone.now().date()
-
-        # If someone unchecks the status → clear the date
-        if not self.check_progress:
+    
+        # -------- FETCH OLD tag_id --------
+        old_tag_id = None
+        if self.pk:
+            old_tag_id = (
+                self.__class__
+                .objects
+                .filter(pk=self.pk)
+                .values_list("tag_id", flat=True)
+                .first()
+            )
+    
+        # -------- RULE 1: tag_id == 5 → CLEAR DATE --------
+        if self.tag_id == 5:
             self.check_progress_date = None
-
+    
+        # -------- RULE 2: tag_id CHANGED (and not 5) → SET DATE --------
+        elif self.tag_id and self.tag_id != old_tag_id:
+            self.check_progress_date = timezone.now().date()
+    
         super().save(*args, **kwargs)
+    
 
 
 class VoterRelationshipDetails(models.Model):

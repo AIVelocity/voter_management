@@ -15,3 +15,6 @@ openpyxl
 django-cors-headers
 deep-translator
 cryptography
+indic-transliteration 
+pandas 
+openpyxl

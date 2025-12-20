@@ -1,10 +1,14 @@
 from ..models import VoterList,VoterTag,ActivityLog,VoterUserMaster,Caste,Religion,Occupation
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 from .view_utils import save_relation,get_family_from_db
 from rest_framework_simplejwt.tokens import AccessToken
 from django.db.models import Q
 from django.utils import timezone
 import pytz
 from django.utils.translation import gettext as _
+from .voters_info_api import split_marathi_name
 
 ist = pytz.timezone("Asia/Kolkata")
 
@@ -33,9 +37,6 @@ def format_indian_datetime(dt):
 # ---------------------------------------------
 # SINGLE VOTER INFO
 # ---------------------------------------------
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.response import Response
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
@@ -49,6 +50,9 @@ def single_voters_info(request, voter_list_id):
 
     # ---------- FETCH VOTER ----------
     try:
+        lang = request.headers.get("Accept-Language", "en")
+        print(lang)
+        is_marathi = lang in ["mr", "mr-in", "marathi"]
         voter = (
             VoterList.objects
             .select_related("tag_id", "occupation", "cast", "religion")
@@ -82,7 +86,7 @@ def single_voters_info(request, voter_list_id):
     age = safe_age(voter.age_eng)
 
     # ---------- FAMILY FROM DB (SOURCE OF TRUTH) ----------
-    family = get_family_from_db(voter)
+    family = get_family_from_db(voter, is_marathi)
 
     father = family.get("father")
     mother = family.get("mother")
@@ -167,17 +171,31 @@ def single_voters_info(request, voter_list_id):
     comment_last_updated_at = format_indian_datetime(
         make_aware_if_needed(comment_last_updated_at)
     )
-
+    
+    if is_marathi:
+        first_name, middle_name, last_name = split_marathi_name(
+            voter.voter_name_marathi
+        )
+        voter_name_eng = voter.voter_name_marathi
+        age_eng = age
+        gender_eng = voter.gender
+    else:
+        first_name = voter.first_name
+        middle_name = voter.middle_name
+        last_name = voter.last_name
+        voter_name_eng = voter.voter_name_eng
+        age_eng = age
+        gender_eng = voter.gender_eng
     # ---------- FINAL RESPONSE ----------
     data = {
         "voter_list_id": voter.voter_list_id,
-        "voter_name_eng": voter.voter_name_eng,
+        "voter_name_eng": voter_name_eng,
         "sr_no": voter.sr_no,
         "voter_id": voter.voter_id,
 
-        "first_name": voter.first_name,
-        "middle_name": voter.middle_name,
-        "last_name": voter.last_name,
+        "first_name": first_name,
+        "middle_name": middle_name,
+        "last_name": last_name,
 
         "address": voter.current_address,
         "mobile_no": voter.mobile_no,
@@ -185,8 +203,8 @@ def single_voters_info(request, voter_list_id):
         "alternate_mobile_no2": voter.alternate_mobile2,
         "kramank": voter.kramank,
         "full_address":voter.address_line1,
-        "age": age,
-        "gender": voter.gender_eng,
+        "age": age_eng,
+        "gender": gender_eng,
         "ward_id": voter.ward_no,
         "location": voter.location,
         "badge": voter.badge,

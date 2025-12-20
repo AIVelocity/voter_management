@@ -18,6 +18,8 @@ def update_voter(request, voter_list_id):
         return Response({"status": False, "message": "PUT method required"}, status=405)
 
     try:
+        lang = request.headers.get("Accept-Language", "en")
+        # print(lang)
         auth_header = request.headers.get("Authorization")
         body = request.data
         
