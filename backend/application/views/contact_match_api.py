@@ -137,7 +137,6 @@ def canonicalize_contacts(payload) -> list[dict]:
 
 
 # ------------------ API ------------------
-
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def match_contacts_with_users(request):
@@ -159,36 +158,22 @@ def match_contacts_with_users(request):
             status=401
         )
 
-    data = request.data
+    # -------- CANONICALIZE INPUT --------
+    canonical_contacts = canonicalize_contacts(request.data)
 
-# SUPPORT BOTH PAYLOAD TYPES
-    if isinstance(data, list):
-        contacts = data
-    elif isinstance(data, dict):
-        contacts = data.get("contacts", [])
-    else:
-        contacts = []
-    
-    if not isinstance(contacts, list):
-        return Response(
-            {"status": False, "message": "contacts must be a list"},
-            status=400
-        )
+    if not canonical_contacts:
+        return Response({"status": True, "count": 0, "matched": []})
 
-    # -------- CANONICALIZE CONTACTS --------
-    canonical_contacts = {}   # mobile_no -> contact_name
+    mobile_to_name = {}
     all_numbers = set()
 
-    for contact in contacts:
-        contact_name = extract_contact_name(contact)
-        for raw in extract_phone_numbers(contact):
+    for contact in canonical_contacts:
+        name = contact["name"]
+        for raw in contact["numbers"]:
             mobile = normalize_phone(raw)
             if mobile:
-                canonical_contacts[mobile] = contact_name
+                mobile_to_name[mobile] = name
                 all_numbers.add(mobile)
-
-    if not all_numbers:
-        return Response({"status": True, "count": 0, "matched": []})
 
     # -------- MATCH WITH VOTERLIST --------
     voters = (
@@ -202,13 +187,10 @@ def match_contacts_with_users(request):
     matched = []
     to_create = []
 
-    for mobile, contact_name in canonical_contacts.items():
+    for mobile, contact_name in mobile_to_name.items():
         voter = voter_map.get(mobile)
         if voter:
-            voter_name = (
-                voter["voter_name_eng"]
-                or voter["voter_name_marathi"]
-            )
+            voter_name = voter["voter_name_eng"] or voter["voter_name_marathi"]
 
             matched.append({
                 "mobile_no": mobile,
@@ -227,7 +209,6 @@ def match_contacts_with_users(request):
                 )
             )
 
-    # -------- SAVE --------
     if to_create:
         with transaction.atomic():
             UserVoterContact.objects.bulk_create(
