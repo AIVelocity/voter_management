@@ -1,4 +1,3 @@
-
 from ..models import VoterList,VoterUserMaster
 from django.core.cache import cache
 from django.core.paginator import Paginator
@@ -8,16 +7,27 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from .view_utils import Translator
 
+def split_marathi_name(full_name):
+    if not full_name:
+        return None, None, None
+
+    parts = full_name.strip().split()
+
+    last_name = parts[0] if len(parts) > 0 else None
+    first_name = parts[1] if len(parts) > 1 else None
+    middle_name = " ".join(parts[2:]) if len(parts) > 2 else None
+
+    return first_name, middle_name, last_name
+
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def voters_info(request):
-    lang = request.headers.get("Accept-Language", "en")
-    print(lang)
+    # lang = request.headers.get("Accept-Language", "en")
+    # print(lang)
     page = int(request.GET.get("page", 1))
     size = int(request.GET.get("size", 100))
-    translator = Translator()
-
+    # is_marathi = lang in ["mr", "mr-in", "marathi"]
     user_id = None
     auth_header = request.headers.get("Authorization")
 
@@ -62,23 +72,29 @@ def voters_info(request):
             .filter(user_id=user_id)
             .order_by("ward_no", "voter_list_id")
         )
-    
 
-    # cache_key = f"voters:page:{page}:size{size}"
-
-    # cache_response = cache.get(cache_key)
-    
-    # if cache_response:
-    #     return Response({
-    #         "status" : True,
-    #         "source":"cache",
-    #         **cache_response
-    #     })
-        
     paginator = Paginator(qs, size)
     page_obj = paginator.get_page(page)
 
     data = []
+
+    # if is_marathi:
+    #     first_name, middle_name, last_name = split_marathi_name(
+    #         v.voter_name_marathi
+    #     )
+
+    #     voter_name_eng = v.voter_name_marathi
+    #     age = v.age_marathi
+    #     gender = v.gender_marathi
+    # else:
+    #     first_name = v.first_name
+    #     middle_name = v.middle_name
+    #     last_name = v.last_name
+
+    #     voter_name_eng = v.voter_name_eng
+    #     age_eng = v.age_eng
+    #     gender_eng = v.gender_eng
+    
 
     for v in page_obj:
         has_whatsapp = any([

@@ -1,10 +1,8 @@
-from ..models import VoterList,VoterRelationshipDetails,VoterUserMaster
+from ..models import VoterList,VoterUserMaster
 from django.db.models import Count
 from django.utils import timezone
 from datetime import timedelta
-from django.db.models import Count, OuterRef, Subquery, IntegerField, Value
-from django.db.models.functions import Coalesce
-from django.views.decorators.csrf import csrf_exempt
+from django.db.models import Count, OuterRef
 from django.db import transaction
 import json
 from django.core.paginator import Paginator, EmptyPage
@@ -19,29 +17,12 @@ from rest_framework.response import Response
 @permission_classes([IsAuthenticated])
 def admin_dashboard(request):
 
-    # today = timezone.now().date()
-    # start_of_week = today - timedelta(days=today.weekday())
-    # start_of_last_week = start_of_week - timedelta(days=7)
-    # end_of_last_week = start_of_week - timedelta(days=1)
-
-    # # This week
-    # this_week_count = VoterList.objects.filter(
-    #     check_progress=True,
-    #     check_progress_date__gte=start_of_week
-    # ).count()
-
-    # # Last week
-    # last_week_count = VoterList.objects.filter(
-    #     check_progress=True,
-    #     check_progress_date__range=(start_of_last_week, end_of_last_week)
-    # ).count()
-
-    # difference = this_week_count - last_week_count
     user = None
     user_id = None
     
     try:
         auth_header = request.headers.get("Authorization")
+        lang = request.headers.get("lang", "en")
     
         if auth_header and auth_header.startswith("Bearer "):
             token_str = auth_header.split(" ")[1]
@@ -419,16 +400,6 @@ def assign_voters_to_karyakarta(request):
 #         "voters": list(voters),
 #         "voter_ids": [v["voter_list_id"] for v in voters]
 #     })
-
-from django.db import transaction
-from ..models import VoterList, VoterUserMaster
-import json
-
-
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.response import Response
-
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def auto_assign_unassigned_voters(request):

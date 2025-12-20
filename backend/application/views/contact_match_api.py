@@ -26,28 +26,114 @@ def normalize_phone(number: str) -> str | None:
 
 
 def extract_contact_name(contact: dict) -> str:
-    # Android
-    if contact.get("displayName"):
-        return contact["displayName"]
+    """
+    Extracts contact name from ALL known payload formats.
+    """
 
-    # iOS
+    if not isinstance(contact, dict):
+        return "Unknown"
+
+    # 1️Custom / simplified payload
+    name = contact.get("name")
+    if isinstance(name, str) and name.strip():
+        return name.strip()
+
+    # 2Android
+    name = contact.get("displayName")
+    if isinstance(name, str) and name.strip():
+        return name.strip()
+
+    # 3 iOS (given + family)
     given = contact.get("givenName", "")
     family = contact.get("familyName", "")
-    name = f"{given} {family}".strip()
+    full = f"{given} {family}".strip()
+    if full:
+        return full
 
-    return name or "Unknown"
+    #  Other common fallbacks
+    for key in ["fullName", "contactName", "username"]:
+        value = contact.get(key)
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+
+    return "Unknown"
 
 
 def extract_phone_numbers(contact: dict) -> list[str]:
+    """
+    Extracts phone numbers from ALL known payload formats.
+    """
+
+    if not isinstance(contact, dict):
+        return []
+
     numbers = []
 
-    for p in contact.get("phoneNumbers", []):
-        if "number" in p:   # Android
-            numbers.append(p["number"])
-        elif "value" in p:  # iOS
-            numbers.append(p["value"])
+    def add(num):
+        if isinstance(num, str) and num.strip():
+            numbers.append(num.strip())
 
-    return numbers
+    # 1️Your custom payload
+    if isinstance(contact.get("numbers"), list):
+        for item in contact["numbers"]:
+            if isinstance(item, dict):
+                add(item.get("number"))
+
+    # 2 Android payload
+    if isinstance(contact.get("phoneNumbers"), list):
+        for item in contact["phoneNumbers"]:
+            if isinstance(item, dict):
+                add(item.get("number"))   # Android
+                add(item.get("value"))    # iOS
+
+    # 3️Other possible keys
+    for key in ["mobile", "phone", "phoneNumber"]:
+        add(contact.get(key))
+
+    #  Raw string list fallback
+    if isinstance(contact.get("phones"), list):
+        for p in contact["phones"]:
+            add(p)
+
+    # Remove duplicates while preserving order
+    seen = set()
+    unique = []
+    for n in numbers:
+        if n not in seen:
+            seen.add(n)
+            unique.append(n)
+
+    return unique
+def canonicalize_contacts(payload) -> list[dict]:
+    """
+    Converts ANY contact payload into a clean standard format:
+    {
+        "name": str,
+        "numbers": [str, str, ...]
+    }
+    """
+
+    contacts = []
+
+    if isinstance(payload, list):
+        raw_contacts = payload
+    elif isinstance(payload, dict):
+        raw_contacts = payload.get("contacts", [])
+    else:
+        return contacts
+
+    for c in raw_contacts:
+        name = extract_contact_name(c)
+        numbers = extract_phone_numbers(c)
+
+        if numbers:
+            contacts.append({
+                "name": name,
+                "numbers": numbers
+            })
+
+    return contacts
+
 
 
 # ------------------ API ------------------

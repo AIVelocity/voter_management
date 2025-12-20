@@ -1,6 +1,9 @@
 from django.db import IntegrityError
 from ..models import VoterRelationshipDetails
 import json
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 
 def parse_json(request):
     try:
@@ -19,10 +22,6 @@ REVERSE_MAP = {
     "spouse": "spouse"
 }
 
-
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.response import Response
 
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])

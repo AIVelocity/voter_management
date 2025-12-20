@@ -4,7 +4,7 @@ from rest_framework_simplejwt.tokens import AccessToken
 from django.db.models import Q
 from django.utils import timezone
 import pytz
-
+from django.utils.translation import gettext as _
 
 ist = pytz.timezone("Asia/Kolkata")
 
@@ -44,7 +44,7 @@ def single_voters_info(request, voter_list_id):
     if request.method != "GET":
         return Response({
             "status": False,
-            "message": "GET method required"
+            "message":  _("GET method required")
         }, status=405)
 
     # ---------- FETCH VOTER ----------

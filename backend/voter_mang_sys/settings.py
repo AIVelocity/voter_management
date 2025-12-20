@@ -19,7 +19,18 @@ load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
-
+USE_I18N = True
+USE_L10N = True
+USE_TZ = True
+LANGUAGE_CODE = 'en'
+LANGUAGES = [
+    ('en', 'English'),
+    ('hi', 'Hindi'),
+    ('mr', 'Marathi'),
+]
+LOCALE_PATHS = [
+    BASE_DIR / 'locale',
+]
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
@@ -29,7 +40,7 @@ SECRET_KEY = 'django-insecure-w^w75v0)bmgunxwhmmagl0bp*1rf$p^u9q-ca$2!%+q%(8f7=&
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
-
+PASSWORD_ENCRYPTION_KEY = "0mqmJvbV5rsJJ_M4iaXsZfsor_BNUGwFB24-WE4LK80="
 # ALLOWED_HOSTS = eval(os.getenv("ALLOWED_HOSTS"))
 
 ALLOWED_HOSTS = ["vms.rntsecops.com","172.25.240.1","172.20.1.101","59.95.99.182","127.0.0.1", "localhost", "172.20.1.155", ".ngrok-free.app", ".ngrok-free.dev"]
@@ -90,6 +101,7 @@ MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware', 
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.middleware.locale.LocaleMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
