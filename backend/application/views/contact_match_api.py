@@ -164,7 +164,8 @@ def match_contacts_with_users(request):
         )
     body = request.data
     # -------- CANONICALIZE INPUT --------
-    canonical_contacts = canonicalize_contacts(body.get("data"))
+    
+    canonical_contacts = canonicalize_contacts(body)
     # -------- DEBUG: SAVE RAW PAYLOAD --------
     try:
         debug_dir = os.path.join(settings.BASE_DIR, "debug_payloads")
