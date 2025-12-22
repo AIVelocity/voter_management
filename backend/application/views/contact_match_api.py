@@ -174,7 +174,7 @@ def match_contacts_with_users(request):
         file_path = os.path.join(debug_dir, filename)
     
         with open(file_path, "w", encoding="utf-8") as f:
-            f.write(json.dumps(request.data, indent=2, ensure_ascii=False))
+            f.write(json.dumps(body.get("data"), indent=2, ensure_ascii=False))
     
     except Exception as e:
         print("Payload dump failed:", str(e))
