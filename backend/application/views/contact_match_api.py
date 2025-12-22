@@ -111,21 +111,19 @@ def extract_phone_numbers(contact: dict) -> list[str]:
             unique.append(n)
 
     return unique
-def canonicalize_contacts(payload) -> list[dict]:
-    """
-    Converts ANY contact payload into a clean standard format:
-    {
-        "name": str,
-        "numbers": [str, str, ...]
-    }
-    """
 
+def canonicalize_contacts(payload) -> list[dict]:
     contacts = []
 
     if isinstance(payload, list):
         raw_contacts = payload
+
     elif isinstance(payload, dict):
-        raw_contacts = payload.get("contacts", [])
+        raw_contacts = (
+            payload.get("contacts")
+            or payload.get("data")      # ← THIS WAS MISSING
+            or []
+        )
     else:
         return contacts
 
