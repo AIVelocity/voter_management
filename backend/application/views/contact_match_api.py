@@ -73,24 +73,26 @@ def extract_phone_numbers(contact: dict) -> list[str]:
         if isinstance(num, str) and num.strip():
             numbers.append(num.strip())
 
-    # 1️Your custom payload
+    # 1️ Your custom payload with {id, label, number} dicts
     if isinstance(contact.get("numbers"), list):
         for item in contact["numbers"]:
             if isinstance(item, dict):
                 add(item.get("number"))
+            elif isinstance(item, str):
+                add(item)
 
-    # 2 Android payload
+    # 2️ Android payload
     if isinstance(contact.get("phoneNumbers"), list):
         for item in contact["phoneNumbers"]:
             if isinstance(item, dict):
                 add(item.get("number"))   # Android
                 add(item.get("value"))    # iOS
 
-    # 3️Other possible keys
+    # 3️ Other possible keys
     for key in ["mobile", "phone", "phoneNumber"]:
         add(contact.get(key))
 
-    #  Raw string list fallback
+    # 4️ Raw string list fallback
     if isinstance(contact.get("phones"), list):
         for p in contact["phones"]:
             add(p)
@@ -175,6 +177,14 @@ def match_contacts_with_users(request):
                 mobile_to_name[mobile] = name
                 all_numbers.add(mobile)
 
+    # Debug: log matched numbers
+    if not all_numbers:
+        return Response({
+            "status": False,
+            "message": "No valid phone numbers extracted",
+            "debug": f"canonical_contacts={canonical_contacts}"
+        })
+
     # -------- MATCH WITH VOTERLIST --------
     voters = (
         VoterList.objects
@@ -182,40 +192,40 @@ def match_contacts_with_users(request):
         .values("voter_list_id", "mobile_no", "voter_name_eng", "voter_name_marathi")
     )
 
-    voter_map = {v["mobile_no"]: v for v in voters}
-
     matched = []
     to_create = []
-
-    for mobile, contact_name in mobile_to_name.items():
-        voter = voter_map.get(mobile)
-        if voter:
-            voter_name = voter["voter_name_eng"] or voter["voter_name_marathi"]
-
-            matched.append({
-                "mobile_no": mobile,
-                "contact_name": contact_name,
-                "voter_id": voter["voter_list_id"],
-                "voter_name": voter_name
-            })
-
-            to_create.append(
-                UserVoterContact(
-                    user_id=user_id,
-                    voter_id=voter["voter_list_id"],
-                    contact_name=contact_name,
-                    voter_name=voter_name,
-                    mobile_no=mobile
-                )
+    
+    for v in voters:
+        mobile = v["mobile_no"]
+        contact_name = mobile_to_name.get(mobile)
+        # Use voter_name_eng (or voter_name_marathi if preferred)
+        voter_name = v.get("voter_name_eng") or v.get("voter_name_marathi") or "Unknown"
+    
+        matched.append({
+            "mobile_no": mobile,
+            "contact_name": contact_name,
+            "voter_id": v["voter_list_id"],
+            "voter_name": voter_name
+        })
+    
+        to_create.append(
+            UserVoterContact(
+                user_id=user_id,
+                voter_id=v["voter_list_id"],
+                contact_name=contact_name,
+                voter_name=voter_name,
+                mobile_no=mobile
             )
-
+        )
+    
+    #  Bulk insert (single query)
     if to_create:
-        with transaction.atomic():
-            UserVoterContact.objects.bulk_create(
-                to_create,
-                ignore_conflicts=True
-            )
-
+        UserVoterContact.objects.bulk_create(
+            to_create,
+            ignore_conflicts=True,
+            batch_size=1000   # IMPORTANT for performance
+        )
+    
     return Response({
         "status": True,
         "count": len(matched),

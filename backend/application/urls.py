@@ -31,6 +31,8 @@ urlpatterns = [
     path("admin/dashboard/auto_assign/",views.auto_select_unassigned_voters,name="auto_select_unassigned_voters"),
     path("admin/dashboard/list_volunteer/",views.list_volunteers,name="list_volunteers"),
     path("admin/dashboard/auto_unassign/",views.auto_unassign_voters,name="auto_unassign_voters"),
+    path("admin/dashboard/unassign_voters/",views.unassign_voters,name="unassign_voters"),
+    path("admin/dashboard/unassign_all_voters/",views.unassign_all_voters_of_karyakarta,name="unassign_all_voters_of_karyakarta"),
     
     
     path("admin/dashboard/volunteers/<int:user_id>/",views.single_volunteer,name="single_volunteer"),

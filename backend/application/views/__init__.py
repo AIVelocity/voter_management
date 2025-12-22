@@ -5,7 +5,7 @@ from .voters_info_api import voters_info
 from .add_voter_api import add_voter
 from .db_list_api import tags ,index , roles
 from .add_relationship_api import add_relation,remove_relation
-from .super_admin_dashboard_api import dashboard,admin_allocation_panel,unassigned_voters,assign_voters_to_karyakarta,auto_select_unassigned_voters,auto_unassign_voters
+from .super_admin_dashboard_api import dashboard,admin_allocation_panel,unassigned_voters,assign_voters_to_karyakarta,auto_select_unassigned_voters,auto_unassign_voters,unassign_voters,unassign_all_voters_of_karyakarta
 from .filter_api import filter
 from .caste_religion_api import caste_dropdown,religion_dropdown
 from .occupation_api import occupation_dropdown
@@ -71,5 +71,7 @@ __all__ = [
     "voters_info_photo",
     "matched_contacts_list",
     "list_all_users",
-    "auto_unassign_voters"
+    "auto_unassign_voters",
+    "unassign_voters",
+    "unassign_all_voters_of_karyakarta"
 ]
