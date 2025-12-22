@@ -259,7 +259,7 @@ def unassigned_voters(request):
         VoterList.objects
         .filter(user__isnull=True)
         .values(
-            "serial_number",
+            # "serial_number",
             "voter_list_id",
             # "sr_no",
             "voter_id",
@@ -291,7 +291,7 @@ def unassigned_voters(request):
                 )
 
                 voters.append({
-                    "serial_number": v["serial_number"],
+                    # "serial_number": v["serial_number"],
                     "voter_list_id": v["voter_list_id"],
                     "voter_id": v["voter_id"],
 
@@ -310,7 +310,7 @@ def unassigned_voters(request):
 
             else:
                 voters.append({
-                    "serial_number": v["serial_number"],
+                    # "serial_number": v["serial_number"],
                     "voter_list_id": v["voter_list_id"],
                     "voter_id": v["voter_id"],
 

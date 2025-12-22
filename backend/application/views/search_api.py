@@ -99,7 +99,7 @@ def voters_search(request):
         bool(v.alternate_mobile2),
     ])
         data.append({
-            "sr_no" : v.serial_number,
+            # "sr_no" : v.serial_number,
             "voter_list_id": v.voter_list_id,
             "voter_id": v.voter_id,
             "first_name": first_name,
@@ -184,7 +184,7 @@ def family_dropdown_search(request):
         bool(v.alternate_mobile2),
     ])
         data.append({
-            "sr_no" : v.serial_number,
+            # "sr_no" : v.serial_number,
             "voter_list_id": v.voter_list_id,
             "voter_id": v.voter_id,
             "first_name": first_name,

@@ -176,152 +176,22 @@ class VoterUserMaster(AbstractBaseUser):
         return f"{self.first_name or ''} {self.last_name or ''} - {self.mobile_no}"
 
 
-class VoterList(models.Model):
-
-    voter_list_id = models.AutoField(primary_key=True)
-    sr_no = models.IntegerField()
-    voter_id = models.CharField(max_length=20, null=True, blank=True)
-
-    voter_name_marathi = models.TextField(null=True, blank=True)
-    voter_name_eng = models.TextField(null=True, blank=True)
-
-    initial_full_name = models.TextField(null=True, blank=True)
-
-    last_name = models.TextField(null=True, blank=True)
-    first_name = models.TextField(null=True, blank=True)
-    middle_name = models.TextField(null=True, blank=True)
-
-    kramank = models.CharField(max_length=20, null=True, blank=True)
-
-    current_address = models.TextField(null=True, blank=True)
-    permanent_address = models.TextField(null=True, blank=True)
-
-    old_address_line1 = models.TextField(null=True, blank=True)
-    address_line1 = models.TextField(null=True, blank=True)
-    address_line2 = models.TextField(null=True, blank=True)
-    address_line3 = models.TextField(null=True, blank=True)
-
-    age = models.CharField(max_length=10, null=True, blank=True)
-    age_eng = models.IntegerField(null=True, blank=True)
-
-    gender = models.TextField(null=True, blank=True)
-    gender_eng = models.CharField(max_length=10, null=True, blank=True)
-
-    image_name = models.CharField(max_length=255, null=True, blank=True)
-
-    mobile_no = models.CharField(max_length=10, null=True, blank=True, validators=[mobile_validator])
-    alternate_mobile1 = models.CharField(max_length=10, null=True, blank=True, validators=[mobile_validator])
-    alternate_mobile2 = models.CharField(max_length=10, null=True, blank=True, validators=[mobile_validator])
-
-    badge = models.TextField(null=True, blank=True)
-    location = models.TextField(null=True, blank=True)
-
-    # occupation = models.CharField(null=True,blank=True)
-    
-    # FIXED TYPES
-    occupation = models.ForeignKey(
-        Occupation,
-        db_column="occupation",
-        on_delete=models.DO_NOTHING,
-        null=True,
-        blank=True
-    )
-
-    # cast = models.TextField(null=True,blank=True)
-    cast = models.ForeignKey(
-        Caste,
-        db_column="cast",
-        on_delete=models.DO_NOTHING,
-        null=True,
-        blank=True
-    )
-
-    organisation = models.TextField(null=True, blank=True)
-    comments = models.TextField(null=True, blank=True)
-
-    #  RELATIONS
-    religion = models.ForeignKey(
-        Religion,
-        db_column="religion_id",
-        on_delete=models.DO_NOTHING,
-        null=True,
-        blank=True
-    )
-
-    tag_id = models.ForeignKey(
-        VoterTag,
-        db_column="tag_id",
-        on_delete=models.DO_NOTHING,
-        null=True,
-        blank=True
-    )
-
-    ward_no = models.IntegerField()
-    check_progress = models.BooleanField(null=True,blank=True)
-    check_progress_date = models.DateField(null=True, blank=True)
-    full_name = models.TextField(null=True,blank=True)
-    
-    user = models.ForeignKey(
-        VoterUserMaster,
-        db_column="user_id",
-        on_delete=models.DO_NOTHING,
-        null=True,
-        blank=True
-    )
-    serial_number = models.IntegerField(null=True, blank=True)
-    yadivibagh = models.IntegerField(null=True,blank=True)
-    anukramank = models.IntegerField(null=True,blank=True)
-    matdankendra = models.TextField(null=True,blank=True)
-    address_marathi = models.TextField(null=True, blank=True)
-
-    class Meta:
-        db_table = "voter_list"
-        managed = False
-
-    def __str__(self):
-        return str(self.voter_id)
-    
-    def save(self, *args, **kwargs):
-    
-        # -------- FETCH OLD tag_id --------
-        old_tag_id = None
-        if self.pk:
-            old_tag_id = (
-                self.__class__
-                .objects
-                .filter(pk=self.pk)
-                .values_list("tag_id", flat=True)
-                .first()
-            )
-    
-        # -------- RULE 1: tag_id == 5 → CLEAR DATE --------
-        if self.tag_id == 5:
-            self.check_progress_date = None
-    
-        # -------- RULE 2: tag_id CHANGED (and not 5) → SET DATE --------
-        elif self.tag_id and self.tag_id != old_tag_id:
-            self.check_progress_date = timezone.now().date()
-    
-        super().save(*args, **kwargs)
-
-
 # class VoterList(models.Model):
 
 #     voter_list_id = models.AutoField(primary_key=True)
 #     sr_no = models.IntegerField()
-#     voter_id = models.CharField(max_length=200, null=True, blank=True)  # increased to match SQL (varchar(200))
+#     voter_id = models.CharField(max_length=20, null=True, blank=True)
 
 #     voter_name_marathi = models.TextField(null=True, blank=True)
 #     voter_name_eng = models.TextField(null=True, blank=True)
 
 #     initial_full_name = models.TextField(null=True, blank=True)
 
-#     # changed to varchar(200) per SQL
-#     last_name = models.CharField(max_length=200, null=True, blank=True)
-#     first_name = models.CharField(max_length=200, null=True, blank=True)
-#     middle_name = models.CharField(max_length=200, null=True, blank=True)
+#     last_name = models.TextField(null=True, blank=True)
+#     first_name = models.TextField(null=True, blank=True)
+#     middle_name = models.TextField(null=True, blank=True)
 
-#     kramank = models.CharField(max_length=200, null=True, blank=True, unique=True)  # unique constraint in SQL
+#     kramank = models.CharField(max_length=20, null=True, blank=True)
 
 #     current_address = models.TextField(null=True, blank=True)
 #     permanent_address = models.TextField(null=True, blank=True)
@@ -331,17 +201,13 @@ class VoterList(models.Model):
 #     address_line2 = models.TextField(null=True, blank=True)
 #     address_line3 = models.TextField(null=True, blank=True)
 
-#     age = models.CharField(max_length=50, null=True, blank=True)      # varchar(50) in SQL
-#     age_eng = models.CharField(max_length=50, null=True, blank=True)  # varchar(50) in SQL (was IntegerField)
+#     age = models.CharField(max_length=10, null=True, blank=True)
+#     age_eng = models.IntegerField(null=True, blank=True)
 
-#     gender = models.CharField(max_length=50, null=True, blank=True)  # varchar(50) in SQL
-#     gender_eng = models.CharField(max_length=50, null=True, blank=True)  # varchar(50) in SQL
+#     gender = models.TextField(null=True, blank=True)
+#     gender_eng = models.CharField(max_length=10, null=True, blank=True)
 
 #     image_name = models.CharField(max_length=255, null=True, blank=True)
-
-#     # additional columns present in SQL
-#     image = models.TextField(null=True, blank=True)
-#     image_path = models.TextField(null=True, blank=True)
 
 #     mobile_no = models.CharField(max_length=10, null=True, blank=True, validators=[mobile_validator])
 #     alternate_mobile1 = models.CharField(max_length=10, null=True, blank=True, validators=[mobile_validator])
@@ -350,7 +216,9 @@ class VoterList(models.Model):
 #     badge = models.TextField(null=True, blank=True)
 #     location = models.TextField(null=True, blank=True)
 
-#     # occupation FK (db column name "occupation")
+#     # occupation = models.CharField(null=True,blank=True)
+    
+#     # FIXED TYPES
 #     occupation = models.ForeignKey(
 #         Occupation,
 #         db_column="occupation",
@@ -359,7 +227,7 @@ class VoterList(models.Model):
 #         blank=True
 #     )
 
-#     # cast FK (db column name "cast")
+#     # cast = models.TextField(null=True,blank=True)
 #     cast = models.ForeignKey(
 #         Caste,
 #         db_column="cast",
@@ -400,13 +268,14 @@ class VoterList(models.Model):
 #         null=True,
 #         blank=True
 #     )
+#     serial_number = models.IntegerField(null=True, blank=True)
 #     yadivibagh = models.IntegerField(null=True,blank=True)
 #     anukramank = models.IntegerField(null=True,blank=True)
 #     matdankendra = models.TextField(null=True,blank=True)
 #     address_marathi = models.TextField(null=True, blank=True)
 
 #     class Meta:
-#         db_table = "final_voter_list"
+#         db_table = "voter_list"
 #         managed = False
 
 #     def __str__(self):
@@ -434,6 +303,137 @@ class VoterList(models.Model):
 #             self.check_progress_date = timezone.now().date()
     
 #         super().save(*args, **kwargs)
+
+
+class VoterList(models.Model):
+
+    voter_list_id = models.AutoField(primary_key=True)
+    sr_no = models.IntegerField()
+    voter_id = models.CharField(max_length=200, null=True, blank=True)  # increased to match SQL (varchar(200))
+
+    voter_name_marathi = models.TextField(null=True, blank=True)
+    voter_name_eng = models.TextField(null=True, blank=True)
+
+    initial_full_name = models.TextField(null=True, blank=True)
+
+    # changed to varchar(200) per SQL
+    last_name = models.CharField(max_length=200, null=True, blank=True)
+    first_name = models.CharField(max_length=200, null=True, blank=True)
+    middle_name = models.CharField(max_length=200, null=True, blank=True)
+
+    kramank = models.CharField(max_length=200, null=True, blank=True, unique=True)  # unique constraint in SQL
+
+    current_address = models.TextField(null=True, blank=True)
+    permanent_address = models.TextField(null=True, blank=True)
+
+    old_address_line1 = models.TextField(null=True, blank=True)
+    address_line1 = models.TextField(null=True, blank=True)
+    address_line2 = models.TextField(null=True, blank=True)
+    address_line3 = models.TextField(null=True, blank=True)
+
+    age = models.CharField(max_length=50, null=True, blank=True)      # varchar(50) in SQL
+    age_eng = models.CharField(max_length=50, null=True, blank=True)  # varchar(50) in SQL (was IntegerField)
+
+    gender = models.CharField(max_length=50, null=True, blank=True)  # varchar(50) in SQL
+    gender_eng = models.CharField(max_length=50, null=True, blank=True)  # varchar(50) in SQL
+
+    image_name = models.CharField(max_length=255, null=True, blank=True)
+
+    # additional columns present in SQL
+    image = models.TextField(null=True, blank=True)
+    image_path = models.TextField(null=True, blank=True)
+
+    mobile_no = models.CharField(max_length=10, null=True, blank=True, validators=[mobile_validator])
+    alternate_mobile1 = models.CharField(max_length=10, null=True, blank=True, validators=[mobile_validator])
+    alternate_mobile2 = models.CharField(max_length=10, null=True, blank=True, validators=[mobile_validator])
+
+    badge = models.TextField(null=True, blank=True)
+    location = models.TextField(null=True, blank=True)
+
+    # occupation FK (db column name "occupation")
+    occupation = models.ForeignKey(
+        Occupation,
+        db_column="occupation",
+        on_delete=models.DO_NOTHING,
+        null=True,
+        blank=True
+    )
+
+    # cast FK (db column name "cast")
+    cast = models.ForeignKey(
+        Caste,
+        db_column="cast",
+        on_delete=models.DO_NOTHING,
+        null=True,
+        blank=True
+    )
+
+    organisation = models.TextField(null=True, blank=True)
+    comments = models.TextField(null=True, blank=True)
+
+    #  RELATIONS
+    religion = models.ForeignKey(
+        Religion,
+        db_column="religion_id",
+        on_delete=models.DO_NOTHING,
+        null=True,
+        blank=True
+    )
+
+    tag_id = models.ForeignKey(
+        VoterTag,
+        db_column="tag_id",
+        on_delete=models.DO_NOTHING,
+        null=True,
+        blank=True
+    )
+
+    ward_no = models.IntegerField()
+    check_progress = models.BooleanField(null=True,blank=True)
+    check_progress_date = models.DateField(null=True, blank=True)
+    full_name = models.TextField(null=True,blank=True)
+    
+    user = models.ForeignKey(
+        VoterUserMaster,
+        db_column="user_id",
+        on_delete=models.DO_NOTHING,
+        null=True,
+        blank=True
+    )
+    yadivibagh = models.IntegerField(null=True,blank=True)
+    anukramank = models.IntegerField(null=True,blank=True)
+    matdankendra = models.TextField(null=True,blank=True)
+    address_marathi = models.TextField(null=True, blank=True)
+
+    class Meta:
+        db_table = "final_voter_list"
+        managed = False
+
+    def __str__(self):
+        return str(self.voter_id)
+    
+    def save(self, *args, **kwargs):
+    
+        # -------- FETCH OLD tag_id --------
+        old_tag_id = None
+        if self.pk:
+            old_tag_id = (
+                self.__class__
+                .objects
+                .filter(pk=self.pk)
+                .values_list("tag_id", flat=True)
+                .first()
+            )
+    
+        # -------- RULE 1: tag_id == 5 → CLEAR DATE --------
+        if self.tag_id == 5:
+            self.check_progress_date = None
+    
+        # -------- RULE 2: tag_id CHANGED (and not 5) → SET DATE --------
+        elif self.tag_id and self.tag_id != old_tag_id:
+            self.check_progress_date = timezone.now().date()
+    
+        super().save(*args, **kwargs)
     
 class VoterRelationshipDetails(models.Model):
 

@@ -353,7 +353,7 @@ def unassigned_voters(request):
 
     # badge = request.GET.get("badge")
 
-    qs = VoterList.objects.select_related("tag_id").filter(user__isnull=True).order_by("serial_number")
+    qs = VoterList.objects.select_related("tag_id").filter(user__isnull=True).order_by("voter_list_id")
     
     # Apply advanced search (name + voter_id)
     if search:
@@ -448,7 +448,7 @@ def unassigned_voters(request):
             gender_eng = v.gender_eng
             
         data.append({
-            "sr_no" : v.serial_number,
+            # "sr_no" : v.serial_number,
             "voter_list_id": v.voter_list_id,
             "voter_name_eng": voter_name_eng,
             "voter_id": v.voter_id,
@@ -572,7 +572,7 @@ def auto_select_unassigned_voters(request):
                 VoterList.objects
                 .select_for_update()               # prevents race condition
                 .filter(user__isnull=True)
-                .order_by("serial_number")
+                .order_by("voter_list_id")
                 .values_list("voter_list_id", flat=True)[:count]
             )
 
