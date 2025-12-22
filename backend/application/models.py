@@ -303,6 +303,8 @@ class VoterList(models.Model):
             self.check_progress_date = timezone.now().date()
     
         super().save(*args, **kwargs)
+
+
 # class VoterList(models.Model):
 
 #     voter_list_id = models.AutoField(primary_key=True)
@@ -431,7 +433,7 @@ class VoterList(models.Model):
 #         elif self.tag_id and self.tag_id != old_tag_id:
 #             self.check_progress_date = timezone.now().date()
     
-        # super().save(*args, **kwargs)
+#         super().save(*args, **kwargs)
     
 class VoterRelationshipDetails(models.Model):
 
@@ -652,71 +654,7 @@ class UserVoterContact(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        unique_together = ("user", "mobile_no")
-
-
-class VoterList2(models.Model):
-    sr_no = models.IntegerField(primary_key=True)
-
-    voter_id = models.CharField(
-        max_length=200,
-        null=True,
-        blank=True
-    )
-
-    voter_name_marathi = models.CharField(
-        max_length=1000,
-        null=True,
-        blank=True
-    )
-
-    voter_name_english = models.CharField(
-        max_length=1000,
-        null=True,
-        blank=True
-    )
-
-    kramank = models.CharField(
-        max_length=200,
-        null=True,
-        blank=True
-    )
-
-    address = models.CharField(
-        max_length=1000,
-        null=True,
-        blank=True
-    )
-
-    age_marathi = models.CharField(
-        max_length=50,
-        null=True,
-        blank=True
-    )
-
-    age_english = models.CharField(
-        max_length=50,
-        null=True,
-        blank=True
-    )
-
-    gender_marathi = models.CharField(
-        max_length=50,
-        null=True,
-        blank=True
-    )
-
-    gender_english = models.CharField(
-        max_length=50,
-        null=True,
-        blank=True
-    )
-
-    created_date = models.DateTimeField(
-        auto_now_add=False,
-        auto_now=False
-    )
-
-    class Meta:
-        db_table = "voter_list_2"
-        managed = False   # VERY IMPORTANT (table already exists)
+        # allow multiple records per (user, mobile_no) so all matches are stored
+        indexes = [
+            models.Index(fields=["user", "mobile_no"]),
+        ]

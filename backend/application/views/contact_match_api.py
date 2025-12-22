@@ -1,4 +1,9 @@
+from django.db.models import Q
+import os
 import re
+import json
+from django.conf import settings
+from datetime import datetime
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -136,8 +141,6 @@ def canonicalize_contacts(payload) -> list[dict]:
 
     return contacts
 
-
-
 # ------------------ API ------------------
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
@@ -162,6 +165,19 @@ def match_contacts_with_users(request):
 
     # -------- CANONICALIZE INPUT --------
     canonical_contacts = canonicalize_contacts(request.data)
+    # -------- DEBUG: SAVE RAW PAYLOAD --------
+    try:
+        debug_dir = os.path.join(settings.BASE_DIR, "debug_payloads")
+        os.makedirs(debug_dir, exist_ok=True)
+    
+        filename = f"contacts_user_{user_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
+        file_path = os.path.join(debug_dir, filename)
+    
+        with open(file_path, "w", encoding="utf-8") as f:
+            f.write(json.dumps(request.data, indent=2, ensure_ascii=False))
+    
+    except Exception as e:
+        print("Payload dump failed:", str(e))
 
     if not canonical_contacts:
         return Response({"status": True, "count": 0, "matched": []})
@@ -188,33 +204,60 @@ def match_contacts_with_users(request):
     # -------- MATCH WITH VOTERLIST --------
     voters = (
         VoterList.objects
-        .filter(mobile_no__in=all_numbers)
-        .values("voter_list_id", "mobile_no", "voter_name_eng", "voter_name_marathi")
+        .filter(
+            Q(mobile_no__in=all_numbers) |
+            Q(alternate_mobile1__in=all_numbers) |
+            Q(alternate_mobile2__in=all_numbers)
+        )
+        .values(
+            "voter_list_id",
+            "mobile_no",
+            "alternate_mobile1",
+            "alternate_mobile2",
+            "voter_name_eng",
+            "voter_name_marathi"
+        )
     )
 
     matched = []
     to_create = []
     
     for v in voters:
-        mobile = v["mobile_no"]
-        contact_name = mobile_to_name.get(mobile)
-        # Use voter_name_eng (or voter_name_marathi if preferred)
+        # determine which phone column matched the incoming contacts
+        matched_mobile = None
+        for fld in ("mobile_no", "alternate_mobile1", "alternate_mobile2"):
+            val = v.get(fld)
+            if val and val in mobile_to_name:
+                matched_mobile = val
+                break
+        # fallback: check intersection with all_numbers
+        if not matched_mobile:
+            for fld in ("mobile_no", "alternate_mobile1", "alternate_mobile2"):
+                val = v.get(fld)
+                if val and val in all_numbers:
+                    matched_mobile = val
+                    break
+        if not matched_mobile:
+            # no matching phone for this voter — skip
+            continue
+
+        contact_name = mobile_to_name.get(matched_mobile)
         voter_name = v.get("voter_name_eng") or v.get("voter_name_marathi") or "Unknown"
-    
+
         matched.append({
-            "mobile_no": mobile,
+            "mobile_no": matched_mobile,
             "contact_name": contact_name,
             "voter_id": v["voter_list_id"],
             "voter_name": voter_name
         })
-    
+
         to_create.append(
             UserVoterContact(
                 user_id=user_id,
                 voter_id=v["voter_list_id"],
                 contact_name=contact_name,
                 voter_name=voter_name,
-                mobile_no=mobile
+                mobile_no=matched_mobile
             )
         )
     
