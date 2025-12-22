@@ -162,32 +162,22 @@ def match_contacts_with_users(request):
             {"status": False, "message": "Unauthorized"},
             status=401
         )
-
+    body = request.data
     # -------- CANONICALIZE INPUT --------
-    canonical_contacts = canonicalize_contacts(request.data)
+    canonical_contacts = canonicalize_contacts(body.get("data"))
     # -------- DEBUG: SAVE RAW PAYLOAD --------
     try:
         debug_dir = os.path.join(settings.BASE_DIR, "debug_payloads")
         os.makedirs(debug_dir, exist_ok=True)
-
-        ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-        base = os.path.join(debug_dir, f"contacts_user_{user_id}_{ts}")
-
-        # 1️RAW BODY (MOST IMPORTANT)
-        with open(base + "_RAW.txt", "wb") as f:
-            f.write(request.body or b"")
-
-        # 2 HEADERS
-        with open(base + "_HEADERS.txt", "w", encoding="utf-8") as f:
-            f.write(json.dumps(dict(request.headers), indent=2))
-
-        # 3 PARSED DATA
-        with open(base + "_PARSED.txt", "w", encoding="utf-8") as f:
+    
+        filename = f"contacts_user_{user_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
+        file_path = os.path.join(debug_dir, filename)
+    
+        with open(file_path, "w", encoding="utf-8") as f:
             f.write(json.dumps(request.data, indent=2, ensure_ascii=False))
-
+    
     except Exception as e:
         print("Payload dump failed:", str(e))
-
 
     if not canonical_contacts:
         return Response({"status": True, "count": 0, "matched": []})
