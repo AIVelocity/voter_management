@@ -223,43 +223,33 @@ def match_contacts_with_users(request):
     to_create = []
     
     for v in voters:
-        # determine which phone column matched the incoming contacts
-        matched_mobile = None
+        voter_name = v.get("voter_name_eng") or v.get("voter_name_marathi") or "Unknown"
+        # create one match per phone-field that appears in the incoming contacts
         for fld in ("mobile_no", "alternate_mobile1", "alternate_mobile2"):
             val = v.get(fld)
-            if val and val in mobile_to_name:
-                matched_mobile = val
-                break
-        # fallback: check intersection with all_numbers
-        if not matched_mobile:
-            for fld in ("mobile_no", "alternate_mobile1", "alternate_mobile2"):
-                val = v.get(fld)
-                if val and val in all_numbers:
-                    matched_mobile = val
-                    break
-        if not matched_mobile:
-            # no matching phone for this voter — skip
-            continue
+            if not val:
+                continue
+            if val not in all_numbers:
+                continue
 
-        contact_name = mobile_to_name.get(matched_mobile)
-        voter_name = v.get("voter_name_eng") or v.get("voter_name_marathi") or "Unknown"
+            contact_name = mobile_to_name.get(val)
 
-        matched.append({
-            "mobile_no": matched_mobile,
-            "contact_name": contact_name,
-            "voter_id": v["voter_list_id"],
-            "voter_name": voter_name
-        })
+            matched.append({
+                "mobile_no": val,
+                "contact_name": contact_name,
+                "voter_id": v["voter_list_id"],
+                "voter_name": voter_name
+            })
 
-        to_create.append(
-            UserVoterContact(
-                user_id=user_id,
-                voter_id=v["voter_list_id"],
-                contact_name=contact_name,
-                voter_name=voter_name,
-                mobile_no=matched_mobile
+            to_create.append(
+                UserVoterContact(
+                    user_id=user_id,
+                    voter_id=v["voter_list_id"],
+                    contact_name=contact_name,
+                    voter_name=voter_name,
+                    mobile_no=val
+                )
             )
-        )
     
     #  Bulk insert (single query)
     if to_create:
