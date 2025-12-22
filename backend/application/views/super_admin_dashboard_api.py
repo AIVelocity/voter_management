@@ -280,6 +280,9 @@ def admin_allocation_panel(request):
         m for m in members if m["assigned_count"] == 0
     ]
 
+    total_admins_karyakarta = total_admins + total_karyakartas
+    total_assigned_admins_karyakarta = assigned_admins + assigned_karyakartas
+    total_unassigned_admins_karyakarta = unassigned_admins + unassigned_karyakartas
     return Response({
         "SUCCESS" :True,
         "data":{ 
@@ -288,9 +291,9 @@ def admin_allocation_panel(request):
                 "assigned_admins": assigned_admins,
                 "unassigned_admins": unassigned_admins,
                 "total_voters": total_voters,
-                "total_karyakartas": total_karyakartas,
-                "assigned_karyakartas": assigned_karyakartas,
-                "unassigned_karyakartas": unassigned_karyakartas
+                "total_karyakartas": total_admins_karyakarta ,
+                "assigned_karyakartas": total_assigned_admins_karyakarta,
+                "unassigned_karyakartas": total_unassigned_admins_karyakarta
                 },
                 
                 # # ---------- FIRST SCREEN ----------
@@ -592,6 +595,82 @@ def auto_select_unassigned_voters(request):
             "assigned_count": updated,
             "assigned_voter_ids": voters,
             "message" : "Voters Assigned successfully"
+        })
+
+    except Exception as e:
+        return Response({
+            "status": False,
+            "error": str(e)
+        }, status=500)
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def auto_unassign_voters(request):
+
+    if request.method != "POST":
+        return Response({
+            "status": False,
+            "message": "POST method required"
+        }, status=405)
+
+    try:
+        body = request.data
+
+        karyakarta_user_id = body.get("karyakarta_user_id")
+        count = body.get("count")
+
+        if not karyakarta_user_id or not count:
+            return Response({
+                "status": False,
+                "message": "karyakarta_user_id and count are required"
+            }, status=400)
+
+        count = int(count)
+        if count <= 0:
+            return Response({
+                "status": False,
+                "message": "Count must be greater than 0"
+            }, status=400)
+
+        # Validate karyakarta
+        try:
+            karyakarta = VoterUserMaster.objects.get(user_id=karyakarta_user_id)
+        except VoterUserMaster.DoesNotExist:
+            return Response({
+                "status": False,
+                "message": "Karyakarta not found"
+            }, status=404)
+
+        with transaction.atomic():
+
+            # fetch last N assigned voters for this karyakarta
+            voters = list(
+                VoterList.objects
+                .select_for_update()               # prevents race condition
+                .filter(user=karyakarta)
+                .order_by("-voter_list_id")
+                .values_list("voter_list_id", flat=True)[:count]
+            )
+
+            if not voters:
+                return Response({
+                    "status": True,
+                    "unassigned_count": 0,
+                    "message": "No assigned voters available for this karyakarta"
+                })
+
+            # unassign them
+            updated = (
+                VoterList.objects
+                .filter(voter_list_id__in=voters, user=karyakarta)
+                .update(user=None)
+            )
+
+        return Response({
+            "status": True,
+            "unassigned_count": updated,
+            "unassigned_voter_ids": voters,
+            "message": "Voters unassigned successfully"
         })
 
     except Exception as e:
