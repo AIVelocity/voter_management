@@ -62,4 +62,7 @@ urlpatterns = [
     path("voters/image/",views.voters_info_photo,name="voters_info_photo"),
     path("mobile_permission/list/", views.matched_contacts_list, name="matched_contacts_list"),
     
+    path("user/list/", views.list_all_users, name="list_all_users"),
+    
+    
 ]

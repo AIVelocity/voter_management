@@ -1,8 +1,8 @@
-from ..models import VoterList,VoterTag,ActivityLog,VoterUserMaster,Caste,Religion,Occupation
+from ..models import VoterList,ActivityLog,VoterUserMaster
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from .view_utils import save_relation,get_family_from_db
+from .view_utils import get_family_from_db
 from rest_framework_simplejwt.tokens import AccessToken
 from django.db.models import Q
 from django.utils import timezone
