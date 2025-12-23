@@ -127,36 +127,39 @@ def matched_contacts_list(request):
         )
 
     # -------- ROLE-BASED QUERY --------
-    if user.role.role_name in ["SuperAdmin", "Admin"]:
-        qs = (
+    # if user.role.role_name in ["SuperAdmin", "Admin"]:
+    #     qs = (
+    #     UserVoterContact.objects
+    #     .select_related("user", "voter")
+    #     # .filter(user=user)
+    #     .order_by("-created_at")
+    # :
+    qs = (
         UserVoterContact.objects
         .select_related("user", "voter")
-        # .filter(user=user)
+        .filter(user=user)
         .order_by("-created_at")
     )
-
-
-        data = []
-        for obj in qs:
-            data.append({
-                "id": obj.id,
-                "user_name": f"{obj.user.first_name} {obj.user.last_name}".strip(),
-                "user_id": obj.user.user_id,
-                "voter_id": obj.voter.voter_id,
-                "voter_name": obj.voter.voter_name_eng or obj.voter.voter_name_marathi,
-                "contact_name": obj.contact_name,
-                "mobile_no": obj.mobile_no,
-                "created_at": obj.created_at,
-            })
-
-        return Response({
-            "status": True,
-            "message": ("Matched voter contacts fetched successfully"),
-            "count": qs.count(),
-            "data": data
+    data = []
+    for obj in qs:
+        data.append({
+            "id": obj.id,
+            "user_name": f"{obj.user.first_name} {obj.user.last_name}".strip(),
+            "user_id": obj.user.user_id,
+            "voter_id": obj.voter.voter_id,
+            "voter_name": obj.voter.voter_name_eng or obj.voter.voter_name_marathi,
+            "contact_name": obj.contact_name,
+            "mobile_no": obj.mobile_no,
+            "created_at": obj.created_at,
         })
-    else:
-        return Response(
-            {"status": False, "message": "Volunteer access not allowed"},
-            status=403
-        )
+    return Response({
+        "status": True,
+        "message": ("Matched voter contacts fetched successfully"),
+        "count": qs.count(),
+        "data": data
+    })
+    # else:
+        # return Response(
+        #     {"status": False, "message": "Volunteer access not allowed"},
+        #     status=403
+        # )

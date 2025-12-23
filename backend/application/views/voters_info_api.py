@@ -116,7 +116,8 @@ def voters_info(request):
             "tag": v.tag_id.tag_name if v.tag_id else None,
             "badge": v.badge,
             "location": v.location,
-            "show_whatsapp": has_whatsapp
+            "show_whatsapp": has_whatsapp,
+            "mobile_no": v.mobile_no if v.mobile_no else v.alternate_mobile1 if v.alternate_mobile1 else v.alternate_mobile2 if v.alternate_mobile2 else None,
         })
 
     response_data = {
