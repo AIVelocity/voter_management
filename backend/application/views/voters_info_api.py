@@ -19,6 +19,15 @@ def split_marathi_name(full_name):
 
     return first_name, middle_name, last_name
 
+def format_mobile_with_country_code(mobile: str) -> str:
+    """Prepend 91 to 10-digit mobile numbers."""
+    if not mobile:
+        return None
+    mobile = mobile.strip()
+    if len(mobile) == 10:
+        return f"91{mobile}"
+    return mobile
+
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
@@ -117,7 +126,9 @@ def voters_info(request):
             "badge": v.badge,
             "location": v.location,
             "show_whatsapp": has_whatsapp,
-            "mobile_no": v.mobile_no if v.mobile_no else v.alternate_mobile1 if v.alternate_mobile1 else v.alternate_mobile2 if v.alternate_mobile2 else None,
+            "mobile_no": format_mobile_with_country_code(
+                v.mobile_no or v.alternate_mobile1 or v.alternate_mobile2 or None
+            ),
         })
 
     response_data = {
