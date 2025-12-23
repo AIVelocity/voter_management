@@ -435,6 +435,27 @@ class VoterList(models.Model):
     
         super().save(*args, **kwargs)
     
+    
+class UserContactPayload(models.Model):
+    user = models.ForeignKey(
+        VoterUserMaster,
+        on_delete=models.CASCADE,
+        related_name="contact_payloads"
+    )
+
+    payload = models.JSONField()   # full raw payload
+    source = models.CharField(
+        max_length=20,
+        default="mobile"
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "voter_user_contact_payload"
+        ordering = ["-created_at"]
+
+    
 class VoterRelationshipDetails(models.Model):
 
     RELATION_CHOICES = [

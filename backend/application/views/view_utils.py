@@ -1,5 +1,7 @@
 from ..models import VoterRelationshipDetails,ActivityLog
 from deep_translator import GoogleTranslator
+from ..models import UserContactPayload, UserVoterContact
+from .contact_match_api import canonicalize_contacts, normalize_phone
 
 class Translator:
     def __init__(self, source="auto"):
@@ -111,3 +113,58 @@ def get_family_from_db(voter, is_marathi=False):
         "siblings": siblings,
         "children": children,
     }
+
+def rematch_contacts_for_voter(voter,user):
+    
+    print("VOTER.USER =", voter.user)
+    print(
+    "PAYLOAD COUNT =",
+    UserContactPayload.objects.filter(user=voter.user).count()
+)
+
+    numbers = {
+        voter.mobile_no,
+        voter.alternate_mobile1,
+        voter.alternate_mobile2
+    }
+    numbers = {n for n in numbers if n}
+
+    if not numbers:
+        return
+
+    payloads = (
+        UserContactPayload.objects
+        .filter(user=user)
+        .order_by("-created_at")[:5]   # last N payloads only
+    )
+
+    print("VOTER.USER =", user)
+    print(
+    "PAYLOAD COUNT =",
+    UserContactPayload.objects.filter(user=user).count()
+    )
+    to_create = []
+
+    for p in payloads:
+        contacts = canonicalize_contacts(p.payload)
+
+        for contact in contacts:
+            for raw in contact["numbers"]:
+                mobile = normalize_phone(raw)
+                if mobile in numbers:
+                    to_create.append(
+                        UserVoterContact(
+                            user=user,
+                            voter=voter,
+                            contact_name=contact["name"],
+                            voter_name=voter.voter_name_eng or voter.voter_name_marathi,
+                            mobile_no=mobile
+                        )
+                    )
+
+    if to_create:
+        UserVoterContact.objects.bulk_create(
+            to_create,
+            ignore_conflicts=True,
+            batch_size=500
+        )

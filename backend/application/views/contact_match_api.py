@@ -8,9 +8,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import AccessToken
-from django.db import transaction
-
-from ..models import VoterList, UserVoterContact
+from ..models import VoterList, UserVoterContact,UserContactPayload
 
 
 # ------------------ NORMALIZATION ------------------
@@ -177,6 +175,10 @@ def match_contacts_with_users(request):
     
     except Exception as e:
         print("Payload dump failed:", str(e))
+        
+    UserContactPayload.objects.create(
+        user_id=user_id,
+        payload=body)
 
     if not canonical_contacts:
         return Response({"status": True, "count": 0, "matched": []})
@@ -209,6 +211,7 @@ def match_contacts_with_users(request):
             Q(alternate_mobile2__in=all_numbers)
         )
         .values(
+            "voter_id",
             "voter_list_id",
             "mobile_no",
             "alternate_mobile1",
