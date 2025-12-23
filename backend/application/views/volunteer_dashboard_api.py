@@ -176,7 +176,7 @@ def volunteer_voters_page(request):
 
     for v in page_obj:
         data.append({
-            # "sr_no" : v.serial_number,
+            "sr_no" : v.sr_no,
             "voter_list_id": v.voter_list_id,
             "voter_id": v.voter_id,
             "first_name":v.first_name,
@@ -360,7 +360,7 @@ def volunteer_voters_page_filter(request):
     data = []
     for v in page_obj:
         data.append({
-            # "sr_no" : v.serial_number,
+            "sr_no" : v.sr_no,
             "voter_list_id": v.voter_list_id,
             "voter_name_eng": v.voter_name_eng,
             "voter_id": v.voter_id,

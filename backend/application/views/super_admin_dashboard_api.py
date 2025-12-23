@@ -448,7 +448,7 @@ def unassigned_voters(request):
             gender_eng = v.gender_eng
             
         data.append({
-            # "sr_no" : v.serial_number,
+            "sr_no" : v.sr_no,
             "voter_list_id": v.voter_list_id,
             "voter_name_eng": voter_name_eng,
             "voter_id": v.voter_id,
