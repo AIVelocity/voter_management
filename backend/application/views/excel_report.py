@@ -6,14 +6,27 @@ from openpyxl import Workbook
 from django.utils.timezone import now
 from ..models import VoterList
 import json
-
-
+from rest_framework.decorators import api_view, permission_classes, renderer_classes
+from rest_framework.renderers import BaseRenderer
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+
+class ExcelRenderer(BaseRenderer):
+    media_type = (
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+    format = "xlsx"
+    charset = None
+    render_style = "binary"
+
+    def render(self, data, media_type=None, renderer_context=None):
+        return data
+
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
+@renderer_classes([ExcelRenderer])
 def export_voters_excel(request):
 
     if request.method != "POST":
