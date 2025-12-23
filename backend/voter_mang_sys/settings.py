@@ -16,6 +16,17 @@ from datetime import timedelta
 from dotenv import load_dotenv
 
 load_dotenv()
+SECRET_KEY = os.getenv("SECRET_KEY")
+
+DEBUG = os.getenv("DEBUG") == "True"
+
+TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID")
+TWILIO_AUTH_TOKEN = os.getenv("TWILIO_AUTH_TOKEN")
+TWILIO_VERIFY_SERVICE_SID = os.getenv("TWILIO_VERIFY_SERVICE_SID")
+OTP_TTL_SECONDS = os.getenv("OTP_TTL_SECONDS", "300")
+RATE_LIMIT_PER_PHONE_PER_HOUR = int(
+    os.getenv("RATE_LIMIT_PER_PHONE_PER_HOUR", "5")
+)
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -43,7 +54,7 @@ DEBUG = True
 PASSWORD_ENCRYPTION_KEY = "0mqmJvbV5rsJJ_M4iaXsZfsor_BNUGwFB24-WE4LK80="
 # ALLOWED_HOSTS = eval(os.getenv("ALLOWED_HOSTS"))
 
-ALLOWED_HOSTS = ["vms.rntsecops.com","172.25.240.1","172.20.1.101","59.95.99.182","127.0.0.1", "localhost", "172.20.1.155", ".ngrok-free.app", ".ngrok-free.dev"]
+ALLOWED_HOSTS = ["172.20.1.116","vms.rntsecops.com","172.25.240.1","172.20.1.101","59.95.99.182","127.0.0.1", "localhost", "172.20.1.155", ".ngrok-free.app", ".ngrok-free.dev"]
 
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(hours=18),

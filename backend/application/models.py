@@ -679,3 +679,13 @@ class UserVoterContact(models.Model):
         indexes = [
             models.Index(fields=["user", "mobile_no"]),
         ]
+
+
+class OTPRequest(models.Model):
+    mobile_no = models.CharField(max_length=15)
+    otp = models.CharField(max_length=6)
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_used = models.BooleanField(default=False)
+
+    def is_expired(self):
+        return timezone.now() > self.created_at + timezone.timedelta(minutes=5)

@@ -22,6 +22,7 @@ from .contact_match_api import match_contacts_with_users
 from .print_api import print_voters_by_ids,matched_contacts_list
 from .photo_api import voters_info_photo
 from .user_details import list_all_users
+from .twilio_api import otp_start,otp_verify,health,reset_password
 # from .lanaguage_api import set_language
 
 __all__ = [
@@ -73,5 +74,11 @@ __all__ = [
     "list_all_users",
     "auto_unassign_voters",
     "unassign_voters",
-    "unassign_all_voters_of_karyakarta"
+    "unassign_all_voters_of_karyakarta",
+    "send_otp",
+    "verify_otp",
+    "otp_start",
+    "otp_verify",
+    "health",
+    "reset_password",
 ]

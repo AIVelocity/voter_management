@@ -67,7 +67,12 @@ urlpatterns = [
     path("mobile_permission/list/", views.matched_contacts_list, name="matched_contacts_list"),
     
     path("user/list/", views.list_all_users, name="list_all_users"),
-    
-    
-    
+
+    # path("otp/send/", views.send_otp, name="send_otp"),
+    # path("otp/verify/", views.verify_otp, name="verify_otp"),
+    path("otp/start/", views.otp_start, name="otp_start"),
+    path("otp/verify/", views.otp_verify, name="verify_otp"),
+    path("health/", views.health, name="health"),
+    path("reset_password/", views.reset_password, name="reset_password"),
+
 ]
