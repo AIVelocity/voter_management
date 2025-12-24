@@ -118,18 +118,16 @@ def otp_start(request):
             channel=channel
         )
  
-        return JsonResponse({"sid": res.sid, "status": res.status}, status=200)
+        return JsonResponse({"status": True, "res-status": res.status, "sid": res.sid,"message": "OTP sent successfully"}, status=200)
  
     except Exception as e:
-        # In production: log exception details server-side
         print("Twilio OTP error:", str(e))  #  ADD THIS
         return JsonResponse(
-        {"detail": "Failed to start OTP", "error": str(e)},
+        {"status": False, "message": "Failed to start OTP", "error": str(e)},
         status=status.HTTP_400_BAD_REQUEST
     )
-        # return JsonResponse({"detail": "Failed to start OTP"}, status=status.HTTP_400_BAD_REQUEST)
- 
- 
+        
+        
 @api_view(["POST"])
 @permission_classes([AllowAny])
 def otp_verify(request):
@@ -162,11 +160,11 @@ def otp_verify(request):
         if check.status == "approved":
             # In prod: issue JWT/session token here
             return JsonResponse({"status": True,"message":"OTP verified successfully"}, status=200)
- 
-        return JsonResponse({"verified": False, "status": check.status}, status=200)
- 
+
+        return JsonResponse({"status": False, "status": check.status}, status=200)
+
     except Exception:
-        return JsonResponse({"detail": "Failed to verify OTP"}, status=status.HTTP_400_BAD_REQUEST)
+        return JsonResponse({"status": False, "message": "Failed to verify OTP"}, status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(["POST"])
@@ -219,6 +217,6 @@ def reset_password(request):
 
     except Exception as e:
         return JsonResponse(
-            {"detail": "Failed to reset password", "error": str(e)},
+            {"status": False, "message": "Failed to reset password", "error": str(e)},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
