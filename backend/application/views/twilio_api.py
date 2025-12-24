@@ -19,10 +19,6 @@ token = os.getenv("TWILIO_AUTH_TOKEN")
 twilio_client = Client(sid, token)
 print(sid, token, twilio_client)
 
-def generate_otp():
-    return str(random.randint(100000, 999999))
-
-
 def normalize_mobile(number):
     number = number.strip()
     if number.startswith("+"):
