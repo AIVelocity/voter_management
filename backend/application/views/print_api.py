@@ -147,6 +147,7 @@ def matched_contacts_list(request):
             "user_name": f"{obj.user.first_name} {obj.user.last_name}".strip(),
             "user_id": obj.user.user_id,
             "voter_id": obj.voter.voter_id,
+            "voter_list_id": obj.voter.voter_list_id,
             "voter_name": obj.voter.voter_name_eng or obj.voter.voter_name_marathi,
             "contact_name": obj.contact_name,
             "mobile_no": obj.mobile_no,
