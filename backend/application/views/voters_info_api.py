@@ -78,7 +78,6 @@ def voters_info(request):
         qs = (
             VoterList.objects
             .select_related("tag_id")
-            .filter(user_id=user_id)
             .order_by("ward_no", "voter_list_id")
         )
 
