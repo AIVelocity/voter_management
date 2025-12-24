@@ -134,7 +134,8 @@ def dashboard(request):
             "cumulative_count": running_total
         })
 
-    total_visited = VoterList.objects.filter(check_progress_date__isnull=False).count()
+    # total_visited = VoterList.objects.filter(check_progress_date__isnull=False).count()
+    total_visited = red_color_tags + orange_color_tags + green_color_tags + golden_color_tags
     
     return Response({
         "SUCCESS": True,
