@@ -104,9 +104,6 @@ def single_voters_info(request, voter_list_id):
         other_relatives = []
         BloodRelatedFam = []
 
-        # -------- YOUR EXISTING LOGIC -----------
-        # (No behavioural change)
-
         # --- MALE ---
         if is_male:
             father = VoterList.objects.filter(

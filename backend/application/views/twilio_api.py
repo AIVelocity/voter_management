@@ -1,12 +1,8 @@
-# views.py
-import random
+from django.contrib.auth.hashers import check_password, make_password
 import os
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
-from django.utils import timezone
 from twilio.rest import Client
-from ..models import OTPRequest
 import re
 import time
 from typing import Dict, Tuple
@@ -25,20 +21,16 @@ def normalize_mobile(number):
         return number
     return f"+91{number}"  # India default
 
-
- 
 E164_REGEX = re.compile(r"^\+[1-9]\d{7,14}$")
  
 # In-memory limiter: phone -> (window_start_epoch, count)
 # NOTE: Not suitable for multi-instance production. Replace with Redis later.
 _rate_store: Dict[str, Tuple[int, int]] = {}
  
- 
 def _require_e164(phone: str):
     if not phone or not E164_REGEX.match(phone):
         return False
     return True
- 
  
 def _rate_limit(phone: str, limit: int, window_seconds: int = 3600):
     now = int(time.time())
@@ -73,7 +65,6 @@ def _verify_service_sid() -> str:
 @permission_classes([AllowAny])
 def health(request):
     return JsonResponse({"status": "ok"}, status=200)
-
 
  
 @api_view(["POST"])
@@ -202,7 +193,13 @@ def reset_password(request):
                 {"detail": "User not found"},
                 status=status.HTTP_404_NOT_FOUND
             )
-
+            
+        if check_password(new_password, user.password):
+            return JsonResponse(
+            {"status": False, "message": "New password must be different from old password"},
+            status=400
+            )
+            
         user.set_password(new_password)
         user.save(update_fields=["password"])
 
