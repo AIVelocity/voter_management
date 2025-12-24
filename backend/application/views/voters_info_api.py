@@ -96,6 +96,7 @@ def voters_info(request):
             voter_name_eng = v.voter_name_marathi
             age_eng = v.age
             gender_eng = v.gender
+            
         else:
             first_name = v.first_name
             middle_name = v.middle_name

@@ -12,7 +12,7 @@ class Occupation(models.Model):
     occupation_id = models.AutoField(primary_key=True)
 
     occupation_name = models.CharField(max_length=100)
-
+    occupation_name_mar = models.CharField(max_length=150, null=True, blank=True)
     class Meta:
         db_table = "voter_occupation_master"
         managed = False
@@ -50,6 +50,7 @@ class VoterTag(models.Model):
     tag_id = models.AutoField(primary_key=True)
 
     tag_name = models.CharField(max_length=20, unique=True)
+    tag_name_mar = models.CharField(max_length=150, null=True, blank=True)
     description = models.TextField(null=True, blank=True)
 
     created_by = models.IntegerField(null=True, blank=True)
@@ -72,6 +73,7 @@ class VoterTag(models.Model):
 class Religion(models.Model):
     religion_id = models.AutoField(primary_key=True)
     religion_name = models.CharField(max_length=100)
+    religion_name_mar = models.CharField(max_length=150, null=True, blank=True)
 
     class Meta:
         db_table = "voter_religion_master"
@@ -89,6 +91,7 @@ class Caste(models.Model):
     )
 
     caste_name = models.CharField(max_length=150)
+    caste_name_mar = models.CharField(max_length=150, null=True, blank=True)
 
     class Meta:
         db_table = "voter_caste_master"

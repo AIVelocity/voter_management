@@ -376,6 +376,10 @@ def single_voters_info(request, voter_list_id):
         voter_name_eng = voter.voter_name_marathi
         age_eng = age
         gender_eng = voter.gender
+        tag_name = voter.tag_id.tag_name_mar if voter.tag_id else None
+        religion_name = voter.religion.religion_name_mar if voter.religion else None
+        caste_name = voter.cast.caste_name_mar if voter.cast else None
+        occupation_name = voter.occupation.occupation_name_mar if voter.occupation else None
     else:
         first_name = voter.first_name
         middle_name = voter.middle_name
@@ -383,6 +387,11 @@ def single_voters_info(request, voter_list_id):
         voter_name_eng = voter.voter_name_eng
         age_eng = age
         gender_eng = voter.gender_eng
+        tag_name = voter.tag_id.tag_name if voter.tag_id else None
+        religion_name = voter.religion.religion_name if voter.religion else None
+        caste_name = voter.cast.caste_name if voter.cast else None
+        occupation_name = voter.occupation.occupation_name if voter.occupation else None
+        
     # ---------- FINAL RESPONSE ----------
     data = {
         "voter_list_id": voter.voter_list_id,
@@ -405,25 +414,25 @@ def single_voters_info(request, voter_list_id):
         "ward_id": voter.ward_no,
         "location": voter.location,
         "badge": voter.badge,
-        "tag": voter.tag_id.tag_name if voter.tag_id else None,
+        "tag": tag_name,
         "tag_obj": {
             "id": voter.tag_id.tag_id if voter.tag_id else None,
-            "name": voter.tag_id.tag_name if voter.tag_id else None
+            "name": tag_name
         },
 
         "occupation_obj": {
             "id": voter.occupation_id,
-            "name": voter.occupation.occupation_name if voter.occupation else None
+            "name": occupation_name
         },
 
         "caste_obj": {
             "id": voter.cast_id,
-            "name": voter.cast.caste_name if voter.cast else None
+            "name": caste_name
         },
 
         "religion_obj": {
             "id": voter.religion_id,
-            "name": voter.religion.religion_name if voter.religion else None
+            "name": religion_name
         },
 
         # FAMILY
