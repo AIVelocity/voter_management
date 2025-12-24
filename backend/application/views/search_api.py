@@ -1,6 +1,6 @@
 
 from ..models import VoterList,VoterTag
-from .voters_info_api import split_marathi_name
+from .voters_info_api import format_mobile_with_country_code, split_marathi_name
 import re
 from collections import Counter
 
@@ -113,7 +113,10 @@ def voters_search(request):
             "tag": v.tag_id.tag_name if v.tag_id else None,
             "badge": v.badge,
             "location": v.location,
-            "show_whatsapp": has_whatsapp
+            "show_whatsapp": has_whatsapp,
+            "mobile_no": format_mobile_with_country_code(
+                v.mobile_no or v.alternate_mobile1 or v.alternate_mobile2 or None
+            ),
         })
 
     return Response({
@@ -198,7 +201,10 @@ def family_dropdown_search(request):
             "tag": v.tag_id.tag_name if v.tag_id else None,
             "badge": v.badge,
             "location": v.location,
-            "show_whatsapp": has_whatsapp
+            "show_whatsapp": has_whatsapp,
+            "mobile_no": format_mobile_with_country_code(
+                v.mobile_no or v.alternate_mobile1 or v.alternate_mobile2 or None
+            ),
         })
     return Response({
         "status": True,
