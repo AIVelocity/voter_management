@@ -3,7 +3,7 @@ from django.db.models import Q
 from rest_framework_simplejwt.tokens import AccessToken
 from django.core.paginator import Paginator
 from .search_api import apply_dynamic_initial_search
-from .voters_info_api import split_marathi_name
+from .voters_info_api import format_mobile_with_country_code, split_marathi_name
 
 def apply_multi_filter(qs, field, value):
     if not value:
@@ -205,7 +205,12 @@ def filter(request):
             voter_name_eng = v.voter_name_eng
             age_eng = v.age_eng
             gender_eng = v.gender_eng
-            
+        
+        has_whatsapp = any([
+        bool(v.mobile_no),
+        bool(v.alternate_mobile1),
+        bool(v.alternate_mobile2),
+    ])
         data.append({
             "sr_no" : v.sr_no,
             "voter_list_id": v.voter_list_id,
@@ -217,7 +222,11 @@ def filter(request):
             "tag": v.tag_id.tag_name if v.tag_id else None,
             "kramank": v.kramank,
             "age":age_eng,
-            "ward_id": v.ward_no
+            "ward_id": v.ward_no,
+            "show_whatsapp": has_whatsapp,
+            "mobile_no": format_mobile_with_country_code(
+                v.mobile_no or v.alternate_mobile1 or v.alternate_mobile2 or None
+            ),
         })
 
     return Response({

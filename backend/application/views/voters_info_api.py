@@ -68,7 +68,7 @@ def voters_info(request):
         )
 
     # -------- ROLE-BASED QUERY --------
-    if user.role.role_name in ["SuperAdmin", "Admin"]:
+    if user.role.role_name in ["SuperAdmin", "Admin","Volunteer"]:
         qs = (
             VoterList.objects
             .select_related("tag_id")
@@ -78,6 +78,7 @@ def voters_info(request):
         qs = (
             VoterList.objects
             .select_related("tag_id")
+            .filter(user_id=user_id)
             .order_by("ward_no", "voter_list_id")
         )
 
