@@ -5,7 +5,6 @@ from rest_framework_simplejwt.tokens import AccessToken
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from .view_utils import Translator
 
 def split_marathi_name(full_name):
     if not full_name:

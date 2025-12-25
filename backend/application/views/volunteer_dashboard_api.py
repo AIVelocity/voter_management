@@ -5,8 +5,7 @@ from django.utils import timezone
 from datetime import timedelta
 from collections import defaultdict
 from django.core.paginator import Paginator
-from .search_api import apply_dynamic_initial_search
-from .filter_api import apply_multi_filter,apply_tag_filter
+from .filter_api import apply_dynamic_initial_search, apply_multi_filter, apply_tag_filter
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
