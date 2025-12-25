@@ -145,7 +145,7 @@ def filter(request):
 
     from django.db.models import Q
     
-    privileged_roles = ["SuperAdmin", "Admin", "Volunteer"]
+    privileged_roles = ["Volunteer"]
     
     if user.role.role_name in privileged_roles:
         # Check if user has any assigned voters
