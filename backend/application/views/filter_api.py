@@ -125,7 +125,6 @@ def filter(request):
         qs = (
             VoterList.objects
             .select_related("tag_id")
-            .filter(user_id=user_id)
             .order_by("sr_no")
         )
     
