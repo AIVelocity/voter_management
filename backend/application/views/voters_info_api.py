@@ -69,13 +69,13 @@ def voters_info(request):
 
     # -------- ROLE-BASED QUERY --------
     from django.db.models import Q
-    
-    privileged_roles = ["SuperAdmin", "Admin", "Volunteer"]
-    
+
+    privileged_roles = ["Admin", "Volunteer"]
+
     if user.role.role_name in privileged_roles:
         # Check if user has any assigned voters
         has_assigned_voters = VoterList.objects.filter(user_id=user_id).exists()
-    
+
         if has_assigned_voters:
             qs = (
                 VoterList.objects
@@ -93,10 +93,9 @@ def voters_info(request):
         qs = (
             VoterList.objects
             .select_related("tag_id")
-            .filter(user_id=user_id)
             .order_by("sr_no")
         )
-    
+
 
     paginator = Paginator(qs, size)
     page_obj = paginator.get_page(page)

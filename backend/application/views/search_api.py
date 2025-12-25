@@ -64,7 +64,7 @@ def voters_search(request):
     user_id = user.user_id
     role = user.role.role_name
 
-    privileged_roles = ["SuperAdmin", "Admin", "Volunteer"]
+    privileged_roles = ["Admin", "Volunteer"]
 
     base_qs = VoterList.objects.select_related("tag_id")
 
@@ -77,7 +77,7 @@ def voters_search(request):
         else:
             qs = base_qs.all()
     else:
-        qs = base_qs.filter(user_id=user_id)
+        qs = base_qs.all()
 
     # ---------- SEARCH ----------
     if search:
