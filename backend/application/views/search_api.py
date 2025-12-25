@@ -1,12 +1,9 @@
-
 from ..models import VoterList,VoterTag
 from .voters_info_api import format_mobile_with_country_code, split_marathi_name
 import re
 from collections import Counter
-
 from django.db.models import Q
 from django.core.paginator import Paginator
-
 
 def apply_dynamic_initial_search(qs, search):
 
@@ -70,7 +67,7 @@ def voters_search(request):
 
     #  PATCH: if list → ordering must be Python side
     if isinstance(qs, list):
-        qs.sort(key=lambda x: x.voter_list_id)
+        qs.sort(key=lambda x: x.sr_no)
 
     paginator = Paginator(qs, size)
     page_obj = paginator.get_page(page)
@@ -157,7 +154,7 @@ def family_dropdown_search(request):
     if isinstance(qs, list):
         qs.sort(key=lambda x: x.voter_list_id)
     else:
-        qs = qs.order_by("voter_list_id")
+        qs = qs.order_by("sr_no")
 
     paginator = Paginator(qs, size)
     page_obj = paginator.get_page(page)
