@@ -24,7 +24,7 @@ def voters_search(request):
     user_id = user.user_id
     role = user.role.role_name
 
-    privileged_roles = ["Admin", "Volunteer"]
+    privileged_roles = ["Volunteer"]
 
     base_qs = VoterList.objects.select_related("tag_id")
 
