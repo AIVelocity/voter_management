@@ -272,7 +272,7 @@ def unassigned_voters(request):
             "badge",
             "location"
         )
-        .order_by("voter_list_id")
+        .order_by("sr_no")
     )
 
     total_count = queryset.count()

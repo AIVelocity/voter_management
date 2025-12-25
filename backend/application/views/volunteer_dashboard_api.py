@@ -7,8 +7,6 @@ from collections import defaultdict
 from django.core.paginator import Paginator
 from .search_api import apply_dynamic_initial_search
 from .filter_api import apply_multi_filter,apply_tag_filter
-
-
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -166,7 +164,7 @@ def volunteer_voters_page(request):
         VoterList.objects
         .select_related("tag_id")
         .filter(user_id=user_id)
-        .order_by("ward_no", "voter_list_id")
+        .order_by("sr_no")
     )
     
     paginator = Paginator(qs, size)
@@ -235,7 +233,7 @@ def volunteer_voters_page_filter(request):
         VoterList.objects
         .select_related("tag_id")
         .filter(user_id=user_id)
-        .order_by("voter_list_id")
+        .order_by("sr_no")
     )
     
     search = request.GET.get("search")

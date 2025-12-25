@@ -1,8 +1,5 @@
-
 from ..models import ActivityLog
 from .single_voters_api import format_indian_datetime
-
-
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
