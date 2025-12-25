@@ -7,47 +7,7 @@ from django.core.paginator import Paginator
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-
-def apply_dynamic_initial_search(qs, search):
-
-    tokens = [t.strip().lower() for t in search.split() if t.strip()]
-    token_counts = Counter(tokens)
-
-    # --------- DB side presence filter ---------
-    for token in token_counts:
-        qs = qs.filter(
-            Q(voter_name_eng__iregex=rf'\m{token}') |
-            Q(voter_id__icontains=token)
-        )
-
-    # --------- Python side frequency validation ---------
-    final_results = []
-    words_re = re.compile(r"[A-Za-z]+")
-
-    for v in qs:
-        words = words_re.findall((v.voter_name_eng or "").lower())
-        voter_id = (v.voter_id or "").lower()
-
-        counts = Counter()
-        for t in token_counts:
-            for w in words:
-                if w.startswith(t):
-                    counts[t] += 1
-
-        valid = True
-        for t, required in token_counts.items():
-            # If token matched voter_id, accept it without name matching
-            if t in voter_id:
-                continue
-
-            if counts[t] < required:
-                valid = False
-                break
-
-        if valid:
-            final_results.append(v)
-
-    return final_results
+from .filter_api import apply_dynamic_initial_search
 
 
 @api_view(["GET"])

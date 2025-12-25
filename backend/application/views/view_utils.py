@@ -1,10 +1,10 @@
 from .filter_api import apply_multi_filter, apply_tag_filter
-from .search_api import apply_dynamic_initial_search
-from ..models import VoterList, VoterRelationshipDetails,ActivityLog
+from ..models import VoterList, VoterRelationshipDetails, ActivityLog, UserContactPayload, UserVoterContact
 from deep_translator import GoogleTranslator
-from ..models import UserContactPayload, UserVoterContact
 from .contact_match_api import canonicalize_contacts, normalize_phone
 from django.db.models import Q
+import re
+from collections import Counter
 
 def build_voter_queryset(request, user):
     qs = VoterList.objects.select_related("tag_id")
@@ -175,13 +175,10 @@ def get_family_from_db(voter, is_marathi=False):
         "children": children,
     }
 
-def rematch_contacts_for_voter(voter,user):
+def rematch_contacts_for_voter(voter, user):
     
     print("VOTER.USER =", voter.user)
-    print(
-    "PAYLOAD COUNT =",
-    UserContactPayload.objects.filter(user=voter.user).count()
-)
+    print("PAYLOAD COUNT =", UserContactPayload.objects.filter(user=voter.user).count())
 
     numbers = {
         voter.mobile_no,
@@ -200,10 +197,7 @@ def rematch_contacts_for_voter(voter,user):
     )
 
     print("VOTER.USER =", user)
-    print(
-    "PAYLOAD COUNT =",
-    UserContactPayload.objects.filter(user=user).count()
-    )
+    print("PAYLOAD COUNT =", UserContactPayload.objects.filter(user=user).count())
     to_create = []
 
     for p in payloads:
