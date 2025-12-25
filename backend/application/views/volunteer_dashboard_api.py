@@ -186,7 +186,8 @@ def volunteer_voters_page(request):
             "ward_id": v.ward_no,
             "tag": v.tag_id.tag_name if v.tag_id else None,
             "badge": v.badge,
-            "location": v.location
+            "location": v.location,
+            "assigned": True if v.check_progress_date else False
         })
 
     return Response({
@@ -367,7 +368,8 @@ def volunteer_voters_page_filter(request):
             "tag": v.tag_id.tag_name if v.tag_id else None,
             "kramank": v.kramank,
             "age":v.age_eng,
-            "ward_id": v.ward_no
+            "ward_id": v.ward_no,
+            "assigned": True if v.check_progress_date else False
         })
 
     return Response({
