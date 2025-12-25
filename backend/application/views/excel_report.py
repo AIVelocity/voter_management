@@ -84,7 +84,6 @@ def export_voters_excel(request):
         )
         df1 = pd.DataFrame.from_records(
                 qs.values(
-                    "voter_list_id",
                     "voter_id",
                     "sr_no",
                     "voter_name_eng",
@@ -172,13 +171,14 @@ def export_voters_excel(request):
 
         buffer.seek(0)
 
-        return Response(
+        response = HttpResponse(
             buffer.getvalue(),
-            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            headers={
-                "Content-Disposition": 'attachment; filename="report.xlsx"'
-            }
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
+        response["Content-Disposition"] = 'attachment; filename="report.xlsx"'
+        response["Content-Length"] = buffer.tell()
+
+        return response
 
     except Exception as e:
         return Response({"status": False, "error": str(e)}, status=400)

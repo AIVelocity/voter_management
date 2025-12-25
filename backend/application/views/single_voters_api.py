@@ -176,7 +176,7 @@ def single_voters_info(request, voter_list_id):
                     p_age is not None and
                     age is not None and
                     abs(p_age - age) <= 18 and
-                    p_kramank and
+                    p_kramank is not None and
                     abs(p_kramank - kramank) <= 5
                 ):
                     siblings.append({
