@@ -100,13 +100,27 @@ def filter(request):
             status=404
         )
 
-    # -------- BASE QUERY (ROLE BASED) --------
-    if user.role.role_name in ["SuperAdmin", "Admin"]:
-        qs = (
-            VoterList.objects
-            .select_related("tag_id")
-            .order_by("sr_no")
-        )
+    from django.db.models import Q
+    
+    privileged_roles = ["SuperAdmin", "Admin", "Volunteer"]
+    
+    if user.role.role_name in privileged_roles:
+        # Check if user has any assigned voters
+        has_assigned_voters = VoterList.objects.filter(user_id=user_id).exists()
+    
+        if has_assigned_voters:
+            qs = (
+                VoterList.objects
+                .select_related("tag_id")
+                .filter(user_id=user_id)
+                .order_by("sr_no")
+            )
+        else:
+            qs = (
+                VoterList.objects
+                .select_related("tag_id")
+                .order_by("sr_no")
+            )
     else:
         qs = (
             VoterList.objects
@@ -114,7 +128,6 @@ def filter(request):
             .filter(user_id=user_id)
             .order_by("sr_no")
         )
-
     
     # Apply advanced search (name + voter_id)
     if search:

@@ -1,7 +1,70 @@
-from ..models import VoterRelationshipDetails,ActivityLog
+from .filter_api import apply_multi_filter, apply_tag_filter
+from .search_api import apply_dynamic_initial_search
+from ..models import VoterList, VoterRelationshipDetails,ActivityLog
 from deep_translator import GoogleTranslator
 from ..models import UserContactPayload, UserVoterContact
 from .contact_match_api import canonicalize_contacts, normalize_phone
+from django.db.models import Q
+
+def build_voter_queryset(request, user):
+    qs = VoterList.objects.select_related("tag_id")
+
+    # ---- ROLE BASED ----
+    if user.role.role_name not in ["SuperAdmin", "Admin"]:
+        qs = qs.filter(user_id=user.user_id)
+
+    # ---- SEARCH ----
+    # search = request.GET.get("search")
+    # if search:
+    #     qs = apply_dynamic_initial_search(qs, search)
+
+    # ---- SIMPLE FILTERS ----
+    if request.GET.get("voter_id"):
+        qs = qs.filter(voter_id__icontains=request.GET["voter_id"])
+
+    if request.GET.get("kramank"):
+        qs = qs.filter(kramank__icontains=request.GET["kramank"])
+
+    # ---- NAME FILTERS ----
+    if request.GET.get("first_name"):
+        qs = qs.filter(first_name__istartswith=request.GET["first_name"])
+
+    if request.GET.get("middle_name"):
+        qs = qs.filter(middle_name__istartswith=request.GET["middle_name"])
+
+    if request.GET.get("last_name"):
+        qs = qs.filter(last_name__istartswith=request.GET["last_name"])
+
+    # ---- AGE RANGES ----
+    age_ranges = request.GET.get("age_ranges")
+    if age_ranges:
+        age_q = Q()
+        for r in age_ranges.split(","):
+            try:
+                lo, hi = r.split("-")
+                age_q |= Q(age_eng__gte=int(lo), age_eng__lte=int(hi))
+            except ValueError:
+                pass
+        qs = qs.filter(age_q)
+
+    # ---- MULTI FILTERS ----
+    qs = apply_multi_filter(qs, "cast", request.GET.get("caste"))
+    qs = apply_multi_filter(qs, "religion_id", request.GET.get("religion"))
+    qs = apply_multi_filter(qs, "occupation", request.GET.get("occupation"))
+    qs = apply_multi_filter(qs, "gender_eng", request.GET.get("gender"))
+    qs = apply_tag_filter(qs, request.GET.get("tag_id"))
+
+    # ---- LOCATION ----
+    if request.GET.get("location"):
+        qs = qs.filter(location__icontains=request.GET["location"])
+
+    # ---- SORT ----
+    if request.GET.get("sort"):
+        qs = qs.order_by(request.GET["sort"])
+    else:
+        qs = qs.order_by("sr_no")
+
+    return qs
 
 class Translator:
     def __init__(self, source="auto"):
@@ -34,8 +97,6 @@ def log_user_update(user, action, description, changed_fields, ip,voter_list_id)
         voter_id=voter_list_id
 
     )
-
-
 
 def save_relation(voter, relation, related_voter_id):
     """
