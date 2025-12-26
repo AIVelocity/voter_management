@@ -1,4 +1,5 @@
 from .filter_api import apply_multi_filter, apply_tag_filter
+from .filter_api import apply_dynamic_initial_search
 from ..models import VoterList, VoterRelationshipDetails, ActivityLog, UserContactPayload, UserVoterContact
 from deep_translator import GoogleTranslator
 from .contact_match_api import canonicalize_contacts, normalize_phone
@@ -14,9 +15,9 @@ def build_voter_queryset(request, user):
         qs = qs.filter(user_id=user.user_id)
 
     # ---- SEARCH ----
-    # search = request.GET.get("search")
-    # if search:
-    #     qs = apply_dynamic_initial_search(qs, search)
+    search = request.GET.get("search")
+    if search:
+        qs = apply_dynamic_initial_search(qs, search)
 
     # ---- SIMPLE FILTERS ----
     if request.GET.get("voter_id"):
