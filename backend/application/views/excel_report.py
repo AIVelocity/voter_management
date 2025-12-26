@@ -14,8 +14,6 @@ from rest_framework.renderers import BaseRenderer
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from .view_utils import build_voter_queryset
-import json
-from collections import defaultdict
 import pandas as pd
 from io import BytesIO
 
@@ -79,9 +77,11 @@ def export_voters_excel(request):
         # ------------------ BUILD VOTER QUERYSET ------------------
         qs = (
             build_voter_queryset(request,user)
-            .select_related("tag_id", "occupation", "cast", "religion")
+            .select_related("tag_id", "occupation", "cast", "religion", "user")
+            .filter(user=user)
             .order_by("sr_no")
         )
+
         df1 = pd.DataFrame.from_records(
                 qs.values(
                     "voter_list_id",
@@ -109,8 +109,11 @@ def export_voters_excel(request):
                 )
             )
         # ------------------ FAMILY DATA ------------------
-        # voter_ids = list(qs.values_list("voter_list_id", flat=True))
-        voter_ids = list(df1['voter_list_id'])
+        # safely extract voter ids
+        if df1.empty:
+            voter_ids = []
+        else:
+            voter_ids = list(df1['voter_list_id'])
 
         relations = VoterRelationshipDetails.objects.filter(
             voter_id__in=voter_ids
@@ -125,7 +128,38 @@ def export_voters_excel(request):
             )
         rename_cols = {'voter_id':'voter_list_id'}
         df2.rename(columns=rename_cols, inplace=True)
-        
+        # Ensure both dataframes have the expected key column so merge doesn't fail
+        expected_voter_cols = [
+            "voter_list_id",
+            "voter_id",
+            "sr_no",
+            "voter_name_eng",
+            "voter_name_marathi",
+            "current_address",
+            "mobile_no",
+            "alternate_mobile1",
+            "alternate_mobile2",
+            "kramank",
+            "address_line1",
+            "age_eng",
+            "gender_eng",
+            "ward_no",
+            "location",
+            "badge",
+            "tag_id",
+            "occupation",
+            "cast",
+            "religion",
+            "comments",
+            "check_progress_date",
+        ]
+
+        if "voter_list_id" not in df1.columns:
+            df1 = pd.DataFrame(columns=expected_voter_cols)
+
+        if "voter_list_id" not in df2.columns:
+            df2 = pd.DataFrame(columns=["voter_list_id", "related_voter__voter_name_eng", "relation_with_voter"])
+
         merged_df = df1.merge(
                             df2,
                             on="voter_list_id",
@@ -140,11 +174,11 @@ def export_voters_excel(request):
         start_dt = make_aware(datetime.combine(report_date, time.min), tz)
         end_dt   = make_aware(datetime.combine(report_date, time.max), tz)
 
+        # Query logs for this user on the report date, regardless of whether voters exist
         logs_qs = (
             ActivityLog.objects
             .filter(
-                voter__in=voter_ids,
-                user=user,                     # only this user
+                user=user,
                 created_at__range=(start_dt, end_dt)  # only this date
             )
             .select_related("user", "voter")
