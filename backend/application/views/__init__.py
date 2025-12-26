@@ -23,6 +23,7 @@ from .print_api import print_voters_by_ids,matched_contacts_list
 from .photo_api import voters_info_photo
 from .user_details import list_all_users
 from .twilio_api import otp_start,otp_verify,health,reset_password
+from .print_api import list_voters_for_print
 # from .lanaguage_api import set_language
 
 __all__ = [
@@ -81,4 +82,5 @@ __all__ = [
     "otp_verify",
     "health",
     "reset_password",
+    "list_voters_for_print"
 ]
