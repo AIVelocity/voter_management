@@ -26,7 +26,7 @@ class NotificationConsumer(AsyncWebsocketConsumer):
             self.groups_joined.append("admins")
 
         # agent group (if your user has agent_id attr)
-        agent_id = getattr(user, "agent_id", None)
+        agent_id = getattr(user, "id", None)
         if agent_id:
             g = f"agent_{agent_id}"
             await self.channel_layer.group_add(g, self.channel_name)

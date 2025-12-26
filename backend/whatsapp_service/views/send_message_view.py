@@ -13,7 +13,6 @@ from rest_framework.response import Response
 
 url = settings.MESSAGE_URL
 token = settings.ACCESS_TOKEN
-
 # --- CONFIG: provider limit ---
 PROVIDER_MAX_PER_SECOND = 50  # provider limit (messages / sec)
 DEFAULT_CHUNK_SIZE = PROVIDER_MAX_PER_SECOND  # how many messages to send per second
@@ -66,10 +65,11 @@ def send_template(request):
                     "type": "body",
                     "parameters": [
                         {"type": "text", "text": v.voter_name_marathi},
-                        {"type": "text", "text": v.yadivibagh},
                         {"type": "text", "text": v.anukramank},
                         {"type": "text", "text": v.voter_id},
-                        {"type": "text", "text": v.matdankendra},
+                        {"type": "text", "text": v.age_eng},
+                        {"type": "text", "text": v.ward_no},
+                        {"type": "text", "text": v.kramank},
                     ][:template.body_param_count]
                 }
             ]
