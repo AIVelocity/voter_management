@@ -165,6 +165,37 @@ def export_voters_excel(request):
                             on="voter_list_id",
                             how="left"
                         )
+        
+        # Rename merged_df columns to meaningful names
+        merged_df.rename(columns={
+            "voter_list_id": "ID",
+            "voter_id": "Voter ID",
+            "sr_no": "Serial No",
+            "voter_name_eng": "Voter Name (English)",
+            "voter_name_marathi": "Voter Name (Marathi)",
+            "current_address": "Current Address",
+            "mobile_no": "Mobile",
+            "alternate_mobile1": "Alternate Mobile 1",
+            "alternate_mobile2": "Alternate Mobile 2",
+            "kramank": "Kramank",
+            "address_line1": "Address Line 1",
+            "age_eng": "Age",
+            "gender_eng": "Gender",
+            "ward_no": "Ward No",
+            "location": "Location",
+            "badge": "Badge",
+            "tag_id": "Tag",
+            "occupation": "Occupation",
+            "cast": "Caste",
+            "religion": "Religion",
+            "comments": "Comments",
+            "check_progress_date": "Check Progress Date",
+            "related_voter__voter_name_eng": "Related Voter Name",
+            "relation_with_voter": "Relation",
+        }, inplace=True)
+        
+        # Drop the ID column after rename
+        merged_df = merged_df.drop(columns=["ID"], errors='ignore')
 
         from datetime import datetime, time
         from django.utils.timezone import make_aware, get_current_timezone
@@ -197,9 +228,24 @@ def export_voters_excel(request):
                     "created_at"
                 )
             )
+        
+        # Rename logs_df columns to meaningful names
+        logs_df.rename(columns={
+            "voter__voter_name_eng": "Voter Name",
+            "voter__voter_id": "Voter ID",
+            "action": "Action",
+            "user__first_name": "User First Name",
+            "user__last_name": "User Last Name",
+            "old_data": "Old Data",
+            "new_data": "New Data",
+            "created_at": "Timestamp",
+        }, inplace=True)
 
         buffer = BytesIO()
 
+        # Generate meaningful filename with user and date
+        user_name = f"{user.first_name}_{user.last_name}".replace(" ", "_") if user.first_name or user.last_name else f"user_{user.user_id}"
+        filename = f"voter_report_{user_name}_{report_date}.xlsx"
 
         with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
             merged_df.to_excel(writer, sheet_name="Voters Data", index=False)
@@ -211,7 +257,7 @@ def export_voters_excel(request):
             buffer.getvalue(),
             content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             headers={
-                "Content-Disposition": 'attachment; filename="report.xlsx"'
+                "Content-Disposition": f'attachment; filename="{filename}"'
             }
         )
 
