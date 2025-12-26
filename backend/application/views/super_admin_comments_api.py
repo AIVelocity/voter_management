@@ -1,8 +1,5 @@
-
 from ..models import ActivityLog
 from .single_voters_api import format_indian_datetime
-
-
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -41,7 +38,7 @@ def all_comments(request):
             "commented_by_mobile": user.mobile_no if user else None,
 
             # voter info
-            "voter_sr_no" : voter.serial_number if voter else None,
+            "voter_sr_no" : voter.sr_no if voter else None,
             "voter_list_id": voter.voter_list_id if voter else None,
             "voter_id": voter.voter_id if voter else None,
             "voter_name": voter.voter_name_eng if voter else None,

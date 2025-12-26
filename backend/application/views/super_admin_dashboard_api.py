@@ -1,20 +1,15 @@
-from ..models import VoterList,VoterRelationshipDetails,VoterUserMaster
+from .voters_info_api import split_marathi_name
+from ..models import VoterList,VoterUserMaster
 from django.db.models import Count
 from django.utils import timezone
 from datetime import timedelta
 from django.db.models import Count, OuterRef, Subquery, IntegerField, Value
 from django.db.models.functions import Coalesce
-from django.views.decorators.csrf import csrf_exempt
 from django.db import transaction
-import json
-from django.core.paginator import Paginator, EmptyPage
+from django.core.paginator import Paginator
 from collections import defaultdict
 from .filter_api import apply_multi_filter,apply_tag_filter
 from .search_api import apply_dynamic_initial_search
-
-# main dashboard api
-
-
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -23,24 +18,6 @@ from rest_framework.response import Response
 @permission_classes([IsAuthenticated])
 def dashboard(request):
 
-    # today = timezone.now().date()
-    # start_of_week = today - timedelta(days=today.weekday())
-    # start_of_last_week = start_of_week - timedelta(days=7)
-    # end_of_last_week = start_of_week - timedelta(days=1)
-
-    # # This week
-    # this_week_count = VoterList.objects.filter(
-    #     check_progress=True,
-    #     check_progress_date__gte=start_of_week
-    # ).count()
-
-    # # Last week
-    # last_week_count = VoterList.objects.filter(
-    #     check_progress=True,
-    #     check_progress_date__range=(start_of_last_week, end_of_last_week)
-    # ).count()
-
-    # difference = this_week_count - last_week_count
     today = timezone.now().date()
 
     # Sunday start
@@ -157,7 +134,8 @@ def dashboard(request):
             "cumulative_count": running_total
         })
 
-    total_visited = VoterList.objects.filter(check_progress_date__isnull=False).count()
+    # total_visited = VoterList.objects.filter(check_progress_date__isnull=False).count()
+    total_visited = red_color_tags + orange_color_tags + green_color_tags + golden_color_tags
     
     return Response({
         "SUCCESS": True,
@@ -303,6 +281,9 @@ def admin_allocation_panel(request):
         m for m in members if m["assigned_count"] == 0
     ]
 
+    total_admins_karyakarta = total_admins + total_karyakartas
+    total_assigned_admins_karyakarta = assigned_admins + assigned_karyakartas
+    total_unassigned_admins_karyakarta = unassigned_admins + unassigned_karyakartas
     return Response({
         "SUCCESS" :True,
         "data":{ 
@@ -311,9 +292,9 @@ def admin_allocation_panel(request):
                 "assigned_admins": assigned_admins,
                 "unassigned_admins": unassigned_admins,
                 "total_voters": total_voters,
-                "total_karyakartas": total_karyakartas,
-                "assigned_karyakartas": assigned_karyakartas,
-                "unassigned_karyakartas": unassigned_karyakartas
+                "total_karyakartas": total_admins_karyakarta ,
+                "assigned_karyakartas": total_assigned_admins_karyakarta,
+                "unassigned_karyakartas": total_unassigned_admins_karyakarta
                 },
                 
                 # # ---------- FIRST SCREEN ----------
@@ -339,14 +320,11 @@ def admin_allocation_panel(request):
         }
     )
 
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.response import Response
-
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def unassigned_voters(request):
-
+    lang = request.headers.get("Accept-Language", "en")
+    is_marathi = lang.lower().startswith("mr")
     page = int(request.GET.get("page", 1))
     size = int(request.GET.get("size", 100))
     sort = request.GET.get("sort")
@@ -376,7 +354,7 @@ def unassigned_voters(request):
 
     # badge = request.GET.get("badge")
 
-    qs = VoterList.objects.select_related("tag_id").filter(user__isnull=True).order_by("serial_number")
+    qs = VoterList.objects.select_related("tag_id").filter(user__isnull=True).order_by("sr_no")
     
     # Apply advanced search (name + voter_id)
     if search:
@@ -385,43 +363,6 @@ def unassigned_voters(request):
     # If Python converted to list → sort manually
     if isinstance(qs, list):
         qs.sort(key=lambda x: x.voter_list_id)
-
-
-    # caste = request.GET.get("caste")
-    # occupation = request.GET.get("occupation")
-
-    # ---------- CAST / CASTE ----------
-    # if caste:
-    #     caste_ids = [c.strip() for c in caste.split(",")]
-    #     if "null" in [c.lower() for c in caste_ids]:
-    #         qs = qs.filter(cast__isnull=True)
-    #     else:
-    #         qs = qs.filter(cast__in=caste_ids)
-
-
-    # # ---------- OCCUPATION ----------
-    # if occupation:
-    #     if occupation.lower() == "null":
-    #         qs = qs.filter(occupation__isnull=True)
-    #     else:
-    #         qs = qs.filter(occupation=int(occupation))
-
-    # # ---------- RELIGION ----------
-    # if religion:
-    #     religion_ids = [r.strip() for r in religion.split(",")]
-
-    #     if "null" in [r.lower() for r in religion_ids]:
-    #         qs = qs.filter(religion__isnull=True)
-    #     else:
-    #         qs = qs.filter(religion_id__in=religion_ids)
-
-
-    # ---------- TAG ----------
-    # if tag:
-    #     qs = qs.filter(tag_id=int(tag))
-
-    # if badge:
-    #     qs = qs.filter(badge__icontains=badge)
     
     if voter_id:
         qs = qs.filter(voter_id__icontains=voter_id)
@@ -463,25 +404,12 @@ def unassigned_voters(request):
 
         qs = qs.filter(age_q)
 
-    # if age_max:
-    #     qs = qs.filter(age_eng__lte=age_max)
-
-    # if age_min:
-    #     qs = qs.filter(age_eng__gte=age_min)
-
     if location:
         qs = qs.filter(location__icontains=location)
-     
     
     if sort:
         qs = qs.order_by(sort)
-    # else:
-    #     qs = qs.order_by(voter)
 
-    # if gender:
-    #     qs = qs.filter(gender_eng__iexact=gender)
-
-    # Apply ENDS WITH filters
     if first_ends:
         qs = qs.filter(first_name__iendswith=first_ends)
     
@@ -503,17 +431,34 @@ def unassigned_voters(request):
 
     data = []
     for v in page_obj:
+        if is_marathi:
+            first_name, middle_name, last_name = split_marathi_name(
+                v.voter_name_marathi
+            )
+
+            voter_name_eng = v.voter_name_marathi
+            age_eng = v.age
+            gender_eng = v.gender
+        else:
+            first_name = v.first_name
+            middle_name = v.middle_name
+            last_name = v.last_name
+
+            voter_name_eng = v.voter_name_eng
+            age_eng = v.age_eng
+            gender_eng = v.gender_eng
+            
         data.append({
-            "sr_no" : v.serial_number,
+            "sr_no" : v.sr_no,
             "voter_list_id": v.voter_list_id,
-            "voter_name_eng": v.voter_name_eng,
+            "voter_name_eng": voter_name_eng,
             "voter_id": v.voter_id,
-            "gender": v.gender_eng,
+            "gender": gender_eng,
             "location": v.location,
             "badge": v.badge,
             "tag": v.tag_id.tag_name if v.tag_id else None,
             "kramank": v.kramank,
-            "age":v.age_eng,
+            "age":age_eng,
             "ward_id": v.ward_no
         })
 
@@ -526,11 +471,6 @@ def unassigned_voters(request):
         "records_returned": len(data),
         "data": data
     })
-
-
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.response import Response
 
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
@@ -588,60 +528,6 @@ def assign_voters_to_karyakarta(request):
         }, status=500)
 
 
-# def auto_select_unassigned_voters(request):
-
-#     try:
-#         count = int(request.GET.get("count", 0))
-#     except ValueError:
-#         return Response({
-#             "status": False,
-#             "message": "Invalid count"
-#         }, status=400)
-
-#     if count <= 0:
-#         return Response({
-#             "status": False,
-#             "message": "Count must be greater than 0"
-#         }, status=400)
-
-#     voters = (
-#         VoterList.objects
-#         .filter(user__isnull=True)
-#         .order_by("serial_number,")
-#         .values(
-#             "voter_list_id",
-#             "serial_number",
-#             "voter_id",
-#             "voter_name_eng",
-#             "voter_name_marathi",
-#             "mobile_no",
-#             "ward_no",
-#             "age",
-#             "gender_eng",
-#             "badge",
-#             "location"
-#         )[:count]
-#     )
-
-#     return Response({
-#         "status": True,
-#         "requested_count": count,
-#         "returned_count": len(voters),
-#         "voters": list(voters),
-#         "voter_ids": [v["voter_list_id"] for v in voters]
-#     })
-
-
-from django.views.decorators.csrf import csrf_exempt
-from django.db import transaction
-from ..models import VoterList, VoterUserMaster
-import json
-
-
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.response import Response
-
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def auto_select_unassigned_voters(request):
@@ -687,7 +573,7 @@ def auto_select_unassigned_voters(request):
                 VoterList.objects
                 .select_for_update()               # prevents race condition
                 .filter(user__isnull=True)
-                .order_by("serial_number")
+                .order_by("sr_no")
                 .values_list("voter_list_id", flat=True)[:count]
             )
 
@@ -710,6 +596,166 @@ def auto_select_unassigned_voters(request):
             "assigned_count": updated,
             "assigned_voter_ids": voters,
             "message" : "Voters Assigned successfully"
+        })
+
+    except Exception as e:
+        return Response({
+            "status": False,
+            "error": str(e)
+        }, status=500)
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def auto_unassign_voters(request):
+
+    if request.method != "POST":
+        return Response({
+            "status": False,
+            "message": "POST method required"
+        }, status=405)
+
+    try:
+        body = request.data
+
+        karyakarta_user_id = body.get("karyakarta_user_id")
+        count = body.get("count")
+
+        if not karyakarta_user_id or not count:
+            return Response({
+                "status": False,
+                "message": "karyakarta_user_id and count are required"
+            }, status=400)
+
+        count = int(count)
+        if count <= 0:
+            return Response({
+                "status": False,
+                "message": "Count must be greater than 0"
+            }, status=400)
+
+        # Validate karyakarta
+        try:
+            karyakarta = VoterUserMaster.objects.get(user_id=karyakarta_user_id)
+        except VoterUserMaster.DoesNotExist:
+            return Response({
+                "status": False,
+                "message": "Karyakarta not found"
+            }, status=404)
+
+        with transaction.atomic():
+
+            # fetch last N assigned voters for this karyakarta
+            voters = list(
+                VoterList.objects
+                .select_for_update()               # prevents race condition
+                .filter(user=karyakarta)
+                .order_by("-sr_no")
+                .values_list("voter_list_id", flat=True)[:count]
+            )
+
+            if not voters:
+                return Response({
+                    "status": True,
+                    "unassigned_count": 0,
+                    "message": "No assigned voters available for this karyakarta"
+                })
+
+            # unassign them
+            updated = (
+                VoterList.objects
+                .filter(voter_list_id__in=voters, user=karyakarta)
+                .update(user=None)
+            )
+
+        return Response({
+            "status": True,
+            "unassigned_count": updated,
+            "unassigned_voter_ids": voters,
+            "message": "Voters unassigned successfully"
+        })
+
+    except Exception as e:
+        return Response({
+            "status": False,
+            "error": str(e)
+        }, status=500)
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def unassign_voters(request):
+
+    if request.method != "POST":
+        return Response({
+            "status": False,
+            "message": "POST method required"
+        }, status=405)
+
+    try:
+        body = request.data
+
+        voter_ids = body.get("voter_ids", [])
+
+        if not voter_ids:
+            return Response({
+                "status": False,
+                "message": "voter_ids are required"
+            }, status=400)
+
+        with transaction.atomic():
+            updated_count = (
+                VoterList.objects
+                .filter(
+                    voter_list_id__in=voter_ids,
+                    user__isnull=False      # only assigned voters
+                )
+                .update(user=None)
+            )
+
+        return Response({
+            "status": True,
+            "unassigned_count": updated_count,
+            "message": "Voters unassigned successfully"
+        })
+
+    except Exception as e:
+        return Response({
+            "status": False,
+            "error": str(e)
+        }, status=500)
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def unassign_all_voters_of_karyakarta(request):
+
+    try:
+        body = request.data
+        karyakarta_user_id = body.get("karyakarta_user_id")
+
+        if not karyakarta_user_id:
+            return Response({
+                "status": False,
+                "message": "karyakarta_user_id is required"
+            }, status=400)
+
+        try:
+            karyakarta = VoterUserMaster.objects.get(user_id=karyakarta_user_id)
+        except VoterUserMaster.DoesNotExist:
+            return Response({
+                "status": False,
+                "message": "Karyakarta not found"
+            }, status=404)
+
+        with transaction.atomic():
+            updated = (
+                VoterList.objects
+                .filter(user=karyakarta)
+                .update(user=None)
+            )
+
+        return Response({
+            "status": True,
+            "unassigned_count": updated,
+            "message": "All voters unassigned from karyakarta"
         })
 
     except Exception as e:
