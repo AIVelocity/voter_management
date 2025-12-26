@@ -269,7 +269,8 @@ def export_voters_excel(request):
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
-# @renderer_classes([ExcelRenderer])
+@renderer_classes([ExcelRenderer])
+
 def voters_export(request):
 
     try:
@@ -298,7 +299,6 @@ def voters_export(request):
             qs = (
                 build_voter_queryset(request,user)
                 .select_related("tag_id", "occupation", "cast", "religion", "user")
-                # .filter(user=user, check_progress_date=report_date)
                 .order_by("sr_no")
             )
         else:
@@ -437,14 +437,13 @@ def voters_export(request):
 
         buffer.seek(0)
 
-        response = HttpResponse(
+        return Response(
             buffer.getvalue(),
-            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={
+                "Content-Disposition": f'attachment; filename="{filename}"'
+            }
         )
-        response["Content-Disposition"] = f'attachment; filename="{filename}"'
-        response["Content-Length"] = buffer.tell()
-        
-        return response
 
     except Exception as e:
         return Response({"status": False, "error": str(e)}, status=400)
