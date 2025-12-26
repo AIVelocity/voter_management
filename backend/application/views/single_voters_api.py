@@ -275,12 +275,12 @@ def single_voters_info(request, voter_list_id):
     # ---------- FAMILY FROM DB (SOURCE OF TRUTH) ----------
     family = get_family_from_db(voter, is_marathi)
     
-    if not (
-        family["father"] or family["mother"] or family["wife"]
-        or family["husband"] or family["siblings"] or family["children"]
-    ):
-        calculate_and_save_family(voter)
-        family = get_family_from_db(voter)
+    # if not (
+    #     family["father"] or family["mother"] or family["wife"]
+    #     or family["husband"] or family["siblings"] or family["children"]
+    # ):
+    #     calculate_and_save_family(voter)
+    #     family = get_family_from_db(voter)
 
     father = family.get("father")
     mother = family.get("mother")
