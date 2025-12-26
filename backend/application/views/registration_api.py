@@ -85,7 +85,10 @@ def registration(request):
         last_name=last_name,
         mobile_no=mobile_no,
         password=make_password(password),
+<<<<<<< HEAD
+=======
         
+>>>>>>> eb81c87bb04a8e95db1e5fb2d87e801e16dce5f2
         role_id=role_id
     )
 

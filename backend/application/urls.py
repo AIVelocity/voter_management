@@ -64,6 +64,9 @@ urlpatterns = [
     path("mobile_permission/",views.match_contacts_with_users,name="match_contacts_with_users"),   
     path("mobile/print/",views.print_voters_by_ids,name="print_voters_by_ids"),
     path("voters/image/",views.voters_info_photo,name="voters_info_photo"),
+<<<<<<< HEAD
+    
+=======
     path("mobile_permission/list/", views.matched_contacts_list, name="matched_contacts_list"),
     
     path("user/list/", views.list_all_users, name="list_all_users"),
@@ -75,4 +78,5 @@ urlpatterns = [
     path("health/", views.health, name="health"),
     path("reset_password/", views.reset_password, name="reset_password"),
 
+>>>>>>> eb81c87bb04a8e95db1e5fb2d87e801e16dce5f2
 ]
