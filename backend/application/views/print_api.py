@@ -5,6 +5,8 @@ import json
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from django.db.models import Q
+from django.core.paginator import Paginator
 
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
@@ -91,6 +93,94 @@ def print_voters_by_ids(request):
         "voters": voters
     })
     
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def list_voters_for_print(request):
+
+    # ---------- AUTH ----------
+    user = request.user
+    if not user or not user.is_authenticated:
+        return Response(
+            {"status": False, "message": "Unauthorized"},
+            status=401
+        )
+
+    try:
+        user = (
+            VoterUserMaster.objects
+            .select_related("role")
+            .get(user_id=user.user_id)
+        )
+    except VoterUserMaster.DoesNotExist:
+        return Response(
+            {"status": False, "message": "User not found"},
+            status=404
+        )
+
+    # ---------- PAGINATION ----------
+    page = int(request.GET.get("page", 1))
+    size = int(request.GET.get("size", 100))
+
+    # ---------- ROLE BASED QUERY ----------
+    privileged_roles = ["Volunteer"]
+
+    if user.role.role_name in privileged_roles:
+        has_assigned_voters = VoterList.objects.filter(user_id=user.user_id).exists()
+
+        if has_assigned_voters:
+            qs = (
+                VoterList.objects
+                .filter(user_id=user.user_id)
+                .order_by("sr_no")
+            )
+        else:
+            qs = (
+                VoterList.objects
+                .order_by("sr_no")
+            )
+    else:
+        qs = (
+            VoterList.objects
+            .order_by("sr_no")
+        )
+
+    # ---------- SELECT ONLY REQUIRED FIELDS ----------
+    qs = qs.values(
+        "voter_list_id",
+        "voter_id",
+        "voter_name_marathi",
+        "yadivibagh",
+        "anukramank",
+        "matdankendra",
+    )
+
+    # ---------- PAGINATE ----------
+    paginator = Paginator(qs, size)
+    page_obj = paginator.get_page(page)
+
+    # ---------- FORMAT RESPONSE ----------
+    voters = []
+    for v in page_obj:
+        voters.append({
+            "voter_list_id": v["voter_list_id"],
+            "voter_name_mar": v["voter_name_marathi"],
+            "yadivibhag": v["yadivibagh"],
+            "anukramank": v["anukramank"],
+            "voter_id": v["voter_id"],
+            "voting_address": v["matdankendra"],
+        })
+
+    return Response({
+        "status": True,
+        "page": page,
+        "page_size": size,
+        "total_pages": paginator.num_pages,
+        "total_records": paginator.count,
+        "records_returned": len(voters),
+        "voters": voters
+    })
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
