@@ -60,11 +60,13 @@ def print_voters_by_ids(request):
         .values(
             "voter_list_id",
             "voter_id",
-            
             "voter_name_marathi",
+            "kramank",
+            "age_eng",
+            "gender_eng",
             "yadivibagh",
             "anukramank",
-            "matdankendra",
+            "matdankendra"
         )
     )
 
@@ -84,7 +86,10 @@ def print_voters_by_ids(request):
             "yadivibhag": v["yadivibagh"],
             "anukramank": v["anukramank"],
             "voter_id": v["voter_id"],
-            "voting_address": v["matdankendra"]
+            "voting_address": v["matdankendra"],
+            "kramank": v["kramank"],
+            "age_eng": v["age_eng"],
+            "gender_eng": v["gender_eng"]
         })
 
     return Response({
@@ -151,6 +156,9 @@ def list_voters_for_print(request):
         "voter_list_id",
         "voter_id",
         "voter_name_marathi",
+        "kramank",
+        "age_eng",
+        "gender_eng",
         "yadivibagh",
         "anukramank",
         "matdankendra",
@@ -170,6 +178,9 @@ def list_voters_for_print(request):
             "anukramank": v["anukramank"],
             "voter_id": v["voter_id"],
             "voting_address": v["matdankendra"],
+            "kramank": v["kramank"],
+            "age_eng": v["age_eng"],
+            "gender_eng": v["gender_eng"]
         })
 
     return Response({
