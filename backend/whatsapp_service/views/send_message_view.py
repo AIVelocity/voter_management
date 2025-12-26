@@ -27,12 +27,13 @@ def send_template(request):
     if request.method != "POST":
         return JsonResponse({"status": False, "message": "Only POST allowed"}, status=405)
 
-    recipients, errors = get_recipients_from_request(request)
+    recipients, errors= get_recipients_from_request(request)
     if not recipients:
         return JsonResponse({"status": False, "message": "No recipients", "errors": errors}, status=400)
 
     data = parse_request_body(request)
     template_id = data.get("id")
+
     if not template_id:
         return JsonResponse({"status": False, "message": "template_id required"}, status=400)
 
@@ -54,12 +55,31 @@ def send_template(request):
         if not phone:
             errors.append(f"No phone for voter_list_id {getattr(v, 'voter_list_id', None)} - skipped")
             continue
+        template_payload = {
+            "name": template.name,
+            "language": {"code": template.template_language},
+        }
+
+        if template.body_param_count > 0:
+            template_payload["components"] = [
+                {
+                    "type": "body",
+                    "parameters": [
+                        {"type": "text", "text": v.voter_name_marathi},
+                        {"type": "text", "text": v.yadivibagh},
+                        {"type": "text", "text": v.anukramank},
+                        {"type": "text", "text": v.voter_id},
+                        {"type": "text", "text": v.matdankendra},
+                    ][:template.body_param_count]
+                }
+            ]
+
         payload = {
             "messaging_product": "whatsapp",
             "recipient_type": "individual",
             "to": country_code + phone,
             "type": "template",
-            "template": {"name": template.name, "language": {"code": template.template_language}}
+            "template": template_payload
         }
         tasks.append((payload, v))
 
@@ -347,7 +367,6 @@ def send_document(request):
     data = parse_request_body(request)
     media_id = data.get("media_id")
     media_url=data.get("media_url")
-    print("media_url",media_url)
     if not media_id:
         return JsonResponse({"status": False, "message": "media_id required for document"}, status=400)
 

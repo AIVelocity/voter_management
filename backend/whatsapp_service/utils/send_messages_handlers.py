@@ -2,8 +2,6 @@ import json
 import re
 import uuid
 import requests
-import mimetypes
-import boto3
 from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
@@ -75,7 +73,6 @@ def get_recipients_from_request(request) -> Tuple[List[Any], List[str]]:
         voter_list_ids = [voter_list_ids]
     # Normalize str ints
     voter_list_ids = list(map(lambda x: int(x) if isinstance(x, (int, str)) and str(x).isdigit() else x, voter_list_ids))
-
     for vid in voter_list_ids:
         try:
             v_obj = VoterList.objects.get(voter_list_id=vid)
