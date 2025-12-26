@@ -270,7 +270,6 @@ def export_voters_excel(request):
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 @renderer_classes([ExcelRenderer])
-
 def voters_export(request):
 
     try:
