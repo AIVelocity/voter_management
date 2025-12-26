@@ -19,16 +19,11 @@ from .change_password_api import password_change
 from .module_api import get_all_roles_permissions,bulk_update_permissions,get_roles_permissions
 from .excel_report import export_voters_excel
 from .contact_match_api import match_contacts_with_users
-<<<<<<< HEAD
-from .print_api import print_voters_by_ids
-from .photo_api import voters_info_photo
-=======
 from .print_api import print_voters_by_ids,matched_contacts_list
 from .photo_api import voters_info_photo
 from .user_details import list_all_users
 from .twilio_api import otp_start,otp_verify,health,reset_password
 # from .lanaguage_api import set_language
->>>>>>> eb81c87bb04a8e95db1e5fb2d87e801e16dce5f2
 
 __all__ = [
     "tags",
@@ -74,9 +69,6 @@ __all__ = [
     "print_voters_by_ids",
     "get_roles_permissions",
     "delete_uploaded_login_excel",
-<<<<<<< HEAD
-    "voters_info_photo"
-=======
     "voters_info_photo",
     "matched_contacts_list",
     "list_all_users",
@@ -89,5 +81,4 @@ __all__ = [
     "otp_verify",
     "health",
     "reset_password",
->>>>>>> eb81c87bb04a8e95db1e5fb2d87e801e16dce5f2
 ]

@@ -78,7 +78,7 @@ def export_voters_excel(request):
         qs = (
             build_voter_queryset(request,user)
             .select_related("tag_id", "occupation", "cast", "religion", "user")
-            .filter(user=user)
+            .filter(user=user, check_progress_date=report_date)
             .order_by("sr_no")
         )
 
