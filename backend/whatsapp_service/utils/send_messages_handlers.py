@@ -2,8 +2,6 @@ import json
 import re
 import uuid
 import requests
-import mimetypes
-import boto3
 from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
@@ -75,7 +73,6 @@ def get_recipients_from_request(request) -> Tuple[List[Any], List[str]]:
         voter_list_ids = [voter_list_ids]
     # Normalize str ints
     voter_list_ids = list(map(lambda x: int(x) if isinstance(x, (int, str)) and str(x).isdigit() else x, voter_list_ids))
-
     for vid in voter_list_ids:
         try:
             v_obj = VoterList.objects.get(voter_list_id=vid)
@@ -164,7 +161,7 @@ def send_whatapps_request(payload: dict,
     except Exception:
         pass  # keep role fields empty if resolution fails
 
-    if message_type not in ["text", "template"] and not is_within_reengagement_window(voter):
+    if message_type != "template" and not is_within_reengagement_window(voter):
         db_id = _make_fallback_local_id()
         reply_to_db = _resolve_reply_to(reply_to_message_id)
 
