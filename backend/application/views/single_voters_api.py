@@ -411,11 +411,7 @@ def single_voters_info(request, voter_list_id):
         "ward_id": voter.ward_no,
         "location": voter.location,
         "badge": voter.badge,
-<<<<<<< HEAD
-        "tag": voter.tag_id.tag_name if voter.tag_id else None,
-=======
         "tag": tag_name,
->>>>>>> eb81c87bb04a8e95db1e5fb2d87e801e16dce5f2
         "tag_obj": {
             "id": voter.tag_id.tag_id if voter.tag_id else None,
             "name": tag_name

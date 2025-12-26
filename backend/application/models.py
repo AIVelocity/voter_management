@@ -177,8 +177,6 @@ class VoterUserMaster(AbstractBaseUser):
 
     def __str__(self):
         return f"{self.first_name or ''} {self.last_name or ''} - {self.mobile_no}"
-<<<<<<< HEAD
-=======
 
 
 # class VoterList(models.Model):
@@ -308,18 +306,13 @@ class VoterUserMaster(AbstractBaseUser):
 #             self.check_progress_date = timezone.now().date()
     
 #         super().save(*args, **kwargs)
->>>>>>> eb81c87bb04a8e95db1e5fb2d87e801e16dce5f2
 
 
 class VoterList(models.Model):
 
     voter_list_id = models.AutoField(primary_key=True)
     sr_no = models.IntegerField()
-<<<<<<< HEAD
-    voter_id = models.CharField(max_length=20, null=True, blank=True)
-=======
     voter_id = models.CharField(max_length=200, null=True, blank=True)  # increased to match SQL (varchar(200))
->>>>>>> eb81c87bb04a8e95db1e5fb2d87e801e16dce5f2
 
     voter_name_marathi = models.TextField(null=True, blank=True)
     voter_name_eng = models.TextField(null=True, blank=True)
@@ -341,16 +334,6 @@ class VoterList(models.Model):
     address_line2 = models.TextField(null=True, blank=True)
     address_line3 = models.TextField(null=True, blank=True)
 
-<<<<<<< HEAD
-    age = models.CharField(max_length=10, null=True, blank=True)
-    age_eng = models.IntegerField(null=True, blank=True)
-
-    gender = models.TextField(null=True, blank=True)
-    gender_eng = models.CharField(max_length=10, null=True, blank=True)
-
-    image_name = models.CharField(max_length=255, null=True, blank=True)
-
-=======
     age = models.CharField(max_length=50, null=True, blank=True)      # varchar(50) in SQL
     age_eng = models.CharField(max_length=50, null=True, blank=True)  # varchar(50) in SQL (was IntegerField)
 
@@ -363,7 +346,6 @@ class VoterList(models.Model):
     image = models.TextField(null=True, blank=True)
     image_path = models.TextField(null=True, blank=True)
 
->>>>>>> eb81c87bb04a8e95db1e5fb2d87e801e16dce5f2
     mobile_no = models.CharField(max_length=10, null=True, blank=True, validators=[mobile_validator])
     alternate_mobile1 = models.CharField(max_length=10, null=True, blank=True, validators=[mobile_validator])
     alternate_mobile2 = models.CharField(max_length=10, null=True, blank=True, validators=[mobile_validator])
@@ -424,11 +406,7 @@ class VoterList(models.Model):
     yadivibagh = models.IntegerField(null=True,blank=True)
     anukramank = models.IntegerField(null=True,blank=True)
     matdankendra = models.TextField(null=True,blank=True)
-<<<<<<< HEAD
-
-=======
     address_marathi = models.TextField(null=True, blank=True)
->>>>>>> eb81c87bb04a8e95db1e5fb2d87e801e16dce5f2
 
     class Meta:
         db_table = "final_voter_list"
@@ -712,70 +690,5 @@ class OTPRequest(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     is_used = models.BooleanField(default=False)
 
-<<<<<<< HEAD
-    voter_id = models.CharField(
-        max_length=200,
-        null=True,
-        blank=True
-    )
-
-    voter_name_marathi = models.CharField(
-        max_length=1000,
-        null=True,
-        blank=True
-    )
-
-    voter_name_english = models.CharField(
-        max_length=1000,
-        null=True,
-        blank=True
-    )
-
-    kramank = models.CharField(
-        max_length=200,
-        null=True,
-        blank=True
-    )
-
-    address = models.CharField(
-        max_length=1000,
-        null=True,
-        blank=True
-    )
-
-    age_marathi = models.CharField(
-        max_length=50,
-        null=True,
-        blank=True
-    )
-
-    age_english = models.CharField(
-        max_length=50,
-        null=True,
-        blank=True
-    )
-
-    gender_marathi = models.CharField(
-        max_length=50,
-        null=True,
-        blank=True
-    )
-
-    gender_english = models.CharField(
-        max_length=50,
-        null=True,
-        blank=True
-    )
-
-    created_date = models.DateTimeField(
-        auto_now_add=False,
-        auto_now=False
-    )
-
-    class Meta:
-        db_table = "voter_list_2"
-        managed = False   # VERY IMPORTANT (table already exists)
-=======
     def is_expired(self):
         return timezone.now() > self.created_at + timezone.timedelta(minutes=5)
->>>>>>> eb81c87bb04a8e95db1e5fb2d87e801e16dce5f2
