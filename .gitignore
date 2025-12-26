@@ -1,1 +1,4 @@
 venv
+images\Cropped_detected_boxes
+images/*
+backend/images/*

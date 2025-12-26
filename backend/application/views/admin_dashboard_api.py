@@ -1,16 +1,14 @@
-from ..models import VoterList,VoterRelationshipDetails,VoterUserMaster
+from ..models import VoterList,VoterUserMaster
 from django.db.models import Count
 from django.utils import timezone
 from datetime import timedelta
-from django.db.models import Count, OuterRef, Subquery, IntegerField, Value
-from django.db.models.functions import Coalesce
-from django.views.decorators.csrf import csrf_exempt
+from django.db.models import Count, OuterRef
 from django.db import transaction
 import json
 from django.core.paginator import Paginator, EmptyPage
 from collections import defaultdict
 from rest_framework_simplejwt.tokens import AccessToken
-
+from .voters_info_api import split_marathi_name
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -19,29 +17,12 @@ from rest_framework.response import Response
 @permission_classes([IsAuthenticated])
 def admin_dashboard(request):
 
-    # today = timezone.now().date()
-    # start_of_week = today - timedelta(days=today.weekday())
-    # start_of_last_week = start_of_week - timedelta(days=7)
-    # end_of_last_week = start_of_week - timedelta(days=1)
-
-    # # This week
-    # this_week_count = VoterList.objects.filter(
-    #     check_progress=True,
-    #     check_progress_date__gte=start_of_week
-    # ).count()
-
-    # # Last week
-    # last_week_count = VoterList.objects.filter(
-    #     check_progress=True,
-    #     check_progress_date__range=(start_of_last_week, end_of_last_week)
-    # ).count()
-
-    # difference = this_week_count - last_week_count
     user = None
     user_id = None
     
     try:
         auth_header = request.headers.get("Authorization")
+        lang = request.headers.get("lang", "en")
     
         if auth_header and auth_header.startswith("Bearer "):
             token_str = auth_header.split(" ")[1]
@@ -266,6 +247,8 @@ def volunteer_allocation_panel(request):
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def unassigned_voters(request):
+    lang = request.headers.get("Accept-Language", "en")
+    is_marathi = lang.lower().startswith("mr")
 
     # -------- GET PARAMS --------
     page = int(request.GET.get("page", 1))
@@ -276,7 +259,7 @@ def unassigned_voters(request):
         VoterList.objects
         .filter(user__isnull=True)
         .values(
-            "serial_number",
+            "sr_no",
             "voter_list_id",
             # "sr_no",
             "voter_id",
@@ -289,7 +272,7 @@ def unassigned_voters(request):
             "badge",
             "location"
         )
-        .order_by("voter_list_id")
+        .order_by("sr_no")
     )
 
     total_count = queryset.count()
@@ -299,6 +282,51 @@ def unassigned_voters(request):
 
     try:
         page_obj = paginator.page(page)
+        voters = []
+
+        for v in page_obj.object_list:
+            if is_marathi:
+                first_name, middle_name, last_name = split_marathi_name(
+                    v.get("voter_name_marathi")
+                )
+
+                voters.append({
+                    "serial_number": v["sr_no"],
+                    "voter_list_id": v["voter_list_id"],
+                    "voter_id": v["voter_id"],
+
+                    "voter_name": v["voter_name_marathi"],
+                    "first_name": first_name,
+                    "middle_name": middle_name,
+                    "last_name": last_name,
+
+                    "mobile_no": v["mobile_no"],
+                    "ward_no": v["ward_no"],
+                    "age": v["age"],
+                    "gender": v.get("gender"),   # Marathi gender
+                    "badge": v["badge"],
+                    "location": v["location"],
+                })
+
+            else:
+                voters.append({
+                    "serial_number": v["sr_no"],
+                    "voter_list_id": v["voter_list_id"],
+                    "voter_id": v["voter_id"],
+
+                    "voter_name": v["voter_name_eng"],
+                    "first_name": v["first_name"],
+                    "middle_name": v["middle_name"],
+                    "last_name": v["last_name"],
+
+                    "mobile_no": v["mobile_no"],
+                    "ward_no": v["ward_no"],
+                    "age": v["age"],
+                    "gender": v["gender_eng"],
+                    "badge": v["badge"],
+                    "location": v["location"],
+                })
+
     except EmptyPage:
         return Response({
             "status": True,
@@ -317,7 +345,7 @@ def unassigned_voters(request):
         "total_pages": paginator.num_pages,
         "has_next": page_obj.has_next(),
         "has_previous": page_obj.has_previous(),
-        "voters": list(page_obj.object_list)
+        "voters": voters
     })
 
 
@@ -419,16 +447,6 @@ def assign_voters_to_karyakarta(request):
 #         "voters": list(voters),
 #         "voter_ids": [v["voter_list_id"] for v in voters]
 #     })
-
-from django.db import transaction
-from ..models import VoterList, VoterUserMaster
-import json
-
-
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.response import Response
-
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def auto_assign_unassigned_voters(request):

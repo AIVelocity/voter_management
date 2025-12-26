@@ -13,10 +13,35 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 from pathlib import Path
 import os
 from datetime import timedelta
+from dotenv import load_dotenv
+
+load_dotenv()
+SECRET_KEY = os.getenv("SECRET_KEY")
+
+DEBUG = os.getenv("DEBUG") == "True"
+
+TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID")
+TWILIO_AUTH_TOKEN = os.getenv("TWILIO_AUTH_TOKEN")
+TWILIO_VERIFY_SERVICE_SID = os.getenv("TWILIO_VERIFY_SERVICE_SID")
+OTP_TTL_SECONDS = os.getenv("OTP_TTL_SECONDS", "300")
+RATE_LIMIT_PER_PHONE_PER_HOUR = int(
+    os.getenv("RATE_LIMIT_PER_PHONE_PER_HOUR", "5")
+)
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
-
+USE_I18N = True
+USE_L10N = True
+USE_TZ = True
+LANGUAGE_CODE = 'en'
+LANGUAGES = [
+    ('en', 'English'),
+    ('hi', 'Hindi'),
+    ('mr', 'Marathi'),
+]
+LOCALE_PATHS = [
+    BASE_DIR / 'locale',
+]
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
@@ -25,11 +50,11 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-w^w75v0)bmgunxwhmmagl0bp*1rf$p^u9q-ca$2!%+q%(8f7=&'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
-
+DEBUG = True
+PASSWORD_ENCRYPTION_KEY = "0mqmJvbV5rsJJ_M4iaXsZfsor_BNUGwFB24-WE4LK80="
 # ALLOWED_HOSTS = eval(os.getenv("ALLOWED_HOSTS"))
 
-ALLOWED_HOSTS = ["vms.rntsecops.com","172.25.240.1","172.20.1.101","59.95.99.182","127.0.0.1", "localhost", "172.20.1.155", ".ngrok-free.app", ".ngrok-free.dev"]
+ALLOWED_HOSTS = ["172.20.1.116","vms.rntsecops.com","172.25.240.1","172.20.1.101","59.95.99.182","127.0.0.1", "localhost", "172.20.1.155", ".ngrok-free.app", ".ngrok-free.dev"]
 
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(hours=18),
@@ -87,6 +112,7 @@ MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware', 
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.middleware.locale.LocaleMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -157,10 +183,10 @@ DATABASES = {
     }
 }
 
-ACCESS_TOKEN="EAATvXwkH2M4BQOUrLA03kl8bFAMsWq07KtszfRVXf1IEZB54ZB9vufzbOkbc7WeZBlUeBclC00qHyuZBg0ZAZC3o9V9EpxwsqwQfKKKYqOvkitoGj2coRSCh0cXDJS6Cwd3d2FI0F3XFYj2ecqHV607uZBH1BhSAPjU6l2aO02jzaqvNqLZC0cF9Dg9MfYJ4mDoydAZDZD"
-VERIFY_TOKEN="Toyamorchidtoken"
-MESSAGE_URL="https://graph.facebook.com/v24.0/946219375236764/messages"
-UPLOAD_URL="https://graph.facebook.com/v24.0/946219375236764/media"
+ACCESS_TOKEN=os.getenv("ACCESS_TOKEN")
+VERIFY_TOKEN=os.getenv("VERIFY_TOKEN")
+MESSAGE_URL=os.getenv("MESSAGE_URL")
+UPLOAD_URL=os.getenv("UPLOAD_URL")
 
 # AWS_ACCESS_KEY_ID= os.environ.get("AWS_ACCESS_KEY_ID")
 # AWS_SECRET_ACCESS_KEY= os.environ.get("AWS_SECRET_ACCESS_KEY")

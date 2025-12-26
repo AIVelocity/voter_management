@@ -5,6 +5,9 @@ __pycache__/
 
 # C extensions
 *.so
+echo backend/images.zip >> .gitignore
+git add .gitignore
+git commit -m "chore: ignore images.zip"
 
 # Distribution / packaging
 .Python

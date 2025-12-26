@@ -2,7 +2,7 @@
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.hashers import check_password
 from rest_framework_simplejwt.tokens import AccessToken
-from ..models import VoterUserMaster
+from ..models import VoterUserMaster, VoterList
 import json
 
 
@@ -24,8 +24,8 @@ def id_validation(request):
     try:
         body = request.data
 
-        mobile_no = body.get("mobile_no")
-        password = body.get("password")
+        mobile_no = (body.get("mobile_no") or "").strip()
+        password = (body.get("password") or "").strip()
 
         # -------- VALIDATIONS --------
         if not mobile_no:
@@ -99,6 +99,7 @@ def id_validation(request):
             "access_token": access_token,
             "token_type": "Bearer",
             "user_id": user.user_id,
+            "assigned": True if VoterList.objects.filter(user_id=user.user_id).exists() else False,
             "user_name": user_name,
             "role_id": role_id,
             "role_name": role_name,

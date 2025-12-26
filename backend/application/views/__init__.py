@@ -5,7 +5,7 @@ from .voters_info_api import voters_info
 from .add_voter_api import add_voter
 from .db_list_api import tags ,index , roles
 from .add_relationship_api import add_relation,remove_relation
-from .super_admin_dashboard_api import dashboard,admin_allocation_panel,unassigned_voters,assign_voters_to_karyakarta,auto_select_unassigned_voters
+from .super_admin_dashboard_api import dashboard,admin_allocation_panel,unassigned_voters,assign_voters_to_karyakarta,auto_select_unassigned_voters,auto_unassign_voters,unassign_voters,unassign_all_voters_of_karyakarta
 from .filter_api import filter
 from .caste_religion_api import caste_dropdown,religion_dropdown
 from .occupation_api import occupation_dropdown
@@ -19,8 +19,16 @@ from .change_password_api import password_change
 from .module_api import get_all_roles_permissions,bulk_update_permissions,get_roles_permissions
 from .excel_report import export_voters_excel
 from .contact_match_api import match_contacts_with_users
+<<<<<<< HEAD
 from .print_api import print_voters_by_ids
 from .photo_api import voters_info_photo
+=======
+from .print_api import print_voters_by_ids,matched_contacts_list
+from .photo_api import voters_info_photo
+from .user_details import list_all_users
+from .twilio_api import otp_start,otp_verify,health,reset_password
+# from .lanaguage_api import set_language
+>>>>>>> eb81c87bb04a8e95db1e5fb2d87e801e16dce5f2
 
 __all__ = [
     "tags",
@@ -66,5 +74,20 @@ __all__ = [
     "print_voters_by_ids",
     "get_roles_permissions",
     "delete_uploaded_login_excel",
+<<<<<<< HEAD
     "voters_info_photo"
+=======
+    "voters_info_photo",
+    "matched_contacts_list",
+    "list_all_users",
+    "auto_unassign_voters",
+    "unassign_voters",
+    "unassign_all_voters_of_karyakarta",
+    "send_otp",
+    "verify_otp",
+    "otp_start",
+    "otp_verify",
+    "health",
+    "reset_password",
+>>>>>>> eb81c87bb04a8e95db1e5fb2d87e801e16dce5f2
 ]

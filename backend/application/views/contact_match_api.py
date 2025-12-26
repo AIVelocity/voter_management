@@ -1,11 +1,14 @@
+from django.db.models import Q
+import os
 import re
+import json
+from django.conf import settings
+from datetime import datetime
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import AccessToken
-from django.db import transaction
-
-from ..models import VoterList, UserVoterContact
+from ..models import VoterList, UserVoterContact,UserContactPayload
 
 
 # ------------------ NORMALIZATION ------------------
@@ -26,32 +29,115 @@ def normalize_phone(number: str) -> str | None:
 
 
 def extract_contact_name(contact: dict) -> str:
-    # Android
-    if contact.get("displayName"):
-        return contact["displayName"]
+    """
+    Extracts contact name from ALL known payload formats.
+    """
 
-    # iOS
+    if not isinstance(contact, dict):
+        return "Unknown"
+
+    # 1️Custom / simplified payload
+    name = contact.get("name")
+    if isinstance(name, str) and name.strip():
+        return name.strip()
+
+    # 2Android
+    name = contact.get("displayName")
+    if isinstance(name, str) and name.strip():
+        return name.strip()
+
+    # 3 iOS (given + family)
     given = contact.get("givenName", "")
     family = contact.get("familyName", "")
-    name = f"{given} {family}".strip()
+    full = f"{given} {family}".strip()
+    if full:
+        return full
 
-    return name or "Unknown"
+    #  Other common fallbacks
+    for key in ["fullName", "contactName", "username"]:
+        value = contact.get(key)
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+
+    return "Unknown"
 
 
 def extract_phone_numbers(contact: dict) -> list[str]:
+    """
+    Extracts phone numbers from ALL known payload formats.
+    """
+
+    if not isinstance(contact, dict):
+        return []
+
     numbers = []
 
-    for p in contact.get("phoneNumbers", []):
-        if "number" in p:   # Android
-            numbers.append(p["number"])
-        elif "value" in p:  # iOS
-            numbers.append(p["value"])
+    def add(num):
+        if isinstance(num, str) and num.strip():
+            numbers.append(num.strip())
 
-    return numbers
+    # 1️ Your custom payload with {id, label, number} dicts
+    if isinstance(contact.get("numbers"), list):
+        for item in contact["numbers"]:
+            if isinstance(item, dict):
+                add(item.get("number"))
+            elif isinstance(item, str):
+                add(item)
 
+    # 2️ Android payload
+    if isinstance(contact.get("phoneNumbers"), list):
+        for item in contact["phoneNumbers"]:
+            if isinstance(item, dict):
+                add(item.get("number"))   # Android
+                add(item.get("value"))    # iOS
+
+    # 3️ Other possible keys
+    for key in ["mobile", "phone", "phoneNumber"]:
+        add(contact.get(key))
+
+    # 4️ Raw string list fallback
+    if isinstance(contact.get("phones"), list):
+        for p in contact["phones"]:
+            add(p)
+
+    # Remove duplicates while preserving order
+    seen = set()
+    unique = []
+    for n in numbers:
+        if n not in seen:
+            seen.add(n)
+            unique.append(n)
+
+    return unique
+
+def canonicalize_contacts(payload) -> list[dict]:
+    contacts = []
+
+    if isinstance(payload, list):
+        raw_contacts = payload
+
+    elif isinstance(payload, dict):
+        raw_contacts = (
+            payload.get("contacts")
+            or payload.get("data")      # ← THIS WAS MISSING
+            or []
+        )
+    else:
+        return contacts
+
+    for c in raw_contacts:
+        name = extract_contact_name(c)
+        numbers = extract_phone_numbers(c)
+
+        if numbers:
+            contacts.append({
+                "name": name,
+                "numbers": numbers
+            })
+
+    return contacts
 
 # ------------------ API ------------------
-
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def match_contacts_with_users(request):
@@ -72,83 +158,109 @@ def match_contacts_with_users(request):
             {"status": False, "message": "Unauthorized"},
             status=401
         )
-
-    data = request.data
-
-# SUPPORT BOTH PAYLOAD TYPES
-    if isinstance(data, list):
-        contacts = data
-    elif isinstance(data, dict):
-        contacts = data.get("contacts", [])
-    else:
-        contacts = []
+    body = request.data
+    # -------- CANONICALIZE INPUT --------
     
-    if not isinstance(contacts, list):
-        return Response(
-            {"status": False, "message": "contacts must be a list"},
-            status=400
-        )
+    canonical_contacts = canonicalize_contacts(body)
+    # -------- DEBUG: SAVE RAW PAYLOAD --------
+    try:
+        debug_dir = os.path.join(settings.BASE_DIR, "debug_payloads")
+        os.makedirs(debug_dir, exist_ok=True)
+    
+        filename = f"contacts_user_{user_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
+        file_path = os.path.join(debug_dir, filename)
+    
+        with open(file_path, "w", encoding="utf-8") as f:
+            f.write(json.dumps(body.get("data"), indent=2, ensure_ascii=False))
+    
+    except Exception as e:
+        print("Payload dump failed:", str(e))
+        
+    UserContactPayload.objects.create(
+        user_id=user_id,
+        payload=body)
 
-    # -------- CANONICALIZE CONTACTS --------
-    canonical_contacts = {}   # mobile_no -> contact_name
+    if not canonical_contacts:
+        return Response({"status": True, "count": 0, "matched": []})
+
+    mobile_to_name = {}
     all_numbers = set()
 
-    for contact in contacts:
-        contact_name = extract_contact_name(contact)
-        for raw in extract_phone_numbers(contact):
+    for contact in canonical_contacts:
+        name = contact["name"]
+        for raw in contact["numbers"]:
             mobile = normalize_phone(raw)
             if mobile:
-                canonical_contacts[mobile] = contact_name
+                mobile_to_name[mobile] = name
                 all_numbers.add(mobile)
 
+    # Debug: log matched numbers
     if not all_numbers:
-        return Response({"status": True, "count": 0, "matched": []})
+        return Response({
+            "status": False,
+            "message": "No valid phone numbers extracted",
+            "debug": f"canonical_contacts={canonical_contacts}"
+        })
 
     # -------- MATCH WITH VOTERLIST --------
     voters = (
         VoterList.objects
-        .filter(mobile_no__in=all_numbers)
-        .values("voter_list_id", "mobile_no", "voter_name_eng", "voter_name_marathi")
+        .filter(
+            Q(mobile_no__in=all_numbers) |
+            Q(alternate_mobile1__in=all_numbers) |
+            Q(alternate_mobile2__in=all_numbers)
+        )
+        .values(
+            "voter_id",
+            "voter_list_id",
+            "mobile_no",
+            "alternate_mobile1",
+            "alternate_mobile2",
+            "voter_name_eng",
+            "voter_name_marathi"
+        )
     )
-
-    voter_map = {v["mobile_no"]: v for v in voters}
 
     matched = []
     to_create = []
+    
+    for v in voters:
+        voter_name = v.get("voter_name_eng") or v.get("voter_name_marathi") or "Unknown"
+        # create one match per phone-field that appears in the incoming contacts
+        for fld in ("mobile_no", "alternate_mobile1", "alternate_mobile2"):
+            val = v.get(fld)
+            if not val:
+                continue
+            if val not in all_numbers:
+                continue
 
-    for mobile, contact_name in canonical_contacts.items():
-        voter = voter_map.get(mobile)
-        if voter:
-            voter_name = (
-                voter["voter_name_eng"]
-                or voter["voter_name_marathi"]
-            )
+            contact_name = mobile_to_name.get(val)
 
             matched.append({
-                "mobile_no": mobile,
+                "mobile_no": val,
                 "contact_name": contact_name,
-                "voter_id": voter["voter_list_id"],
+                "voter_id": v["voter_list_id"],
                 "voter_name": voter_name
             })
 
             to_create.append(
                 UserVoterContact(
                     user_id=user_id,
-                    voter_id=voter["voter_list_id"],
+                    voter_id=v["voter_list_id"],
                     contact_name=contact_name,
                     voter_name=voter_name,
-                    mobile_no=mobile
+                    mobile_no=val
                 )
             )
-
-    # -------- SAVE --------
+    
+    #  Bulk insert (single query)
     if to_create:
-        with transaction.atomic():
-            UserVoterContact.objects.bulk_create(
-                to_create,
-                ignore_conflicts=True
-            )
-
+        UserVoterContact.objects.bulk_create(
+            to_create,
+            ignore_conflicts=True,
+            batch_size=1000   # IMPORTANT for performance
+        )
+    
     return Response({
         "status": True,
         "count": len(matched),

@@ -2,7 +2,51 @@ from ..models import VoterList,VoterUserMaster
 from django.db.models import Q
 from rest_framework_simplejwt.tokens import AccessToken
 from django.core.paginator import Paginator
-from .search_api import apply_dynamic_initial_search
+from .voters_info_api import format_mobile_with_country_code, split_marathi_name
+import re
+from collections import Counter
+
+def apply_dynamic_initial_search(qs, search):
+
+    tokens = [t.strip().lower() for t in search.split() if t.strip()]
+    token_counts = Counter(tokens)
+
+    # --------- DB side presence filter ---------
+    for token in token_counts:
+        qs = qs.filter(
+            Q(voter_name_eng__iregex=rf'\m{token}') |
+            Q(voter_id__icontains=token)
+        )
+
+    # --------- Python side frequency validation ---------
+    final_results = []
+    words_re = re.compile(r"[A-Za-z]+")
+
+    for v in qs:
+        words = words_re.findall((v.voter_name_eng or "").lower())
+        voter_id = (v.voter_id or "").lower()
+
+        counts = Counter()
+        for t in token_counts:
+            for w in words:
+                if w.startswith(t):
+                    counts[t] += 1
+
+        valid = True
+        for t, required in token_counts.items():
+            # If token matched voter_id, accept it without name matching
+            if t in voter_id:
+                continue
+
+            if counts[t] < required:
+                valid = False
+                break
+
+        if valid:
+            final_results.append(v)
+
+    return final_results
+
 
 def apply_multi_filter(qs, field, value):
     if not value:
@@ -40,7 +84,8 @@ from rest_framework.response import Response
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def filter(request):
-
+    lang = request.headers.get("Accept-Language", "en")
+    is_marathi = lang.lower().startswith("mr")
     page = int(request.GET.get("page", 1))
     size = int(request.GET.get("size", 100))
     sort = request.GET.get("sort")
@@ -98,21 +143,33 @@ def filter(request):
             status=404
         )
 
-    # -------- BASE QUERY (ROLE BASED) --------
-    if user.role.role_name in ["SuperAdmin", "Admin"]:
-        qs = (
-            VoterList.objects
-            .select_related("tag_id")
-            .order_by("ward_no", "voter_list_id")
-        )
+    from django.db.models import Q
+    
+    privileged_roles = ["Volunteer"]
+    
+    if user.role.role_name in privileged_roles:
+        # Check if user has any assigned voters
+        has_assigned_voters = VoterList.objects.filter(user_id=user_id).exists()
+    
+        if has_assigned_voters:
+            qs = (
+                VoterList.objects
+                .select_related("tag_id")
+                .filter(user_id=user_id)
+                .order_by("sr_no")
+            )
+        else:
+            qs = (
+                VoterList.objects
+                .select_related("tag_id")
+                .order_by("sr_no")
+            )
     else:
         qs = (
             VoterList.objects
             .select_related("tag_id")
-            .filter(user_id=user_id)
-            .order_by("ward_no", "voter_list_id")
+            .order_by("sr_no")
         )
-
     
     # Apply advanced search (name + voter_id)
     if search:
@@ -187,18 +244,44 @@ def filter(request):
 
     data = []
     for v in page_obj:
+        if is_marathi:
+            first_name, middle_name, last_name = split_marathi_name(
+                v.voter_name_marathi
+            )
+
+            voter_name_eng = v.voter_name_marathi
+            age_eng = v.age
+            gender_eng = v.gender
+        else:
+            first_name = v.first_name
+            middle_name = v.middle_name
+            last_name = v.last_name
+
+            voter_name_eng = v.voter_name_eng
+            age_eng = v.age_eng
+            gender_eng = v.gender_eng
+        
+        has_whatsapp = any([
+        bool(v.mobile_no),
+        bool(v.alternate_mobile1),
+        bool(v.alternate_mobile2),
+    ])
         data.append({
-            "sr_no" : v.serial_number,
+            "sr_no" : v.sr_no,
             "voter_list_id": v.voter_list_id,
-            "voter_name_eng": v.voter_name_eng,
+            "voter_name_eng": voter_name_eng,
             "voter_id": v.voter_id,
-            "gender": v.gender_eng,
+            "gender": gender_eng,
             "location": v.location,
             "badge": v.badge,
             "tag": v.tag_id.tag_name if v.tag_id else None,
             "kramank": v.kramank,
-            "age":v.age_eng,
-            "ward_id": v.ward_no
+            "age":age_eng,
+            "ward_id": v.ward_no,
+            "show_whatsapp": has_whatsapp,
+            "mobile_no": format_mobile_with_country_code(
+                v.mobile_no or v.alternate_mobile1 or v.alternate_mobile2 or None
+            ),
         })
 
     return Response({

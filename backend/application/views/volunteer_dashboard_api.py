@@ -5,10 +5,7 @@ from django.utils import timezone
 from datetime import timedelta
 from collections import defaultdict
 from django.core.paginator import Paginator
-from .search_api import apply_dynamic_initial_search
-from .filter_api import apply_multi_filter,apply_tag_filter
-
-
+from .filter_api import apply_dynamic_initial_search, apply_multi_filter, apply_tag_filter
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -166,7 +163,7 @@ def volunteer_voters_page(request):
         VoterList.objects
         .select_related("tag_id")
         .filter(user_id=user_id)
-        .order_by("ward_no", "voter_list_id")
+        .order_by("sr_no")
     )
     
     paginator = Paginator(qs, size)
@@ -176,7 +173,7 @@ def volunteer_voters_page(request):
 
     for v in page_obj:
         data.append({
-            "sr_no" : v.serial_number,
+            "sr_no" : v.sr_no,
             "voter_list_id": v.voter_list_id,
             "voter_id": v.voter_id,
             "first_name":v.first_name,
@@ -189,7 +186,8 @@ def volunteer_voters_page(request):
             "ward_id": v.ward_no,
             "tag": v.tag_id.tag_name if v.tag_id else None,
             "badge": v.badge,
-            "location": v.location
+            "location": v.location,
+            "assigned": True if v.check_progress_date else False
         })
 
     return Response({
@@ -235,7 +233,7 @@ def volunteer_voters_page_filter(request):
         VoterList.objects
         .select_related("tag_id")
         .filter(user_id=user_id)
-        .order_by("voter_list_id")
+        .order_by("sr_no")
     )
     
     search = request.GET.get("search")
@@ -360,7 +358,7 @@ def volunteer_voters_page_filter(request):
     data = []
     for v in page_obj:
         data.append({
-            "sr_no" : v.serial_number,
+            "sr_no" : v.sr_no,
             "voter_list_id": v.voter_list_id,
             "voter_name_eng": v.voter_name_eng,
             "voter_id": v.voter_id,
@@ -370,7 +368,8 @@ def volunteer_voters_page_filter(request):
             "tag": v.tag_id.tag_name if v.tag_id else None,
             "kramank": v.kramank,
             "age":v.age_eng,
-            "ward_id": v.ward_no
+            "ward_id": v.ward_no,
+            "assigned": True if v.check_progress_date else False
         })
 
     return Response({

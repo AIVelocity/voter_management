@@ -1,4 +1,80 @@
-from ..models import VoterRelationshipDetails,ActivityLog
+from .filter_api import apply_multi_filter, apply_tag_filter
+from ..models import VoterList, VoterRelationshipDetails, ActivityLog, UserContactPayload, UserVoterContact
+from deep_translator import GoogleTranslator
+from .contact_match_api import canonicalize_contacts, normalize_phone
+from django.db.models import Q
+import re
+from collections import Counter
+
+def build_voter_queryset(request, user):
+    qs = VoterList.objects.select_related("tag_id")
+
+    # ---- ROLE BASED ----
+    if user.role.role_name not in ["SuperAdmin", "Admin"]:
+        qs = qs.filter(user_id=user.user_id)
+
+    # ---- SEARCH ----
+    # search = request.GET.get("search")
+    # if search:
+    #     qs = apply_dynamic_initial_search(qs, search)
+
+    # ---- SIMPLE FILTERS ----
+    if request.GET.get("voter_id"):
+        qs = qs.filter(voter_id__icontains=request.GET["voter_id"])
+
+    if request.GET.get("kramank"):
+        qs = qs.filter(kramank__icontains=request.GET["kramank"])
+
+    # ---- NAME FILTERS ----
+    if request.GET.get("first_name"):
+        qs = qs.filter(first_name__istartswith=request.GET["first_name"])
+
+    if request.GET.get("middle_name"):
+        qs = qs.filter(middle_name__istartswith=request.GET["middle_name"])
+
+    if request.GET.get("last_name"):
+        qs = qs.filter(last_name__istartswith=request.GET["last_name"])
+
+    # ---- AGE RANGES ----
+    age_ranges = request.GET.get("age_ranges")
+    if age_ranges:
+        age_q = Q()
+        for r in age_ranges.split(","):
+            try:
+                lo, hi = r.split("-")
+                age_q |= Q(age_eng__gte=int(lo), age_eng__lte=int(hi))
+            except ValueError:
+                pass
+        qs = qs.filter(age_q)
+
+    # ---- MULTI FILTERS ----
+    qs = apply_multi_filter(qs, "cast", request.GET.get("caste"))
+    qs = apply_multi_filter(qs, "religion_id", request.GET.get("religion"))
+    qs = apply_multi_filter(qs, "occupation", request.GET.get("occupation"))
+    qs = apply_multi_filter(qs, "gender_eng", request.GET.get("gender"))
+    qs = apply_tag_filter(qs, request.GET.get("tag_id"))
+
+    # ---- LOCATION ----
+    if request.GET.get("location"):
+        qs = qs.filter(location__icontains=request.GET["location"])
+
+    # ---- SORT ----
+    if request.GET.get("sort"):
+        qs = qs.order_by(request.GET["sort"])
+    else:
+        qs = qs.order_by("sr_no")
+
+    return qs
+
+class Translator:
+    def __init__(self, source="auto"):
+        self.source = source
+
+    def translate(self, text, target_lang):
+        return GoogleTranslator(
+            source=self.source,
+            target=target_lang
+        ).translate(text)
 
 
 def log_user_update(user, action, description, changed_fields, ip,voter_list_id):
@@ -22,8 +98,6 @@ def log_user_update(user, action, description, changed_fields, ip,voter_list_id)
 
     )
 
-
-
 def save_relation(voter, relation, related_voter_id):
     """
     Persists a voter relationship safely.
@@ -39,8 +113,19 @@ def save_relation(voter, relation, related_voter_id):
         relation_with_voter=relation.lower(),
     )
     
+def build_member(p, is_marathi):
+    if is_marathi and p.voter_name_marathi:
+        return {
+            "name": p.voter_name_marathi,
+            "voter_list_id": p.voter_list_id,
+        }
 
-def get_family_from_db(voter):
+    # fallback to English
+    return {
+        "name": p.voter_name_eng,
+        "voter_list_id": p.voter_list_id,
+    }
+def get_family_from_db(voter, is_marathi=False):
 
     relations = (
         VoterRelationshipDetails.objects
@@ -51,32 +136,28 @@ def get_family_from_db(voter):
     siblings = []
     children = []
 
-    father_name = mother_name = wife_name = husband_name = spouse_name = None
+    father = mother = spouse = wife = husband = None
 
     for rel in relations:
         p = rel.related_voter
-
-        member = {
-            "name": f"{p.first_name} {p.middle_name} {p.last_name}",
-            "voter_list_id": p.voter_list_id,
-        }
+        member = build_member(p, is_marathi)
 
         rel_type = rel.relation_with_voter
 
         if rel_type == "father":
-            father_name = member
+            father = member
 
         elif rel_type == "mother":
-            mother_name = member
-        
+            mother = member
+
         elif rel_type == "spouse":
-            spouse_name = member
+            spouse = member
 
         elif rel_type == "wife":
-            wife_name = member
+            wife = member
 
         elif rel_type == "husband":
-            husband_name = member
+            husband = member
 
         elif rel_type == "child":
             children.append(member)
@@ -85,12 +166,60 @@ def get_family_from_db(voter):
             siblings.append(member)
 
     return {
-        "father": father_name,
-        "mother": mother_name,
-        "wife": wife_name,
-        "husband": husband_name,
+        "father": father,
+        "mother": mother,
+        "wife": wife,
+        "husband": husband,
+        "spouse": spouse,
         "siblings": siblings,
         "children": children,
-        "spouse" : spouse_name
     }
+
+def rematch_contacts_for_voter(voter, user):
     
+    print("VOTER.USER =", voter.user)
+    print("PAYLOAD COUNT =", UserContactPayload.objects.filter(user=voter.user).count())
+
+    numbers = {
+        voter.mobile_no,
+        voter.alternate_mobile1,
+        voter.alternate_mobile2
+    }
+    numbers = {n for n in numbers if n}
+
+    if not numbers:
+        return
+
+    payloads = (
+        UserContactPayload.objects
+        .filter(user=user)
+        .order_by("-created_at")[:5]   # last N payloads only
+    )
+
+    print("VOTER.USER =", user)
+    print("PAYLOAD COUNT =", UserContactPayload.objects.filter(user=user).count())
+    to_create = []
+
+    for p in payloads:
+        contacts = canonicalize_contacts(p.payload)
+
+        for contact in contacts:
+            for raw in contact["numbers"]:
+                mobile = normalize_phone(raw)
+                if mobile in numbers:
+                    to_create.append(
+                        UserVoterContact(
+                            user=user,
+                            voter=voter,
+                            contact_name=contact["name"],
+                            voter_name=voter.voter_name_eng or voter.voter_name_marathi,
+                            mobile_no=mobile
+                        )
+                    )
+
+    if to_create:
+        UserVoterContact.objects.bulk_create(
+            to_create,
+            ignore_conflicts=True,
+            batch_size=500
+        )
