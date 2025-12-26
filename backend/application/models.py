@@ -690,5 +690,65 @@ class OTPRequest(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     is_used = models.BooleanField(default=False)
 
-    def is_expired(self):
-        return timezone.now() > self.created_at + timezone.timedelta(minutes=5)
+    voter_id = models.CharField(
+        max_length=200,
+        null=True,
+        blank=True
+    )
+
+    voter_name_marathi = models.CharField(
+        max_length=1000,
+        null=True,
+        blank=True
+    )
+
+    voter_name_english = models.CharField(
+        max_length=1000,
+        null=True,
+        blank=True
+    )
+
+    kramank = models.CharField(
+        max_length=200,
+        null=True,
+        blank=True
+    )
+
+    address = models.CharField(
+        max_length=1000,
+        null=True,
+        blank=True
+    )
+
+    age_marathi = models.CharField(
+        max_length=50,
+        null=True,
+        blank=True
+    )
+
+    age_english = models.CharField(
+        max_length=50,
+        null=True,
+        blank=True
+    )
+
+    gender_marathi = models.CharField(
+        max_length=50,
+        null=True,
+        blank=True
+    )
+
+    gender_english = models.CharField(
+        max_length=50,
+        null=True,
+        blank=True
+    )
+
+    created_date = models.DateTimeField(
+        auto_now_add=False,
+        auto_now=False
+    )
+
+    class Meta:
+        db_table = "voter_list_2"
+        managed = False   # VERY IMPORTANT (table already exists)

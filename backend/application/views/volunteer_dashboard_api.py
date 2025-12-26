@@ -170,9 +170,11 @@ def volunteer_voters_page(request):
     page_obj = paginator.get_page(page)
 
     data = []
+    tagged_data = []
+    untagged_data = []
 
     for v in page_obj:
-        data.append({
+        voter_obj = {
             "sr_no" : v.sr_no,
             "voter_list_id": v.voter_list_id,
             "voter_id": v.voter_id,
@@ -188,7 +190,15 @@ def volunteer_voters_page(request):
             "badge": v.badge,
             "location": v.location,
             "assigned": True if v.check_progress_date else False
-        })
+        }
+        
+        data.append(voter_obj)
+        
+        # Separate into tagged and untagged based on check_progress_date
+        if v.check_progress_date:
+            tagged_data.append(voter_obj)
+        else:
+            untagged_data.append(voter_obj)
 
     return Response({
         "SUCCESS": True,
@@ -197,7 +207,9 @@ def volunteer_voters_page(request):
         "total_pages": paginator.num_pages,
         "total_records": paginator.count,
         "records_returned": len(data),
-        "data": data
+        "all": data,
+        "visited": tagged_data,
+        "pending": untagged_data
     })
 
 
