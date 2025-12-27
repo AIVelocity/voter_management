@@ -4,27 +4,12 @@ from ..models import VoterList, VoterRelationshipDetails, ActivityLog, UserConta
 from deep_translator import GoogleTranslator
 from .contact_match_api import canonicalize_contacts, normalize_phone
 from django.db.models import Q
-from ..models import ActivityLog
-from django.utils.timezone import now
-
-def log_relation_activity(
-    *,
-    user,
-    action,
-    voter_id,
-    description,
-    old_data=None,
-    new_data=None,
-):
-    ActivityLog.objects.create(
-        user=user,
-        action=action,
-        description=description,
-        voter_list_id=voter_id,
-        old_data=old_data,
-        new_data=new_data,
-        created_at=now(),
-    )
+import re
+from collections import Counter
+from django.conf import settings
+import os
+import csv
+import json
 
 def build_voter_queryset(request, user):
     qs = VoterList.objects.select_related("tag_id")
@@ -114,7 +99,9 @@ def log_user_update(
     }
     """
 
-    ActivityLog.objects.create(
+    old_data = {k: v["old"] for k, v in changed_fields.items()}
+    new_data = {k: v["new"] for k, v in changed_fields.items()}
+    log_entry = ActivityLog.objects.create(
         user=user,
         action=action,
         description=description,
@@ -123,6 +110,43 @@ def log_user_update(
         ip_address=ip,
         voter_id=voter_list_id
     )
+    logs_dir = os.path.join(settings.BASE_DIR, "local_logs")
+    os.makedirs(logs_dir, exist_ok=True)
+
+    csv_path = os.path.join(logs_dir, "activity_logs.csv")
+
+    file_exists = os.path.exists(csv_path)
+
+    with open(csv_path, "a", newline="", encoding="utf-8") as f:
+        writer = csv.writer(f)
+
+        # Write header only once:
+        if not file_exists:
+            writer.writerow([
+                "log_id",
+                "user_id",
+                "action",
+                "description",
+                "ip_address",
+                "voter_id",
+                "old_data",
+                "new_data",
+                "created_at"
+            ])
+
+        # Append a new row:
+        writer.writerow([
+            log_entry.log_id,
+            log_entry.user.user_id if log_entry.user else None,
+            log_entry.action,
+            log_entry.description,
+            log_entry.ip_address,
+            voter_list_id,
+            json.dumps(old_data, ensure_ascii=False),
+            json.dumps(new_data, ensure_ascii=False),
+            str(log_entry.created_at),
+        ])
+    return log_entry
 
 
 def save_relation(voter, relation, related_voter_id):

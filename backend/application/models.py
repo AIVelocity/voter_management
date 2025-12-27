@@ -28,7 +28,7 @@ class Roles(models.Model):
         unique=True,
         db_column="role"
     )
-    
+
     created_by = models.IntegerField(null=True, blank=True)
     created_date = models.DateTimeField(null=True, blank=True)
 
@@ -37,11 +37,11 @@ class Roles(models.Model):
 
     deleted_by = models.IntegerField(null=True, blank=True)
     deleted_date = models.DateTimeField(null=True, blank=True)
-    
+
     class Meta:
         db_table = "voter_role_master"
         managed = False
-    
+
     def __str__(self):
         return self.role_name
 
@@ -68,7 +68,7 @@ class VoterTag(models.Model):
 
     def __str__(self):
         return self.tag_name
-    
+
 # voter_religion_master
 class Religion(models.Model):
     religion_id = models.AutoField(primary_key=True)
@@ -260,7 +260,7 @@ class VoterList(models.Model):
     check_progress = models.BooleanField(null=True,blank=True)
     check_progress_date = models.DateField(null=True, blank=True)
     full_name = models.TextField(null=True,blank=True)
-    
+
     user = models.ForeignKey(
         VoterUserMaster,
         db_column="user_id",
@@ -279,9 +279,9 @@ class VoterList(models.Model):
 
     def __str__(self):
         return str(self.voter_id)
-    
+
     def save(self, *args, **kwargs):
-    
+
         # -------- FETCH OLD tag_id --------
         old_tag_id = None
         if self.pk:
@@ -292,18 +292,18 @@ class VoterList(models.Model):
                 .values_list("tag_id", flat=True)
                 .first()
             )
-    
+
         # -------- RULE 1: tag_id == 5 → CLEAR DATE --------
         if self.tag_id == 5:
             self.check_progress_date = None
-    
+
         # -------- RULE 2: tag_id CHANGED (and not 5) → SET DATE --------
         elif self.tag_id and self.tag_id != old_tag_id:
             self.check_progress_date = timezone.now().date()
-    
+
         super().save(*args, **kwargs)
-    
-    
+
+
 class UserContactPayload(models.Model):
     user = models.ForeignKey(
         VoterUserMaster,
@@ -323,7 +323,7 @@ class UserContactPayload(models.Model):
         db_table = "voter_user_contact_payload"
         ordering = ["-created_at"]
 
-    
+
 class VoterRelationshipDetails(models.Model):
 
     RELATION_CHOICES = [
@@ -375,7 +375,7 @@ class VoterRelationshipDetails(models.Model):
         return f"{self.voter.voter_list_id} - {self.relation_with_voter} -> {self.related_voter.voter_list_id}"
 
 
-    
+
 class ActivityLog(models.Model):
     log_id = models.AutoField(primary_key=True)
 
@@ -391,7 +391,7 @@ class ActivityLog(models.Model):
     action = models.CharField(max_length=255, null=True, blank=True)
     description = models.TextField(null=True, blank=True)
     ip_address = models.CharField(max_length=50, null=True, blank=True)
-    
+
     voter = models.ForeignKey(
         VoterList,
         on_delete=models.DO_NOTHING,
@@ -409,7 +409,6 @@ class ActivityLog(models.Model):
     class Meta:
         db_table = "voter_activity_log"   # TABLE NAME IN DB
         managed = False                # You want Django to create/manage this table
-        
 
     def __str__(self):
         return f"{self.action} by User {self.user_id}"
@@ -474,6 +473,7 @@ class RoleModulePermission(models.Model):
         managed = False
          
 
+
     def __str__(self):
         return f"{self.role} → {self.module}"
 
@@ -511,7 +511,6 @@ class VoterPrintDetails(models.Model):
 
     class Meta:
         db_table = "voter_print_details"
-         
 
     def __str__(self):
         return str(self.voter.voter_list_id)
@@ -550,4 +549,3 @@ class UserVoterContact(models.Model):
         indexes = [
             models.Index(fields=["user", "mobile_no"]),
         ]
-         
