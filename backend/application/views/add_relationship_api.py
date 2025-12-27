@@ -62,7 +62,7 @@ def add_relation(request):
 
         # -------- DUPLICATE CHECK --------
         if VoterRelationshipDetails.objects.filter(
-            voter_list_id=voter_id,
+            voter_id=voter_id,
             related_voter_id=related_id,
             relation_with_voter=relation
         ).exists():
@@ -71,18 +71,20 @@ def add_relation(request):
                 status=409
             )
 
+
         # -------- CREATE RELATIONS --------
         VoterRelationshipDetails.objects.create(
-            voter_list_id=voter_id,
+            voter_id=voter_id,
             related_voter_id=related_id,
             relation_with_voter=relation,
         )
-
+        
         VoterRelationshipDetails.objects.create(
-            voter_list_id=related_id,
+            voter_id=related_id,
             related_voter_id=voter_id,
             relation_with_voter=reverse,
         )
+
 
         # -------- LOG (NAMES ONLY) --------
         new_data = {
@@ -95,7 +97,7 @@ def add_relation(request):
         log_user_update(
             user=request.user,
             action="ADD_RELATION",
-            voter_id=voter_id,
+            voter_list_id=voter_id,
             description="Added voter relationship",
             old_data=None,
             new_data=new_data,
@@ -140,7 +142,7 @@ def remove_relation(request):
 
         # -------- FETCH EXISTING --------
         existing = VoterRelationshipDetails.objects.filter(
-            voter_list_id=voter_id,
+            voter_id=voter_id,
             related_voter_id=related_id,
             relation_with_voter=relation
         ).first()
@@ -163,7 +165,7 @@ def remove_relation(request):
         voter_name = voter.voter_name_eng if voter else None
         related_voter_name = related_voter.voter_name_eng if related_voter else None
 
-        # -------- LOG OLD DATA (NAMES) --------
+        # -------- LOG OLD DATA --------
         old_data = {
             "voter_name": voter_name,
             "related_voter_name": related_voter_name,
@@ -173,14 +175,14 @@ def remove_relation(request):
 
         # -------- DELETE BOTH SIDES --------
         VoterRelationshipDetails.objects.filter(
-            voter_list_id=voter_id,
+            voter_id=voter_id,
             related_voter_id=related_id,
             relation_with_voter=relation
         ).delete()
 
         if reverse:
             VoterRelationshipDetails.objects.filter(
-                voter_list_id=related_id,
+                voter_id=related_id,
                 related_voter_id=voter_id,
                 relation_with_voter=reverse
             ).delete()
@@ -189,12 +191,12 @@ def remove_relation(request):
         log_user_update(
             user=request.user,
             action="REMOVE_RELATION",
-            voter_id=voter_id,
+            voter_list_id=voter_id,
             description="Removed voter relationship",
             old_data=old_data,
             new_data=None,
         )
-
+     
         return Response({
             "status": True,
             "message": "Deleted successfully"

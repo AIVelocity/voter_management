@@ -95,28 +95,35 @@ class Translator:
             source=self.source,
             target=target_lang
         ).translate(text)
-
-
-def log_user_update(user, action, description, changed_fields, ip,voter_list_id):
+        
+def log_user_update(
+    *,
+    user,
+    action,
+    description,
+    voter_list_id=None,
+    old_data=None,
+    new_data=None,
+    ip=None
+):
     """
-    changed_fields = {
-        "mobile_no": {"old": "1111111111", "new": "9999999999"},
-        "address_line1": {"old": "Old Address", "new": "New Address"}
+    old_data / new_data:
+    {
+        "mobile_no": "1111111111",
+        "address_line1": "Old Address"
     }
     """
-    if not changed_fields:
-        return  # No changes → no logs
 
     ActivityLog.objects.create(
         user=user,
         action=action,
         description=description,
-        old_data={k: v["old"] for k, v in changed_fields.items()},
-        new_data={k: v["new"] for k, v in changed_fields.items()},
+        old_data=old_data,
+        new_data=new_data,
         ip_address=ip,
         voter_id=voter_list_id
-
     )
+
 
 def save_relation(voter, relation, related_voter_id):
     """
