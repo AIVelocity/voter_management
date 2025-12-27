@@ -19,3 +19,4 @@ indic-transliteration
 pandas 
 openpyxl
 twilio
+dotenv

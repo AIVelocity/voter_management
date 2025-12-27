@@ -108,6 +108,7 @@ CORS_ALLOW_ALL_ORIGINS = True   # OK for now (tighten later)
 AUTH_USER_MODEL = "application.VoterUserMaster"
 
 
+
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware', 
     'django.middleware.security.SecurityMiddleware',

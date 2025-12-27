@@ -4,8 +4,27 @@ from ..models import VoterList, VoterRelationshipDetails, ActivityLog, UserConta
 from deep_translator import GoogleTranslator
 from .contact_match_api import canonicalize_contacts, normalize_phone
 from django.db.models import Q
-import re
-from collections import Counter
+from ..models import ActivityLog
+from django.utils.timezone import now
+
+def log_relation_activity(
+    *,
+    user,
+    action,
+    voter_id,
+    description,
+    old_data=None,
+    new_data=None,
+):
+    ActivityLog.objects.create(
+        user=user,
+        action=action,
+        description=description,
+        voter_list_id=voter_id,
+        old_data=old_data,
+        new_data=new_data,
+        created_at=now(),
+    )
 
 def build_voter_queryset(request, user):
     qs = VoterList.objects.select_related("tag_id")
