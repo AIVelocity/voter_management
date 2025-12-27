@@ -108,6 +108,7 @@ CORS_ALLOW_ALL_ORIGINS = True   # OK for now (tighten later)
 AUTH_USER_MODEL = "application.VoterUserMaster"
 
 
+
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware', 
     'django.middleware.security.SecurityMiddleware',
@@ -175,12 +176,11 @@ DB_PORT = os.getenv("DB_PORT")
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": "whatsapp_db",      # your DB name
-        "USER": "postgres",        # your username
-        "PASSWORD": "postgres",
-        # "HOST": "172.20.1.155",       # or 172.20.1.155
-        "HOST": "59.95.99.182",       # or 172.20.1.155
-        "PORT": "5432",
+        "NAME": DB_NAME,      # your DB name
+        "USER": DB_USER,        # your username
+        "PASSWORD": DB_PASSWORD,
+        "HOST": DB_HOST,       # or 172.20.1.155
+        "PORT": DB_PORT,
     }
 }
 

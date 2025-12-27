@@ -410,7 +410,6 @@ class ActivityLog(models.Model):
         db_table = "voter_activity_log"   # TABLE NAME IN DB
         managed = False                # You want Django to create/manage this table
 
-
     def __str__(self):
         return f"{self.action} by User {self.user_id}"
 
@@ -472,6 +471,7 @@ class RoleModulePermission(models.Model):
             models.Index(fields=["module"]),
         ]
         managed = False
+         
 
 
     def __str__(self):
@@ -511,7 +511,6 @@ class VoterPrintDetails(models.Model):
 
     class Meta:
         db_table = "voter_print_details"
-
 
     def __str__(self):
         return str(self.voter.voter_list_id)

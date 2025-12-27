@@ -1,10 +1,10 @@
 from django.db import IntegrityError
-from ..models import VoterRelationshipDetails
+from ..models import VoterRelationshipDetails,VoterList, VoterUserMaster
 import json
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-
+from .view_utils import log_user_update
 def parse_json(request):
     try:
         return json.loads(request.body.decode("utf-8"))
@@ -22,18 +22,12 @@ REVERSE_MAP = {
     "spouse": "spouse"
 }
 
-
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def add_relation(request):
 
     try:
         body = request.data
-        if not body:
-            return Response(
-                {"status": False, "message": "Invalid JSON body"},
-                status=400
-            )
 
         voter_id = body.get("voter_list_id")
         related_id = body.get("related_voter_list_id")
@@ -46,20 +40,6 @@ def add_relation(request):
             )
 
         relation = relation.lower()
-
-        # Conflict check
-        if VoterRelationshipDetails.objects.filter(
-            voter_id=voter_id,
-            related_voter_id=related_id
-        ).exists():
-            return Response(
-                {
-                    "status": False,
-                    "message": "Relation already exists between voters"
-                },
-                status=409
-            )
-
         reverse = REVERSE_MAP.get(relation)
 
         if not reverse:
@@ -68,18 +48,57 @@ def add_relation(request):
                 status=400
             )
 
-        # Create primary relation
-        VoterRelationshipDetails.objects.get_or_create(
-            voter_id=voter_id,
+        # -------- FETCH NAMES (ONCE) --------
+        voter = VoterList.objects.filter(
+            voter_list_id=voter_id
+        ).only("voter_name_eng").first()
+
+        related_voter = VoterList.objects.filter(
+            voter_list_id=related_id
+        ).only("voter_name_eng").first()
+
+        voter_name = voter.voter_name_eng if voter else None
+        related_voter_name = related_voter.voter_name_eng if related_voter else None
+
+        # -------- DUPLICATE CHECK --------
+        if VoterRelationshipDetails.objects.filter(
+            voter_list_id=voter_id,
+            related_voter_id=related_id,
+            relation_with_voter=relation
+        ).exists():
+            return Response(
+                {"status": False, "message": "Relation already exists"},
+                status=409
+            )
+
+        # -------- CREATE RELATIONS --------
+        VoterRelationshipDetails.objects.create(
+            voter_list_id=voter_id,
             related_voter_id=related_id,
             relation_with_voter=relation,
         )
 
-        # Create reverse relation
-        VoterRelationshipDetails.objects.get_or_create(
-            voter_id=related_id,
+        VoterRelationshipDetails.objects.create(
+            voter_list_id=related_id,
             related_voter_id=voter_id,
             relation_with_voter=reverse,
+        )
+
+        # -------- LOG (NAMES ONLY) --------
+        new_data = {
+            "voter_name": voter_name,
+            "related_voter_name": related_voter_name,
+            "relation": relation,
+            "reverse_relation": reverse,
+        }
+
+        log_user_update(
+            user=request.user,
+            action="ADD_RELATION",
+            voter_id=voter_id,
+            description="Added voter relationship",
+            old_data=None,
+            new_data=new_data,
         )
 
         return Response({
@@ -99,19 +118,12 @@ def add_relation(request):
             {"status": False, "message": "Server error"},
             status=500
         )
-
-
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def remove_relation(request):
 
     try:
         body = request.data
-        if not body:
-            return Response(
-                {"status": False, "message":"Invalid JSON body"},
-                status=400
-            )
 
         voter_id = body.get("voter_list_id")
         related_id = body.get("related_voter_list_id")
@@ -119,28 +131,74 @@ def remove_relation(request):
 
         if not voter_id or not related_id or not relation:
             return Response(
-                {"status": False, "message":"Missing parameters"},
+                {"status": False, "message": "Missing parameters"},
                 status=400
             )
 
         relation = relation.lower()
+        reverse = REVERSE_MAP.get(relation)
 
+        # -------- FETCH EXISTING --------
+        existing = VoterRelationshipDetails.objects.filter(
+            voter_list_id=voter_id,
+            related_voter_id=related_id,
+            relation_with_voter=relation
+        ).first()
+
+        if not existing:
+            return Response(
+                {"status": False, "message": "Relation not found"},
+                status=404
+            )
+
+        # -------- FETCH NAMES --------
+        voter = VoterList.objects.filter(
+            voter_list_id=voter_id
+        ).only("voter_name_eng").first()
+
+        related_voter = VoterList.objects.filter(
+            voter_list_id=related_id
+        ).only("voter_name_eng").first()
+
+        voter_name = voter.voter_name_eng if voter else None
+        related_voter_name = related_voter.voter_name_eng if related_voter else None
+
+        # -------- LOG OLD DATA (NAMES) --------
+        old_data = {
+            "voter_name": voter_name,
+            "related_voter_name": related_voter_name,
+            "relation": relation,
+            "reverse_relation": reverse,
+        }
+
+        # -------- DELETE BOTH SIDES --------
         VoterRelationshipDetails.objects.filter(
-            voter_id=voter_id,
+            voter_list_id=voter_id,
             related_voter_id=related_id,
             relation_with_voter=relation
         ).delete()
 
-        reverse = REVERSE_MAP.get(relation)
-
         if reverse:
             VoterRelationshipDetails.objects.filter(
-                voter_id=related_id,
+                voter_list_id=related_id,
                 related_voter_id=voter_id,
                 relation_with_voter=reverse
             ).delete()
 
-        return Response({"status": True,"message":"Deleted successfully"})
+        # -------- LOG --------
+        log_user_update(
+            user=request.user,
+            action="REMOVE_RELATION",
+            voter_id=voter_id,
+            description="Removed voter relationship",
+            old_data=old_data,
+            new_data=None,
+        )
+
+        return Response({
+            "status": True,
+            "message": "Deleted successfully"
+        })
 
     except Exception as e:
         print("REMOVE RELATION ERROR:", str(e))

@@ -13,7 +13,7 @@ from twilio.rest import Client
 sid = os.getenv("TWILIO_ACCOUNT_SID")
 token = os.getenv("TWILIO_AUTH_TOKEN")
 twilio_client = Client(sid, token)
-print(sid, token, twilio_client)
+# print(sid, token, twilio_client)
 
 def normalize_mobile(number):
     number = number.strip()
