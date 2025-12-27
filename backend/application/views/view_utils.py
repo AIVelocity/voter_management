@@ -89,7 +89,8 @@ def log_user_update(
     voter_list_id=None,
     old_data=None,
     new_data=None,
-    ip=None
+    ip=None,
+    changed_fields=None
 ):
     """
     old_data / new_data:
@@ -98,9 +99,9 @@ def log_user_update(
         "address_line1": "Old Address"
     }
     """
-
-    old_data = {k: v["old"] for k, v in changed_fields.items()}
-    new_data = {k: v["new"] for k, v in changed_fields.items()}
+    if changed_fields:
+        old_data = {k: v["old"] for k, v in changed_fields.items()}
+        new_data = {k: v["new"] for k, v in changed_fields.items()}
     log_entry = ActivityLog.objects.create(
         user=user,
         action=action,
