@@ -526,7 +526,8 @@ class UserVoterContact(models.Model):
     voter = models.ForeignKey(
         VoterList,
         on_delete=models.CASCADE,
-        related_name="contact_matches"
+        related_name="contact_matches",
+        db_column="voter_list_id"
     )
 
     contact_name = models.CharField(
@@ -544,7 +545,8 @@ class UserVoterContact(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        # allow multiple records per (user, mobile_no) so all matches are stored
+        db_table = "user_voter_contact"   #  FIX
+        managed = True
         indexes = [
             models.Index(fields=["user", "mobile_no"]),
         ]
