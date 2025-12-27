@@ -178,7 +178,8 @@ DATABASES = {
         "NAME": "whatsapp_db",      # your DB name
         "USER": "postgres",        # your username
         "PASSWORD": "postgres",
-        "HOST": "172.20.1.155",       # or 172.20.1.155
+        # "HOST": "172.20.1.155",       # or 172.20.1.155
+        "HOST": "59.95.99.182",       # or 172.20.1.155
         "PORT": "5432",
     }
 }
