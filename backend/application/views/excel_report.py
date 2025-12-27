@@ -1,4 +1,6 @@
+from django.http import HttpResponse
 from datetime import date
+from openpyxl import Workbook
 from django.utils.timezone import now
 from ..models import (
     VoterUserMaster,
@@ -270,115 +272,6 @@ def export_voters_excel(request):
     except Exception as e:
         return Response({"status": False, "error": str(e)}, status=400)
 
-
-@api_view(["GET"])
-@permission_classes([IsAuthenticated])
-def voters_export_csv(request):
-
-    # ---------- AUTH ----------
-    if not request.user or not request.user.is_authenticated:
-        return Response({"status": False, "message": "Unauthorized"}, status=401)
-
-    try:
-        user = (
-            VoterUserMaster.objects
-            .select_related("role")
-            .get(user_id=request.user.user_id)
-        )
-    except VoterUserMaster.DoesNotExist:
-        return Response({"status": False, "message": "User not found"}, status=404)
-
-    # ---------- BASE QUERYSET ----------
-    qs = build_voter_queryset(request, user)
-
-    if user.role.role_name not in ["SuperAdmin", "Admin"]:
-        qs = qs.filter(user=user)
-
-    qs = (
-        qs
-        .values(
-            "voter_id",
-            "sr_no",
-            "voter_name_eng",
-            "voter_name_marathi",
-            "mobile_no",
-            "alternate_mobile1",
-            "alternate_mobile2",
-            "age_eng",
-            "gender_eng",
-            "ward_no",
-            "location",
-            "kramank",
-            "address_line1",
-            "comments",
-            "check_progress_date",
-        )
-        .order_by("sr_no")
-        .iterator(chunk_size=2000)   
-    )
-
-    # ---------- CSV STREAM ----------
-    pseudo_buffer = Echo()
-    writer = csv.writer(pseudo_buffer)
-
-    # Header
-    header = [
-        "Voter ID",
-        "SR No",
-        "Voter Name (English)",
-        "Voter Name (Marathi)",
-        "Mobile",
-        "Alt Mobile 1",
-        "Alt Mobile 2",
-        "Age",
-        "Gender",
-        "Ward No",
-        "Location",
-        "Kramank",
-        "Address",
-        "Comments",
-        "Check Progress Date",
-    ]
-
-    def row_generator():
-        yield writer.writerow(header)
-
-        for row in qs:
-            yield writer.writerow([
-                row["voter_id"],
-                row["sr_no"],
-                row["voter_name_eng"],
-                row["voter_name_marathi"],
-                row["mobile_no"],
-                row["alternate_mobile1"],
-                row["alternate_mobile2"],
-                row["age_eng"],
-                row["gender_eng"],
-                row["ward_no"],
-                row["location"],
-                row["kramank"],
-                row["address_line1"],
-                row["comments"],
-                row["check_progress_date"],
-            ])
-
-    # ---------- RESPONSE ----------
-    timestamp = now().strftime("%Y%m%d_%H%M%S")
-    user_name = (
-        f"{user.first_name}_{user.last_name}".replace(" ", "_")
-        if user.first_name or user.last_name
-        else f"user_{user.user_id}"
-    )
-
-    filename = f"voter_report_{user_name}_{timestamp}.csv"
-
-    response = StreamingHttpResponse(
-        row_generator(),
-        content_type="text/csv",
-    )
-    response["Content-Disposition"] = f'attachment; filename="{filename}"'
-
-    return response
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
