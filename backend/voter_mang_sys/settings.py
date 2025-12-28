@@ -18,7 +18,6 @@ from dotenv import load_dotenv
 load_dotenv()
 SECRET_KEY = os.getenv("SECRET_KEY")
 
-DEBUG = os.getenv("DEBUG") == "True"
 
 TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID")
 TWILIO_AUTH_TOKEN = os.getenv("TWILIO_AUTH_TOKEN")
@@ -50,7 +49,7 @@ LOCALE_PATHS = [
 SECRET_KEY = 'django-insecure-w^w75v0)bmgunxwhmmagl0bp*1rf$p^u9q-ca$2!%+q%(8f7=&'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+# DEBUG = True
 PASSWORD_ENCRYPTION_KEY = "0mqmJvbV5rsJJ_M4iaXsZfsor_BNUGwFB24-WE4LK80="
 # ALLOWED_HOSTS = eval(os.getenv("ALLOWED_HOSTS"))
 
@@ -103,10 +102,14 @@ CORS_ALLOW_HEADERS = [
     "authorization",
     "content-type",
 ]
+CORS_ALLOW_ALL_ORIGINS = False
 
-CORS_ALLOW_ALL_ORIGINS = True   # OK for now (tighten later)
+CORS_ALLOWED_ORIGINS = [
+    "https://vms.rntsecops.com",
+    "https://admin.vms.rntsecops.com"
+] 
+
 AUTH_USER_MODEL = "application.VoterUserMaster"
-
 
 
 MIDDLEWARE = [
@@ -179,7 +182,7 @@ DATABASES = {
         "NAME": DB_NAME,      # your DB name
         "USER": DB_USER,        # your username
         "PASSWORD": DB_PASSWORD,
-        "HOST": DB_HOST,       # or 172.20.1.155
+        "HOST": DB_HOST,      
         "PORT": DB_PORT,
     }
 }
