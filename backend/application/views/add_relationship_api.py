@@ -115,7 +115,7 @@ def add_relation(request):
         )
 
     except Exception as e:
-        print("ADD RELATION ERROR:", str(e))
+        # print("ADD RELATION ERROR:", str(e))
         return Response(
             {"status": False, "message": "Server error"},
             status=500
@@ -203,7 +203,7 @@ def remove_relation(request):
         })
 
     except Exception as e:
-        print("REMOVE RELATION ERROR:", str(e))
+        # print("REMOVE RELATION ERROR:", str(e))
         return Response(
             {"status": False, "message": "Server error"},
             status=500

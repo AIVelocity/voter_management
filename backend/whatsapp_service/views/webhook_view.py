@@ -28,7 +28,7 @@ def verify_webhook(request):
     expected = VERIFY_TOKEN
 
     if hub_mode == "subscribe" and hub_token == expected:
-        print("Webhook verified")
+        # print("Webhook verified")
         return HttpResponse(hub_challenge, status=200)
 
     return error_resp("Invalid verification token", status=403)
@@ -40,7 +40,7 @@ def verify_webhook(request):
 def receive_webhook(request):
     try:
         body = json.loads(request.body.decode("utf-8") or "{}")
-        print(body)
+        # print(body)
         logger.debug("Webhook body: %s", body)
     except json.JSONDecodeError:
         logger.error("Bad JSON in webhook payload")

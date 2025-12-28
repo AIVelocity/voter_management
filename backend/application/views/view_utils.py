@@ -229,8 +229,8 @@ def get_family_from_db(voter, is_marathi=False):
 
 def rematch_contacts_for_voter(voter, user):
     
-    print("VOTER.USER =", voter.user)
-    print("PAYLOAD COUNT =", UserContactPayload.objects.filter(user=voter.user).count())
+    # print("VOTER.USER =", voter.user)
+    # print("PAYLOAD COUNT =", UserContactPayload.objects.filter(user=voter.user).count())
 
     numbers = {
         voter.mobile_no,
@@ -248,8 +248,8 @@ def rematch_contacts_for_voter(voter, user):
         .order_by("-created_at")[:5]   # last N payloads only
     )
 
-    print("VOTER.USER =", user)
-    print("PAYLOAD COUNT =", UserContactPayload.objects.filter(user=user).count())
+    # print("VOTER.USER =", user)
+    # print("PAYLOAD COUNT =", UserContactPayload.objects.filter(user=user).count())
     to_create = []
 
     for p in payloads:

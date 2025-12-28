@@ -12,7 +12,7 @@ from django.http import FileResponse
 
 
 BASE_DIR = settings.BASE_DIR
-print(BASE_DIR)
+# print(BASE_DIR)
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
@@ -53,7 +53,7 @@ def voters_info_photo(request):
         image_name = voter.image_name
         
         image_full_path = os.path.join(BASE_DIR,'images','Cropped_detected_boxes',image_name)
-        print(image_full_path)
+        # print(image_full_path)
         
         with open(image_full_path, "rb") as img_file:
             encoded_image = base64.b64encode(img_file.read()).decode("utf-8")

@@ -112,13 +112,13 @@ def voters_search(request):
 @permission_classes([IsAuthenticated]) 
 def family_dropdown_search(request):
     search = request.GET.get("search", "").strip()
-    print(search)
+    # print(search)
     
     lang = request.headers.get("Accept-Language", "en")
     is_marathi = lang in ["mr", "mr-in", "marathi"]
     
     exclude_id = request.GET.get("exclude_id")   
-    print(exclude_id)
+    # print(exclude_id)
     page = int(request.GET.get("page", 1))
     size = 30   
 

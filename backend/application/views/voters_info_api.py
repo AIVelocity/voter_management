@@ -32,7 +32,7 @@ def format_mobile_with_country_code(mobile: str) -> str:
 @permission_classes([IsAuthenticated])
 def voters_info(request):
     lang = request.headers.get("Accept-Language", "en")
-    print(lang)
+    # print(lang)
     page = int(request.GET.get("page", 1))
     size = int(request.GET.get("size", 100))
     is_marathi = lang in ["mr", "mr-in", "marathi"]
