@@ -1,6 +1,5 @@
-from ..models import VoterList,VoterUserMaster
+from ..models import VoterList
 from django.db.models import Q
-from rest_framework_simplejwt.tokens import AccessToken
 from django.core.paginator import Paginator
 from .voters_info_api import format_mobile_with_country_code, split_marathi_name
 import re
@@ -88,7 +87,7 @@ def filter(request):
     is_marathi = lang.lower().startswith("mr")
     page = int(request.GET.get("page", 1))
     size = int(request.GET.get("size", 100))
-    sort = request.GET.get("sort")
+    # sort = request.GET.get("sort")
     search = request.GET.get("search")
 
     first_name = request.GET.get("first_name")
@@ -114,34 +113,8 @@ def filter(request):
 
     # badge = request.GET.get("badge")
 
-    user_id = None
-    auth_header = request.headers.get("Authorization")
-
-    if auth_header and auth_header.startswith("Bearer "):
-        try:
-            token = AccessToken(auth_header.split(" ")[1])
-            user_id = token["user_id"]
-        except Exception:
-            pass
-
-    if not user_id:
-        return Response(
-            {"status": False, "message": "Unauthorized"},
-            status=401
-        )
-
-    # -------- USER & ROLE --------
-    try:
-        user = (
-            VoterUserMaster.objects
-            .select_related("role")
-            .get(user_id=user_id)
-        )
-    except VoterUserMaster.DoesNotExist:
-        return Response(
-            {"status": False, "message": "User not found"},
-            status=404
-        )
+    user = request.user
+    user_id = user.user_id
 
     from django.db.models import Q
     
@@ -219,8 +192,8 @@ def filter(request):
         qs = qs.filter(location__icontains=location)
      
     
-    if sort:
-        qs = qs.order_by(sort)
+    # if sort:
+    #     qs = qs.order_by(sort)
 
     # Apply ENDS WITH filters
     if first_ends:
@@ -248,19 +221,19 @@ def filter(request):
             first_name, middle_name, last_name = split_marathi_name(
                 v.voter_name_marathi
             )
-
             voter_name_eng = v.voter_name_marathi
-            age_eng = v.age
+            age_eng = v.age_eng
             gender_eng = v.gender
+            tag_name = v.tag_id.tag_name_mar if v.tag_id else None
         else:
             first_name = v.first_name
             middle_name = v.middle_name
             last_name = v.last_name
-
             voter_name_eng = v.voter_name_eng
             age_eng = v.age_eng
             gender_eng = v.gender_eng
-        
+            tag_name = v.tag_id.tag_name if v.tag_id else None
+
         has_whatsapp = any([
         bool(v.mobile_no),
         bool(v.alternate_mobile1),
@@ -274,7 +247,7 @@ def filter(request):
             "gender": gender_eng,
             "location": v.location,
             "badge": v.badge,
-            "tag": v.tag_id.tag_name if v.tag_id else None,
+            "tag":tag_name,
             "kramank": v.kramank,
             "age":age_eng,
             "ward_id": v.ward_no,

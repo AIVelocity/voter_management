@@ -43,12 +43,6 @@ def voters_search(request):
     if search:
         qs = apply_dynamic_initial_search(qs, search)
 
-    # ---------- ORDERING ----------
-    if isinstance(qs, list):
-        qs.sort(key=lambda x: x.sr_no)
-    else:
-        qs = qs.order_by("sr_no")
-
     # ---------- PAGINATION ----------
     paginator = Paginator(qs, size)
     page_obj = paginator.get_page(page)
@@ -131,12 +125,6 @@ def family_dropdown_search(request):
     if search:
         qs = apply_dynamic_initial_search(qs, search)
 
-    # If we got Python list back from search → sort manually
-    if isinstance(qs, list):
-        qs.sort(key=lambda x: x.voter_list_id)
-    else:
-        qs = qs.order_by("sr_no")
-
     paginator = Paginator(qs, size)
     page_obj = paginator.get_page(page)
 
@@ -150,6 +138,7 @@ def family_dropdown_search(request):
             voter_name_eng = v.voter_name_marathi
             age_eng = v.age
             gender_eng = v.gender
+            tag = v.tag_id.tag_name_mar if v.tag_id else None
         else:
             first_name = v.first_name
             middle_name = v.middle_name
@@ -158,6 +147,7 @@ def family_dropdown_search(request):
             voter_name_eng = v.voter_name_eng
             age_eng = v.age_eng
             gender_eng = v.gender_eng
+            tag = v.tag_id.tag_name if v.tag_id else None
             
         has_whatsapp = any([
         bool(v.mobile_no),
@@ -176,7 +166,7 @@ def family_dropdown_search(request):
             "age": age_eng,
             "gender": gender_eng,
             "ward_id": v.ward_no,
-            "tag": v.tag_id.tag_name if v.tag_id else None,
+            "tag": tag,
             "badge": v.badge,
             "location": v.location,
             "show_whatsapp": has_whatsapp,
@@ -196,37 +186,3 @@ def family_dropdown_search(request):
     })
 
   
-# def family_dropdown_search(request):
-#     search = request.GET.get("search", "").strip()
-    
-#     page = int(request.GET.get("page", 1))
-#     size = int(request.GET.get("size", 100))
-
-#     qs = VoterList.objects.all()
-
-#     if search:
-#         qs = apply_dynamic_initial_search(qs, search)
-
-#     # if Python list, sort it
-#     if isinstance(qs, list):
-#         qs.sort(key=lambda x: x.voter_list_id)
-
-#         #  Limit to 30 only
-#     paginator = Paginator(qs, size)
-#     page_obj = paginator.get_page(page)
-
-#     results = [{
-#         "id": v.voter_list_id,
-#         "voter_id": v.voter_id,
-#         "name": v.voter_name_eng,
-#         "age": v.age_eng,
-#         "gender": v.gender_eng,
-#         "ward": v.ward_no,
-#     } for v in page_obj]
-
-#     return Response({
-#         "status": True,
-#         "query": search,
-#         "limit": 30,
-#         "results": results
-#     })
