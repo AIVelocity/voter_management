@@ -49,9 +49,8 @@ LOCALE_PATHS = [
 SECRET_KEY = 'django-insecure-w^w75v0)bmgunxwhmmagl0bp*1rf$p^u9q-ca$2!%+q%(8f7=&'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-# DEBUG = True
-PASSWORD_ENCRYPTION_KEY = "0mqmJvbV5rsJJ_M4iaXsZfsor_BNUGwFB24-WE4LK80="
-# ALLOWED_HOSTS = eval(os.getenv("ALLOWED_HOSTS"))
+DEBUG = False
+# PASSWORD_ENCRYPTION_KEY = "0mqmJvbV5rsJJ_M4iaXsZfsor_BNUGwFB24-WE4LK80="
 
 ALLOWED_HOSTS = ["172.20.1.116","vms.rntsecops.com","172.25.240.1","172.20.1.101","59.95.99.182","127.0.0.1", "localhost", "172.20.1.155", ".ngrok-free.app", ".ngrok-free.dev"]
 
