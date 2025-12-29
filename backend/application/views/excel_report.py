@@ -12,11 +12,11 @@ from django.http import StreamingHttpResponse
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes, renderer_classes
-from rest_framework_simplejwt.tokens import AccessToken
 from rest_framework.renderers import BaseRenderer
 from .view_utils import build_voter_queryset
 import pandas as pd
 from io import BytesIO
+from collections import defaultdict
 
 class Echo:
     def write(self, value):
@@ -41,12 +41,6 @@ def export_voters_excel(request):
         # -------- GET USER & ROLE --------
         user = request.user
         
-        if not user or not user.is_authenticated:
-            return Response(
-                {"status": False, "message": "Unauthorized"},
-                status=401
-            )
-
         try:
             user = (
                 VoterUserMaster.objects
@@ -106,10 +100,10 @@ def export_voters_excel(request):
                     "ward_no",
                     "location",
                     "badge",
-                    "tag_id",
-                    "occupation",
-                    "cast",
-                    "religion",
+                    "tag_id__tag_name",
+                    "occupation__occupation_name",
+                    "cast__caste_name",
+                    "religion__religion_name",
                     "comments",
                     "check_progress_date",
                 )
@@ -190,10 +184,10 @@ def export_voters_excel(request):
             "ward_no": "Ward No",
             "location": "Location",
             "badge": "Badge",
-            "tag_id": "Tag",
-            "occupation": "Occupation",
-            "cast": "Caste",
-            "religion": "Religion",
+            "tag_id__tag_name": "Tag",
+            "occupation__occupation_name": "Occupation",
+            "cast__caste_name": "Caste",
+            "religion__religion_name": "Religion",
             "comments": "Comments",
             "check_progress_date": "Check Progress Date",
             "related_voter__voter_name_eng": "Related Voter Name",
@@ -272,183 +266,124 @@ def export_voters_excel(request):
     except Exception as e:
         return Response({"status": False, "error": str(e)}, status=400)
 
-
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
-@renderer_classes([ExcelRenderer])
 def voters_export(request):
 
-    try:
-        # -------- GET USER & ROLE --------
-        user = request.user
-        
-        if not user or not user.is_authenticated:
-            return Response(
-                {"status": False, "message": "Unauthorized"},
-                status=401
-            )
+    # ------------------ USER & ROLE ------------------
+    user = request.user
+    user = VoterUserMaster.objects.select_related("role").get(
+        user_id=user.user_id
+    )
 
-        try:
-            user = (
-                VoterUserMaster.objects
-                .select_related("role")
-                .get(user_id=user.user_id)
-            )
-        except VoterUserMaster.DoesNotExist:
-            return Response(
-                {"status": False, "message": "User not found"},
-                status=404
-            )
+    if user.role.role_name in ["SuperAdmin", "Admin"]:
+        qs = build_voter_queryset(request, user)
+    else:
+        qs = build_voter_queryset(request, user).filter(user=user)
 
-        if user.role.role_name in ["SuperAdmin", "Admin"]:
-            qs = (
-                build_voter_queryset(request,user)
-                .select_related("tag_id", "occupation", "cast", "religion", "user")
-                .order_by("sr_no")
-            )
-        else:
-            qs = (
-                build_voter_queryset(request,user)
-                .select_related("tag_id", "occupation", "cast", "religion", "user")
-                .filter(user=user)
-                .order_by("sr_no")
-            )
-                
-        df1 = pd.DataFrame.from_records(
-                qs.values(
-                    "voter_list_id",
-                    "voter_id",
-                    "sr_no",
-                    "voter_name_eng",
-                    "voter_name_marathi",
-                    "current_address",
-                    "mobile_no",
-                    "alternate_mobile1",
-                    "alternate_mobile2",
-                    "kramank",
-                    "address_line1",
-                    "age_eng",
-                    "gender_eng",
-                    "ward_no",
-                    "location",
-                    "badge",
-                    "tag_id",
-                    "occupation",
-                    "cast",
-                    "religion",
-                    "comments",
-                    "check_progress_date",
-                )
-            )
-        # ------------------ FAMILY DATA ------------------
-        # safely extract voter ids
-        if df1.empty:
-            voter_ids = []
-        else:
-            voter_ids = list(df1['voter_list_id'])
+    qs = qs.order_by("sr_no")
 
-        relations = VoterRelationshipDetails.objects.filter(
-            voter_id__in=voter_ids
-        ).select_related("related_voter")
-        
-        df2 = pd.DataFrame.from_records(
-                relations.values(
-                    "voter_id",
-                    "related_voter__voter_name_eng",
-                    "relation_with_voter"
-                )
-            )
-        rename_cols = {'voter_id':'voter_list_id'}
-        df2.rename(columns=rename_cols, inplace=True)
-        # Ensure both dataframes have the expected key column so merge doesn't fail
-        expected_voter_cols = [
-            "voter_list_id",
-            "voter_id",
-            "sr_no",
-            "voter_name_eng",
-            "voter_name_marathi",
-            "current_address",
-            "mobile_no",
-            "alternate_mobile1",
-            "alternate_mobile2",
-            "kramank",
-            "address_line1",
-            "age_eng",
-            "gender_eng",
-            "ward_no",
-            "location",
-            "badge",
-            "tag_id",
-            "occupation",
-            "cast",
-            "religion",
-            "comments",
-            "check_progress_date",
-        ]
+    # ------------------ RESPONSE (STREAMING CSV) ------------------
+    response = HttpResponse(content_type="text/csv; charset=utf-8-sig")
+    filename = f"voter_report_{user.first_name}{user.last_name}_{now().strftime('%Y%m%d_%H%M%S')}.csv"
+    response["Content-Disposition"] = f'attachment; filename="{filename}"'
+    response.write("\ufeff")
+    writer = csv.writer(response)
 
-        if "voter_list_id" not in df1.columns:
-            df1 = pd.DataFrame(columns=expected_voter_cols)
+    # ------------------ HEADERS ------------------
+    writer.writerow([
+        "Voter ID",
+        "Serial No",
+        "Voter Name (English)",
+        "Voter Name (Marathi)",
+        "Current Address",
+        "Mobile",
+        "Alternate Mobile 1",
+        "Alternate Mobile 2",
+        "Kramank",
+        "Address Line 1",
+        "Age",
+        "Gender",
+        "Ward No",
+        "Location",
+        "Badge",
+        "Tag",
+        "Occupation",
+        "Caste",
+        "Religion",
+        "Comments",
+        "Check Progress Date",
+        "Father",
+        "Mother",
+        "Sibling",
+        "Child",
+    ])
 
-        if "voter_list_id" not in df2.columns:
-            df2 = pd.DataFrame(columns=["voter_list_id", "related_voter__voter_name_eng", "relation_with_voter"])
+    # ------------------ RELATION MAP ------------------
+    relation_map = defaultdict(lambda: {
+        "father": None,
+        "mother": None,
+        "sibling": [],
+        "child": [],
+    })
 
-        merged_df = df1.merge(
-                            df2,
-                            on="voter_list_id",
-                            how="left"
-                        )
-        
-        # Rename merged_df columns to meaningful names
-        merged_df.rename(columns={
-            "voter_list_id": "ID",
-            "voter_id": "Voter ID",
-            "sr_no": "Serial No",
-            "voter_name_eng": "Voter Name (English)",
-            "voter_name_marathi": "Voter Name (Marathi)",
-            "current_address": "Current Address",
-            "mobile_no": "Mobile",
-            "alternate_mobile1": "Alternate Mobile 1",
-            "alternate_mobile2": "Alternate Mobile 2",
-            "kramank": "Kramank",
-            "address_line1": "Address Line 1",
-            "age_eng": "Age",
-            "gender_eng": "Gender",
-            "ward_no": "Ward No",
-            "location": "Location",
-            "badge": "Badge",
-            "tag_id": "Tag",
-            "occupation": "Occupation",
-            "cast": "Caste",
-            "religion": "Religion",
-            "comments": "Comments",
-            "check_progress_date": "Check Progress Date",
-            "related_voter__voter_name_eng": "Related Voter Name",
-            "relation_with_voter": "Relation",
-        }, inplace=True)
-        
-        # Drop the ID column after rename
-        merged_df = merged_df.drop(columns=["ID"], errors='ignore')
-
-        buffer = BytesIO()
-        from django.utils.timezone import now
-        # Generate meaningful filename with user and date
-        user_name = f"{user.first_name}_{user.last_name}".replace(" ", "_") if user.first_name or user.last_name else f"user_{user.user_id}"
-        timestamp = now().strftime("%Y%m%d_%H%M%S")
-
-        filename = f"voter_report_{user_name}_{timestamp}.xlsx"
-
-        with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
-            merged_df.to_excel(writer, sheet_name="Voters Data", index=False)
-
-        buffer.seek(0)
-
-        return Response(
-            buffer.getvalue(),
-            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            headers={
-                "Content-Disposition": f'attachment; filename="{filename}"'
-            }
+    relations_qs = (
+        VoterRelationshipDetails.objects
+        .select_related("related_voter")
+        .filter(
+            voter_id__in=qs.values_list("voter_list_id", flat=True)
         )
+    )
 
-    except Exception as e:
-        return Response({"status": False, "error": str(e)}, status=400)
+    for r in relations_qs:
+        rel = (r.relation_with_voter or "").lower()
+        name = r.related_voter.voter_name_eng if r.related_voter else None
+        if not name:
+            continue
+
+        if rel == "father":
+            relation_map[r.voter_id]["father"] = name
+        elif rel == "mother":
+            relation_map[r.voter_id]["mother"] = name
+        elif rel in ("brother", "sister"):
+            relation_map[r.voter_id]["sibling"].append(name)
+        elif rel in ("son", "daughter"):
+            relation_map[r.voter_id]["child"].append(name)
+
+    # ------------------ WRITE ROWS (FAST STREAMING) ------------------
+    for row in qs.values_list(
+        "voter_id",
+        "sr_no",
+        "voter_name_eng",
+        "voter_name_marathi",
+        "current_address",
+        "mobile_no",
+        "alternate_mobile1",
+        "alternate_mobile2",
+        "kramank",
+        "address_line1",
+        "age_eng",
+        "gender_eng",
+        "ward_no",
+        "location",
+        "badge",
+        "tag_id__tag_name",
+        "occupation__occupation_name",
+        "cast__caste_name",
+        "religion__religion_name",
+        "comments",
+        "check_progress_date",
+        "voter_list_id",
+    ).iterator(chunk_size=5000):
+
+        *data, voter_list_id = row
+        rel = relation_map.get(voter_list_id, {})
+
+        writer.writerow(list(data) + [
+            rel.get("father"),
+            rel.get("mother"),
+            ", ".join(rel.get("sibling", [])) or None,
+            ", ".join(rel.get("child", [])) or None,
+        ])
+
+    return response
