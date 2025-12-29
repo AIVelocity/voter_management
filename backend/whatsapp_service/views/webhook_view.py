@@ -40,7 +40,6 @@ def verify_webhook(request):
 def receive_webhook(request):
     try:
         body = json.loads(request.body.decode("utf-8") or "{}")
-        # print(body)
         logger.debug("Webhook body: %s", body)
     except json.JSONDecodeError:
         logger.error("Bad JSON in webhook payload")

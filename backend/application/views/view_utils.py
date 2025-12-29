@@ -146,15 +146,23 @@ def log_user_update(
     changed_fields=None
 ):
     """
-    old_data / new_data:
-    {
-        "mobile_no": "1111111111",
-        "address_line1": "Old Address"
-    }
+        changed_fields = {
+            "mobile_no": {"old": "1111111111", "new": "9999999999"},
+            "address_line1": {"old": "Old Address", "new": "New Address"}
+        }
     """
-    if changed_fields:
-        old_data = {k: v["old"] for k, v in changed_fields.items()}
-        new_data = {k: v["new"] for k, v in changed_fields.items()}
+    if not changed_fields:
+        return  # No changes → no logs
+    voter_name_eng = None
+    try:
+        voter_name = VoterList.objects.get(voter_id=voter_list_id)
+        voter_name_eng = voter_name.voter_name_eng
+    except VoterList.DoesNotExist:
+        voter_name_eng = None
+
+
+    old_data = {k: v["old"] for k, v in changed_fields.items()}
+    new_data = {k: v["new"] for k, v in changed_fields.items()}
     log_entry = ActivityLog.objects.create(
         user=user,
         action=action,
@@ -183,6 +191,7 @@ def log_user_update(
                 "description",
                 "ip_address",
                 "voter_id",
+                "voter_name_eng",
                 "old_data",
                 "new_data",
                 "created_at"
@@ -196,6 +205,7 @@ def log_user_update(
             log_entry.description,
             log_entry.ip_address,
             voter_list_id,
+            voter_name_eng,
             json.dumps(old_data, ensure_ascii=False),
             json.dumps(new_data, ensure_ascii=False),
             str(log_entry.created_at),
