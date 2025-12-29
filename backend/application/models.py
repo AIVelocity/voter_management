@@ -486,6 +486,9 @@ class UploadedLoginExcel(models.Model):
     created_count = models.IntegerField(default=0)
     skipped_count = models.IntegerField(default=0)
 
+    class Meta:
+        db_table = "voter_app_uploaded_login_excel"
+
     def __str__(self):
         return f"{self.file_name} ({self.uploaded_at})"
 
