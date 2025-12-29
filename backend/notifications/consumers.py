@@ -8,13 +8,8 @@ from .models import Notification
 class NotificationConsumer(AsyncWebsocketConsumer):
 
     async def connect(self):
+        await self.accept()
 
-        user = self.scope.get("user")
-
-        # Reject if anonymous
-        if not user or user.is_anonymous:
-            await self.close(code=4001)
-            return
 
         self.user = user
         self.groups_joined = []
