@@ -47,15 +47,20 @@ def export_voters_excel(request):
                 status=400
             )
 
-        # ------------------ QUERYSET ------------------
-        if user.role.role_name in ["SuperAdmin"]:
-            qs = (
-                build_voter_queryset(request, user)
-                .filter(check_progress_date=report_date)
-                .order_by("sr_no")
-            )
-        else:
-            qs = (
+        # # ------------------ QUERYSET ------------------
+        # if user.role.role_name in ["SuperAdmin"]:
+        #     qs = (
+        #         build_voter_queryset(request, user)
+        #         .filter(check_progress_date=report_date)
+        #         .order_by("sr_no")
+        #     )
+        # else:
+        #     qs = (
+        #         build_voter_queryset(request, user)
+        #         .filter(user=user, check_progress_date=report_date)
+        #         .order_by("sr_no")
+        #     )
+        qs = (
                 build_voter_queryset(request, user)
                 .filter(user=user, check_progress_date=report_date)
                 .order_by("sr_no")
