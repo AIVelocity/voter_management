@@ -10,6 +10,65 @@ from django.conf import settings
 import os
 import csv
 import json
+from rest_framework_simplejwt.authentication import JWTAuthentication
+from rest_framework.exceptions import AuthenticationFailed
+from django.utils import timezone
+
+class CustomJWTAuthentication(JWTAuthentication):
+
+    def get_user(self, validated_token):
+        user = super().get_user(validated_token)
+
+        token_iat = validated_token.get("iat")
+        if token_iat and user.password_changed_at:
+            token_time = timezone.datetime.fromtimestamp(
+                token_iat, tz=timezone.utc
+            )
+            if token_time < user.password_changed_at:
+                raise AuthenticationFailed("Token expired due to password change")
+
+        return user
+
+
+import json
+
+def format_change_data(data):
+    """
+    Convert change JSON/dict into readable text for CSV/Excel.
+    Handles:
+    - {"field": {"old": x, "new": y}}
+    - {"field": y}
+    - JSON string
+    """
+
+    if not data:
+        return ""
+
+    # If stored as JSON string
+    if isinstance(data, str):
+        try:
+            data = json.loads(data)
+        except Exception:
+            return data
+
+    if not isinstance(data, dict):
+        return str(data)
+
+    parts = []
+
+    for field, value in data.items():
+        # Case 1: {field: {old: x, new: y}}
+        if isinstance(value, dict):
+            old = value.get("old")
+            new = value.get("new")
+            parts.append(f"{field}: {old} → {new}")
+
+        # Case 2: {field: y}
+        else:
+            parts.append(f"{field}: {value}")
+
+    return "; ".join(parts)
+
 
 def build_voter_queryset(request, user):
     qs = VoterList.objects.select_related("tag_id")
@@ -62,12 +121,6 @@ def build_voter_queryset(request, user):
     # ---- LOCATION ----
     if request.GET.get("location"):
         qs = qs.filter(location__icontains=request.GET["location"])
-
-    # ---- SORT ----
-    if request.GET.get("sort"):
-        qs = qs.order_by(request.GET["sort"])
-    else:
-        qs = qs.order_by("sr_no")
 
     return qs
 
