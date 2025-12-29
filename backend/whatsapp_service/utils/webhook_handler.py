@@ -11,7 +11,7 @@ from application.models import VoterList
 from ..models import VoterChatMessage
 from .download_whatsapp_media import download_whatsapp_media
 from .s3_integration import upload_to_s3
-from notifications.utils import broadcast_to_agent, broadcast_to_admins, send_to_user
+from notifications.utils import broadcast_to_admins, send_to_user
 
 logger = logging.getLogger(__name__)
 
@@ -279,13 +279,6 @@ def handle_incoming_messages(messages, contacts=None):
                 
                 def _do_broadcast():
                     try:
-                        voter_sender_id = chat_row.sender_user_id
-
-                        if not voter_sender_id:
-                            try:
-                                voter_sender_id = getattr(chat_row.voter, "user_id", None)
-                            except Exception:
-                                voter_sender_id = None
                         meta = {
                             "event": "new_message",
                             "voter_id": voter_id,
@@ -294,12 +287,28 @@ def handle_incoming_messages(messages, contacts=None):
                             "type": media_type or msg_type,
                             "media_url": media_url,
                         }
+
+                        voter_sender_id = getattr(chat_row, "sender_user_id", None)
+
+                        if not voter_sender_id:
+                            voter_sender_id = getattr(voter, "user_id", None) if voter else None
+
                         if voter_sender_id:
-                            send_to_user(voter_sender_id, "New message received", text_body or "New message", meta=meta)
+                            send_to_user(
+                                voter_sender_id,
+                                "New message received",
+                                text_body or "New voter message",
+                                meta=meta,
+                            )
                         else:
-                            broadcast_to_admins("New incoming message", f"From {raw_from}: {text_body or 'media'}", meta=meta)
+                            broadcast_to_admins(
+                                "New incoming message",
+                                f"From {raw_from}: {text_body or media_type or 'media'}",
+                                meta=meta,
+                            )
+
                     except Exception:
-                        logger.exception("Failed to broadcast WS notification")
+                        logger.exception("Failed WS broadcast")
 
                 transaction.on_commit(_do_broadcast)
 

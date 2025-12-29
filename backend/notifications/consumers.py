@@ -1,82 +1,99 @@
 import json
+from datetime import datetime, timezone
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
-from datetime import datetime
 from .models import Notification
 
+
 class NotificationConsumer(AsyncWebsocketConsumer):
+
     async def connect(self):
+
         user = self.scope.get("user")
-        if user is None or getattr(user, "is_anonymous", True):
-            # Reject anonymous connections (recommended)
+
+        # Reject if anonymous
+        if not user or user.is_anonymous:
             await self.close(code=4001)
             return
 
-        # Determine groups to join
+        self.user = user
         self.groups_joined = []
-        # per-user
-        user_group = f"user_{user.id}"
+
+        # -------------------------------
+        # 1️⃣ Per-user group
+        # -------------------------------
+        user_group = f"user_{user.user_id}"
         await self.channel_layer.group_add(user_group, self.channel_name)
         self.groups_joined.append(user_group)
 
-        # admin group (adjust check as per your user model)
-        is_admin = getattr(user, "is_staff", False) or (hasattr(user, "role") and str(getattr(user, "role")).lower() == "admin")
-        if is_admin:
+        # -------------------------------
+        # 2️⃣ Admin group
+        # -------------------------------
+        role_name = getattr(getattr(user, "role", None), "role_name", "").lower()
+
+        if role_name == "admin":
             await self.channel_layer.group_add("admins", self.channel_name)
             self.groups_joined.append("admins")
 
-        # agent group (if your user has agent_id attr)
-        agent_id = getattr(user, "id", None)
-        if agent_id:
-            g = f"agent_{agent_id}"
-            await self.channel_layer.group_add(g, self.channel_name)
-            self.groups_joined.append(g)
-
         await self.accept()
 
-        # Optionally send unread notifications backlog
-        unread = await self._get_unread_notifications_for_user(user.id)
+        # Send unread notifications
+        unread = await self._get_unread_notifications(user.user_id)
         for n in unread:
-            await self.send_json({"event": "notification", "payload": n})
+            await self.send_json({
+                "event": "notification",
+                "payload": n
+            })
 
     async def disconnect(self, close_code):
-        for g in self.groups_joined:
+        for group in self.groups_joined:
             try:
-                await self.channel_layer.group_discard(g, self.channel_name)
-            except Exception:
+                await self.channel_layer.group_discard(group, self.channel_name)
+            except:
                 pass
 
     async def receive(self, text_data=None, bytes_data=None):
+
         if not text_data:
             return
+
         try:
             data = json.loads(text_data)
-        except Exception:
+        except:
             return
 
-        typ = data.get("type")
-        if typ == "ping":
-            await self.send_json({"type": "pong", "time": datetime.now(datetime.timezone.utc).isoformat()})
+        msg_type = data.get("type")
+
+        # Client heartbeat
+        if msg_type == "ping":
+            await self.send_json({
+                "type": "pong",
+                "time": datetime.now(timezone.utc).isoformat()
+            })
             return
 
-        if typ == "mark_read":
+        # Mark notification read
+        if msg_type == "mark_read":
             notif_id = data.get("id")
             await self._mark_notification_read(notif_id)
             return
 
-        # add other client-sent message handlers here
-
-    # Called by group_send with type='notify'
+    # Called by group_send
     async def notify(self, event):
         payload = event.get("payload", {})
-        await self.send_json({"event": "notify", "payload": payload})
+        await self.send_json({
+            "event": "notify",
+            "payload": payload
+        })
 
     @database_sync_to_async
-    def _get_unread_notifications_for_user(self, user_id):
-        qs = Notification.objects.filter(to_user_id=user_id, is_read=False).values(
-            "id", "title", "message", "meta", "created_at"
+    def _get_unread_notifications(self, user_id):
+        return list(
+            Notification.objects.filter(
+                to_user_id=user_id,
+                is_read=False
+            ).values("id", "title", "message", "meta", "created_at")
         )
-        return list(qs)
 
     @database_sync_to_async
     def _mark_notification_read(self, notif_id):

@@ -1,6 +1,6 @@
 from .filter_api import apply_multi_filter, apply_tag_filter
 from .filter_api import apply_dynamic_initial_search
-from ..models import VoterList, VoterRelationshipDetails, ActivityLog, UserContactPayload, UserVoterContact
+from ..models import VoterList, VoterRelationshipDetails, ActivityLog, UserContactPayload, UserVoterContact, VoterUserMaster
 from deep_translator import GoogleTranslator
 from .contact_match_api import canonicalize_contacts, normalize_phone
 from django.db.models import Q
@@ -154,11 +154,16 @@ def log_user_update(
     if not changed_fields:
         return  # No changes → no logs
     voter_name_eng = None
+    user_fullname = None
     try:
         voter_name = VoterList.objects.get(voter_id=voter_list_id)
+        user_name = VoterUserMaster.objects.filter(user_id=user.user_id).first()
+        if user_name:
+            user_fullname = f"{user_name.first_name} {user_name.last_name}" 
         voter_name_eng = voter_name.voter_name_eng
     except VoterList.DoesNotExist:
         voter_name_eng = None
+    
 
 
     old_data = {k: v["old"] for k, v in changed_fields.items()}
@@ -187,6 +192,7 @@ def log_user_update(
             writer.writerow([
                 "log_id",
                 "user_id",
+                "user_fullname",
                 "action",
                 "description",
                 "ip_address",
@@ -201,6 +207,7 @@ def log_user_update(
         writer.writerow([
             log_entry.log_id,
             log_entry.user.user_id if log_entry.user else None,
+            user_fullname,
             log_entry.action,
             log_entry.description,
             log_entry.ip_address,
