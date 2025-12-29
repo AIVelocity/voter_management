@@ -28,7 +28,7 @@ def verify_webhook(request):
     expected = VERIFY_TOKEN
 
     if hub_mode == "subscribe" and hub_token == expected:
-        print("Webhook verified")
+        # print("Webhook verified")
         return HttpResponse(hub_challenge, status=200)
 
     return error_resp("Invalid verification token", status=403)

@@ -45,9 +45,9 @@ def _rate_limit(phone: str, limit: int, window_seconds: int = 3600):
  
 def _twilio_client() -> Client:
     sid = os.getenv("TWILIO_ACCOUNT_SID", "").strip()
-    print(sid)
+    # print(sid)
     token = os.getenv("TWILIO_AUTH_TOKEN", "").strip()
-    print(token)
+    # print(token)
     if not sid or not token:
         raise ValueError("Twilio credentials missing")
     return Client(sid, token)
@@ -55,7 +55,7 @@ def _twilio_client() -> Client:
  
 def _verify_service_sid() -> str:
     vsid = os.getenv("TWILIO_VERIFY_SERVICE_SID", "").strip()
-    print(vsid)
+    # print(vsid)
     if not vsid:
         raise ValueError("Verify service not configured")
     return vsid
@@ -74,7 +74,7 @@ def otp_start(request):
     data = request.data
     phone = (data.get("phone") or "").strip()
     channel = (data.get("channel") or "sms").strip().lower()
-    print(data)
+    # print(data)
     # phone = (request.data.get("phone") or "").strip()
     # channel = (request.data.get("channel") or "sms").strip().lower()
  
@@ -108,7 +108,7 @@ def otp_start(request):
         return JsonResponse({"status": True, "res-status": res.status, "sid": res.sid,"message": "OTP sent successfully"}, status=200)
  
     except Exception as e:
-        print("Twilio OTP error:", str(e))  #  ADD THIS
+        # print("Twilio OTP error:", str(e))  #  ADD THIS
         return JsonResponse(
         {"status": False, "message": "Failed to start OTP", "error": str(e)},
         status=status.HTTP_400_BAD_REQUEST

@@ -1,7 +1,6 @@
 from ..models import VoterList,VoterUserMaster
 from django.core.cache import cache
 from django.core.paginator import Paginator
-from rest_framework_simplejwt.tokens import AccessToken
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -32,26 +31,12 @@ def format_mobile_with_country_code(mobile: str) -> str:
 @permission_classes([IsAuthenticated])
 def voters_info(request):
     lang = request.headers.get("Accept-Language", "en")
-    print(lang)
+    # print(lang)
     page = int(request.GET.get("page", 1))
     size = int(request.GET.get("size", 100))
     is_marathi = lang in ["mr", "mr-in", "marathi"]
-    user_id = None
-    auth_header = request.headers.get("Authorization")
-
-    if auth_header and auth_header.startswith("Bearer "):
-        try:
-            token = AccessToken(auth_header.split(" ")[1])
-            user_id = token["user_id"]
-        except Exception:
-            pass
-
-    if not user_id:
-        return Response(
-            {"status": False, "message": "Unauthorized"},
-            status=401
-        )
-    
+    user = request.user
+    user_id = user.user_id
 
     # -------- GET USER & ROLE --------
     try:
@@ -110,6 +95,8 @@ def voters_info(request):
             voter_name_eng = v.voter_name_marathi
             age_eng = v.age
             gender_eng = v.gender
+            tag = v.tag_id.tag_name_mar if v.tag_id else None
+            location = "रिमोट" if v.location == "Remote" else 'स्थानिक'
             
         else:
             first_name = v.first_name
@@ -119,6 +106,8 @@ def voters_info(request):
             voter_name_eng = v.voter_name_eng
             age_eng = v.age_eng
             gender_eng = v.gender_eng
+            tag = v.tag_id.tag_name if v.tag_id else None
+            location = v.location
             
         has_whatsapp = any([
         bool(v.mobile_no),
@@ -137,9 +126,9 @@ def voters_info(request):
             "age": age_eng,
             "gender": gender_eng,
             "ward_id": v.ward_no,
-            "tag": v.tag_id.tag_name if v.tag_id else None,
+            "tag": tag,
             "badge": v.badge,
-            "location": v.location,
+            "location": location,
             "show_whatsapp": has_whatsapp,
             "mobile_no": format_mobile_with_country_code(
                 v.mobile_no or v.alternate_mobile1 or v.alternate_mobile2 or None

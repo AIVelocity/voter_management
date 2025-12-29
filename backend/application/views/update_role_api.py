@@ -47,7 +47,7 @@ def single_volunteer(request, user_id):
             "message": "GET method required"
         }, status=405)
         
-    print("AUTH HEADER:", request.headers.get("Authorization"))
+    # print("AUTH HEADER:", request.headers.get("Authorization"))
 
     auth_header = request.headers.get("Authorization")
     logged_in_user_id = None

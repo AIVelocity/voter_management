@@ -80,9 +80,18 @@ class Translator:
             source=self.source,
             target=target_lang
         ).translate(text)
-
-
-def log_user_update(user, action, description, changed_fields, ip,voter_list_id):
+        
+def log_user_update(
+    *,
+    user,
+    action,
+    description,
+    voter_list_id=None,
+    old_data=None,
+    new_data=None,
+    ip=None,
+    changed_fields=None
+):
     """
         changed_fields = {
             "mobile_no": {"old": "1111111111", "new": "9999999999"},
@@ -105,11 +114,10 @@ def log_user_update(user, action, description, changed_fields, ip,voter_list_id)
         user=user,
         action=action,
         description=description,
-        old_data={k: v["old"] for k, v in changed_fields.items()},
-        new_data={k: v["new"] for k, v in changed_fields.items()},
+        old_data=old_data,
+        new_data=new_data,
         ip_address=ip,
         voter_id=voter_list_id
-
     )
     logs_dir = os.path.join(settings.BASE_DIR, "local_logs")
     os.makedirs(logs_dir, exist_ok=True)
@@ -150,6 +158,7 @@ def log_user_update(user, action, description, changed_fields, ip,voter_list_id)
             str(log_entry.created_at),
         ])
     return log_entry
+
 
 def save_relation(voter, relation, related_voter_id):
     """
@@ -230,8 +239,8 @@ def get_family_from_db(voter, is_marathi=False):
 
 def rematch_contacts_for_voter(voter, user):
     
-    print("VOTER.USER =", voter.user)
-    print("PAYLOAD COUNT =", UserContactPayload.objects.filter(user=voter.user).count())
+    # print("VOTER.USER =", voter.user)
+    # print("PAYLOAD COUNT =", UserContactPayload.objects.filter(user=voter.user).count())
 
     numbers = {
         voter.mobile_no,
@@ -249,8 +258,8 @@ def rematch_contacts_for_voter(voter, user):
         .order_by("-created_at")[:5]   # last N payloads only
     )
 
-    print("VOTER.USER =", user)
-    print("PAYLOAD COUNT =", UserContactPayload.objects.filter(user=user).count())
+    # print("VOTER.USER =", user)
+    # print("PAYLOAD COUNT =", UserContactPayload.objects.filter(user=user).count())
     to_create = []
 
     for p in payloads:

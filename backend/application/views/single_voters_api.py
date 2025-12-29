@@ -51,7 +51,7 @@ def single_voters_info(request, voter_list_id):
     # ---------- FETCH VOTER ----------
     try:
         lang = request.headers.get("Accept-Language", "en")
-        print(lang)
+        # print(lang)
         is_marathi = lang in ["mr", "mr-in", "marathi"]
         voter = (
             VoterList.objects

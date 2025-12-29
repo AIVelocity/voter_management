@@ -327,7 +327,6 @@ def unassigned_voters(request):
     is_marathi = lang.lower().startswith("mr")
     page = int(request.GET.get("page", 1))
     size = int(request.GET.get("size", 100))
-    sort = request.GET.get("sort")
     search = request.GET.get("search")
 
     first_name = request.GET.get("first_name")
@@ -360,9 +359,6 @@ def unassigned_voters(request):
     if search:
         qs = apply_dynamic_initial_search(qs, search)
 
-    # If Python converted to list → sort manually
-    if isinstance(qs, list):
-        qs.sort(key=lambda x: x.voter_list_id)
     
     if voter_id:
         qs = qs.filter(voter_id__icontains=voter_id)
@@ -407,9 +403,6 @@ def unassigned_voters(request):
     if location:
         qs = qs.filter(location__icontains=location)
     
-    if sort:
-        qs = qs.order_by(sort)
-
     if first_ends:
         qs = qs.filter(first_name__iendswith=first_ends)
     
