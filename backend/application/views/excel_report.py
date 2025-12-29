@@ -1,6 +1,4 @@
 from django.http import HttpResponse
-from datetime import date
-from openpyxl import Workbook
 from django.utils.timezone import now
 from ..models import (
     VoterUserMaster,
@@ -8,53 +6,33 @@ from ..models import (
     ActivityLog
 )
 import csv
+from datetime import date, datetime, time
+from django.utils.timezone import make_aware, get_current_timezone, now
 from django.http import StreamingHttpResponse
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes, renderer_classes
 from rest_framework.renderers import BaseRenderer
-from .view_utils import build_voter_queryset
-import pandas as pd
-from io import BytesIO
+from .view_utils import build_voter_queryset,format_change_data
 from collections import defaultdict
 
 class Echo:
     def write(self, value):
         return value
 
-
-class ExcelRenderer(BaseRenderer):
-    media_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    format = "xlsx"
-    charset = None
-    render_style = "binary"
-
-    def render(self, data, media_type=None, renderer_context=None):
-        return data
-
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
-@renderer_classes([ExcelRenderer])
 def export_voters_excel(request):
 
     try:
-        # -------- GET USER & ROLE --------
+        # ------------------ USER ------------------
         user = request.user
-        
-        try:
-            user = (
-                VoterUserMaster.objects
-                .select_related("role")
-                .get(user_id=user.user_id)
-            )
-        except VoterUserMaster.DoesNotExist:
-            return Response(
-                {"status": False, "message": "User not found"},
-                status=404
-            )
-        # ------------------ READ REPORT DATE ------------------
-        report_date = request.GET.get("report_date")
+        user = VoterUserMaster.objects.select_related("role").get(
+            user_id=user.user_id
+        )
 
+        # ------------------ REPORT DATE ------------------
+        report_date = request.GET.get("report_date")
         if not report_date:
             return Response(
                 {"status": False, "message": "report_date is required (YYYY-MM-DD)"},
@@ -69,68 +47,62 @@ def export_voters_excel(request):
                 status=400
             )
 
-        # ------------------ WORKBOOK ------------------
-        # wb = Workbook()
-        # ws_voters = wb.active
-        # ws_voters.title = "Voters Data"
-
-        # ------------------ BUILD VOTER QUERYSET ------------------
-        qs = (
-            build_voter_queryset(request,user)
-            .select_related("tag_id", "occupation", "cast", "religion", "user")
-            .filter(user=user, check_progress_date=report_date)
-            .order_by("sr_no")
-        )
-
-        df1 = pd.DataFrame.from_records(
-                qs.values(
-                    "voter_list_id",
-                    "voter_id",
-                    "sr_no",
-                    "voter_name_eng",
-                    "voter_name_marathi",
-                    "current_address",
-                    "mobile_no",
-                    "alternate_mobile1",
-                    "alternate_mobile2",
-                    "kramank",
-                    "address_line1",
-                    "age_eng",
-                    "gender_eng",
-                    "ward_no",
-                    "location",
-                    "badge",
-                    "tag_id__tag_name",
-                    "occupation__occupation_name",
-                    "cast__caste_name",
-                    "religion__religion_name",
-                    "comments",
-                    "check_progress_date",
-                )
+        # ------------------ QUERYSET ------------------
+        if user.role.role_name in ["SuperAdmin", "Admin"]:
+            qs = (
+                build_voter_queryset(request, user)
+                .filter(check_progress_date=report_date)
+                .order_by("sr_no")
             )
-        # ------------------ FAMILY DATA ------------------
-        # safely extract voter ids
-        if df1.empty:
-            voter_ids = []
         else:
-            voter_ids = list(df1['voter_list_id'])
-
-        relations = VoterRelationshipDetails.objects.filter(
-            voter_id__in=voter_ids
-        ).select_related("related_voter")
-        
-        df2 = pd.DataFrame.from_records(
-                relations.values(
-                    "voter_id",
-                    "related_voter__voter_name_eng",
-                    "relation_with_voter"
-                )
+            qs = (
+                build_voter_queryset(request, user)
+                .filter(user=user, check_progress_date=report_date)
+                .order_by("sr_no")
             )
-        rename_cols = {'voter_id':'voter_list_id'}
-        df2.rename(columns=rename_cols, inplace=True)
-        # Ensure both dataframes have the expected key column so merge doesn't fail
-        expected_voter_cols = [
-            "voter_list_id",
+
+        # ------------------ RESPONSE (UTF-8 BOM FOR EXCEL) ------------------
+        filename = f"voter_report_{user.first_name}_{user.last_name}_{now().strftime('%Y%m%d_%H%M%S')}.csv"
+
+        response = HttpResponse(
+            content_type="text/csv; charset=utf-8-sig"
+        )
+        response["Content-Disposition"] = f'attachment; filename="{filename}"'
+
+        # THIS LINE FIXES MARATHI IN EXCEL
+        response.write("\ufeff")
+
+        writer = csv.writer(response)
+
+        # ==========================================================
+        # =============== SECTION 1 : VOTERS DATA ==================
+        # ==========================================================
+        writer.writerow(["VOTERS DATA"])
+        writer.writerow([
+            "Voter ID",
+            "Serial No",
+            "Voter Name (English)",
+            "Voter Name (Marathi)",
+            "Current Address",
+            "Mobile",
+            "Alternate Mobile 1",
+            "Alternate Mobile 2",
+            "Kramank",
+            "Address Line 1",
+            "Age",
+            "Gender",
+            "Ward No",
+            "Location",
+            "Badge",
+            "Tag",
+            "Occupation",
+            "Caste",
+            "Religion",
+            "Comments",
+            "Check Progress Date",
+        ])
+
+        for row in qs.values_list(
             "voter_id",
             "sr_no",
             "voter_name_eng",
@@ -146,125 +118,86 @@ def export_voters_excel(request):
             "ward_no",
             "location",
             "badge",
-            "tag_id",
-            "occupation",
-            "cast",
-            "religion",
+            "tag_id__tag_name",
+            "occupation__occupation_name",
+            "cast__caste_name",
+            "religion__religion_name",
             "comments",
             "check_progress_date",
-        ]
+        ).iterator(chunk_size=5000):
+            writer.writerow(row)
 
-        if "voter_list_id" not in df1.columns:
-            df1 = pd.DataFrame(columns=expected_voter_cols)
+        # ==========================================================
+        # =============== SECTION 2 : CHANGE LOGS ===================
+        # ==========================================================
+        writer.writerow([])
+        writer.writerow([])
+        writer.writerow(["CHANGE LOGS"])
 
-        if "voter_list_id" not in df2.columns:
-            df2 = pd.DataFrame(columns=["voter_list_id", "related_voter__voter_name_eng", "relation_with_voter"])
-
-        merged_df = df1.merge(
-                            df2,
-                            on="voter_list_id",
-                            how="left"
-                        )
-        
-        # Rename merged_df columns to meaningful names
-        merged_df.rename(columns={
-            "voter_list_id": "ID",
-            "voter_id": "Voter ID",
-            "sr_no": "Serial No",
-            "voter_name_eng": "Voter Name (English)",
-            "voter_name_marathi": "Voter Name (Marathi)",
-            "current_address": "Current Address",
-            "mobile_no": "Mobile",
-            "alternate_mobile1": "Alternate Mobile 1",
-            "alternate_mobile2": "Alternate Mobile 2",
-            "kramank": "Kramank",
-            "address_line1": "Address Line 1",
-            "age_eng": "Age",
-            "gender_eng": "Gender",
-            "ward_no": "Ward No",
-            "location": "Location",
-            "badge": "Badge",
-            "tag_id__tag_name": "Tag",
-            "occupation__occupation_name": "Occupation",
-            "cast__caste_name": "Caste",
-            "religion__religion_name": "Religion",
-            "comments": "Comments",
-            "check_progress_date": "Check Progress Date",
-            "related_voter__voter_name_eng": "Related Voter Name",
-            "relation_with_voter": "Relation",
-        }, inplace=True)
-        
-        # Drop the ID column after rename
-        merged_df = merged_df.drop(columns=["ID"], errors='ignore')
-
-        from datetime import datetime, time
-        from django.utils.timezone import make_aware, get_current_timezone
+        writer.writerow([
+            "Voter Name",
+            "Voter ID",
+            "Action",
+            "User First Name",
+            "User Last Name",
+            "Old Data",
+            "New Data",
+            "Timestamp",
+        ])
 
         tz = get_current_timezone()
-
         start_dt = make_aware(datetime.combine(report_date, time.min), tz)
         end_dt   = make_aware(datetime.combine(report_date, time.max), tz)
 
-        # Query logs for this user on the report date, regardless of whether voters exist
         logs_qs = (
             ActivityLog.objects
             .filter(
                 user=user,
-                created_at__range=(start_dt, end_dt)  # only this date
+                created_at__range=(start_dt, end_dt)
             )
-            .select_related("user", "voter")
-            .order_by("created_at")           # chronological
+            .order_by("created_at")
         )
-        
-        logs_df = pd.DataFrame.from_records(
-                logs_qs.values(
-                    "voter__voter_name_eng",
-                    "voter__voter_id",
-                    "action",
-                    "user__first_name",
-                    "user__last_name",
-                    "old_data",
-                    "new_data",
-                    "created_at"
-                )
-            )
-        
-        # Rename logs_df columns to meaningful names
-        logs_df.rename(columns={
-            "voter__voter_name_eng": "Voter Name",
-            "voter__voter_id": "Voter ID",
-            "action": "Action",
-            "user__first_name": "User First Name",
-            "user__last_name": "User Last Name",
-            "old_data": "Old Data",
-            "new_data": "New Data",
-            "created_at": "Timestamp",
-        }, inplace=True)
 
-        buffer = BytesIO()
-        from django.utils.timezone import now
-        # Generate meaningful filename with user and date
-        user_name = f"{user.first_name}_{user.last_name}".replace(" ", "_") if user.first_name or user.last_name else f"user_{user.user_id}"
-        timestamp = now().strftime("%Y%m%d_%H%M%S")
+        for (
+            voter_name,
+            voter_id,
+            action,
+            user_first,
+            user_last,
+            old_data,
+            new_data,
+            created_at,
+        ) in logs_qs.values_list(
+            "voter__voter_name_eng",
+            "voter__voter_id",
+            "action",
+            "user__first_name",
+            "user__last_name",
+            "old_data",
+            "new_data",
+            "created_at",
+        ).iterator(chunk_size=5000):
 
-        filename = f"voter_report_{user_name}_{timestamp}.xlsx"
+            writer.writerow([
+                voter_name,
+                voter_id,
+                action,
+                user_first,
+                user_last,
+                format_change_data(old_data),  
+                format_change_data(new_data),   
+                created_at,
+            ])
 
-        with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
-            merged_df.to_excel(writer, sheet_name="Voters Data", index=False)
-            logs_df.to_excel(writer, sheet_name="Change Logs", index=False)
 
-        buffer.seek(0)
-
-        return Response(
-            buffer.getvalue(),
-            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            headers={
-                "Content-Disposition": f'attachment; filename="{filename}"'
-            }
-        )
+        return response
 
     except Exception as e:
-        return Response({"status": False, "error": str(e)}, status=400)
+        return Response(
+            {"status": False, "error": str(e)},
+            status=400
+        )
+
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])

@@ -20,40 +20,13 @@ from .view_utils import rematch_contacts_for_voter, log_user_update
 @permission_classes([IsAuthenticated])
 def update_voter(request, voter_list_id):
 
-    if request.method != "PUT":
-        return Response(
-            {"status": False, "message": "PUT method required"},
-            status=405
-        )
-
     try:
         body = request.data
-        auth_header = request.headers.get("Authorization")
+        # auth_header = request.headers.get("Authorization")
         ip = request.META.get("REMOTE_ADDR")
 
-        # ---------- AUTH ----------
-        user_id = None
-        if auth_header and auth_header.startswith("Bearer "):
-            try:
-                token = AccessToken(auth_header.split(" ")[1])
-                user_id = token["user_id"]
-            except Exception:
-                pass
-
-        if not user_id:
-            return Response(
-                {"status": False, "message": "Unauthorized"},
-                status=401
-            )
-
-        try:
-            user = VoterUserMaster.objects.get(user_id=user_id)
-        except VoterUserMaster.DoesNotExist:
-            return Response(
-                {"status": False, "message": "User not found"},
-                status=404
-            )
-
+        user = request.user
+        
         try:
             voter = VoterList.objects.get(voter_list_id=voter_list_id)
         except VoterList.DoesNotExist:
@@ -107,8 +80,8 @@ def update_voter(request, voter_list_id):
                 )
                 if voter.occupation != new_occupation:
                     changed_fields["occupation"] = {
-                        "old": voter.occupation.occupation_id if voter.occupation else None,
-                        "new": new_occupation.occupation_id
+                        "old": voter.occupation.occupation_name if voter.occupation else None,
+                        "new": new_occupation.occupation_name
                     }
                     voter.occupation = new_occupation
             except Occupation.DoesNotExist:
@@ -125,8 +98,8 @@ def update_voter(request, voter_list_id):
                 )
                 if voter.religion != new_religion:
                     changed_fields["religion"] = {
-                        "old": voter.religion.religion_id if voter.religion else None,
-                        "new": new_religion.religion_id
+                        "old": voter.religion.religion_name if voter.religion else None,
+                        "new": new_religion.religion_name
                     }
                     voter.religion = new_religion
             except Religion.DoesNotExist:
@@ -141,8 +114,8 @@ def update_voter(request, voter_list_id):
                 new_caste = Caste.objects.get(caste_id=caste_id)
                 if voter.cast != new_caste:
                     changed_fields["cast"] = {
-                        "old": voter.cast.caste_id if voter.cast else None,
-                        "new": new_caste.caste_id
+                        "old": voter.cast.caste_name if voter.cast else None,
+                        "new": new_caste.caste_name
                     }
                     voter.cast = new_caste
             except Caste.DoesNotExist:
@@ -157,8 +130,8 @@ def update_voter(request, voter_list_id):
                 new_tag = VoterTag.objects.get(tag_id=tag_id)
                 if voter.tag_id != new_tag:
                     changed_fields["tag_id"] = {
-                        "old": voter.tag_id.tag_id if voter.tag_id else None,
-                        "new": new_tag.tag_id
+                        "old": voter.tag_id.tag_name if voter.tag_id else None,
+                        "new": new_tag.tag_name
                     }
                     voter.tag_id = new_tag
             except VoterTag.DoesNotExist:
