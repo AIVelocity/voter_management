@@ -48,7 +48,7 @@ def export_voters_excel(request):
             )
 
         # ------------------ QUERYSET ------------------
-        if user.role.role_name in ["SuperAdmin", "Admin"]:
+        if user.role.role_name in ["SuperAdmin"]:
             qs = (
                 build_voter_queryset(request, user)
                 .filter(check_progress_date=report_date)
