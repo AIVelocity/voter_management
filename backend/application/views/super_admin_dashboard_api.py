@@ -433,6 +433,9 @@ def unassigned_voters(request):
             voter_name_eng = v.voter_name_marathi
             age_eng = v.age
             gender_eng = v.gender
+            tag = v.tag_id.tag_name_mar if v.tag_id else None
+            location = "रिमोट" if v.location == "Remote" else 'स्थानिक'
+            
         else:
             first_name = v.first_name
             middle_name = v.middle_name
@@ -441,6 +444,8 @@ def unassigned_voters(request):
             voter_name_eng = v.voter_name_eng
             age_eng = v.age_eng
             gender_eng = v.gender_eng
+            tag = v.tag_id.tag_name if v.tag_id else None
+            location = v.location
             
         data.append({
             "sr_no" : v.sr_no,
@@ -448,9 +453,9 @@ def unassigned_voters(request):
             "voter_name_eng": voter_name_eng,
             "voter_id": v.voter_id,
             "gender": gender_eng,
-            "location": v.location,
+            "location": location,
             "badge": v.badge,
-            "tag": v.tag_id.tag_name if v.tag_id else None,
+            "tag": tag,
             "kramank": v.kramank,
             "age":age_eng,
             "ward_id": v.ward_no
