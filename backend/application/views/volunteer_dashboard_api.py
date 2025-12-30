@@ -16,10 +16,16 @@ from rest_framework.response import Response
 def volunteer_dashboard(request):
     logger.info("volunteer_dashboard_api: Volunteer dashboard request received")
     # ---------------- AUTH ----------------
-    user_id = None
     user = request.user
     user_id = user.user_id
     # ---------------- BASIC COUNTS ----------------
+    user_data = (
+        VoterUserMaster.objects
+        .filter(user_id=user_id)
+        .values("user_id", "first_name", "last_name", "mobile_no", "role__role_name")
+        .first()
+    )
+
 
     assigned_count = VoterList.objects.filter(user_id=user_id).count()
 
@@ -94,7 +100,7 @@ def volunteer_dashboard(request):
     return Response({
         "SUCCESS": True,
         "data": {
-            "user": user,
+            "user": user_data,
             "assigned": assigned_count,
             "visited": visited_count,
             "pending": pending_count,
