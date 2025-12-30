@@ -1,29 +1,21 @@
-
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.hashers import check_password
 from rest_framework_simplejwt.tokens import AccessToken
 from ..models import VoterUserMaster, VoterList
 import json
-
-
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
+from logger import logger
 
 @api_view(["POST"])
 @permission_classes([AllowAny])
 def id_validation(request):
 
-    if request.method != "POST":
-        return Response({
-            "status": False,
-            "message": "POST method required"
-        }, status=405)
-
     try:
         body = request.data
-
+        logger.info("id_validation_api: ID validation request received")
         mobile_no = (body.get("mobile_no") or "").strip()
         password = (body.get("password") or "").strip()
 
@@ -58,41 +50,8 @@ def id_validation(request):
         else:
             role_name = None
             role_id = None
-    
-    
-                # -------- MODULE PERMISSIONS --------
-        # permissions = []
 
-        # if user.role:
-        #     perms = (
-        #         RoleModulePermission.objects
-        #         .filter(
-        #             role_id=user.role.role_id,
-        #             module__is_active=True
-        #         )
-        #         .select_related("module")
-        #         .values(
-        #             "module__module_name",
-        #             "module__module_code",
-        #             "can_add",
-        #             "can_edit",
-        #             "can_delete"
-        #         )
-        #         .order_by("module__module_name")
-        #     )
-
-        #     permissions = [
-        #         {
-        #             "module": p["module__module_name"],
-        #             "code": p["module__module_code"],
-        #             "add": p["can_add"],
-        #             "edit": p["can_edit"],
-        #             "delete": p["can_delete"]
-        #         }
-        #         for p in perms
-        #     ]
-
-    
+        logger.info(f"id_validation_api: User {user.user_id} authenticated successfully")    
         # -------- SUCCESS --------
         return Response({
             "status": True,

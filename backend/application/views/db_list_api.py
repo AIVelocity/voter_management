@@ -1,6 +1,8 @@
 from ..models import VoterTag,Roles
 from django.http import JsonResponse
-
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 
 # index api
 def index(request):
@@ -9,7 +11,10 @@ def index(request):
         "message":"Application running"
     })
     
-# tags api
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
 def tags(request):
     tags = VoterTag.objects.all().order_by("tag_id")
     data = []
@@ -23,7 +28,12 @@ def tags(request):
         "data":data
     })
     
-# role api
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
 def roles(request):
     roles = Roles.objects.all().order_by("role_id")
     data = []

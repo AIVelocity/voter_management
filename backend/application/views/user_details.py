@@ -4,11 +4,12 @@ from rest_framework.response import Response
 from django.core.paginator import Paginator, EmptyPage
 from ..models import VoterUserMaster
 from .single_voters_api import format_indian_datetime, make_aware_if_needed 
+from logger import logger
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def list_all_users(request):
-
+    logger.info("super_admin_dashboard_api: List all users request received")
     page = int(request.GET.get("page", 1))
     size = int(request.GET.get("size", 50))
     role = request.GET.get("role")   # optional filter
@@ -50,7 +51,7 @@ def list_all_users(request):
             "created_at": format_indian_datetime(
         make_aware_if_needed(user.created_date))
         })
-
+    logger.info(f"super_admin_dashboard_api: Retrieved page {page} with {len(data)} users")
     return Response({
         "status": True,
         "page": page,

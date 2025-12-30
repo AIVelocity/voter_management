@@ -1,3 +1,4 @@
+from backend import logger
 from ..models import VoterList, VoterUserMaster
 from django.db.models import Count
 from rest_framework_simplejwt.tokens import AccessToken
@@ -13,32 +14,11 @@ from rest_framework.response import Response
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def volunteer_dashboard(request):
-
+    logger.info("volunteer_dashboard_api: Volunteer dashboard request received")
     # ---------------- AUTH ----------------
     user_id = None
-
-    auth_header = request.headers.get("Authorization")
-    if auth_header and auth_header.startswith("Bearer "):
-        try:
-            token = AccessToken(auth_header.split(" ")[1])
-            user_id = token["user_id"]
-        except Exception:
-            pass
-
-    if not user_id:
-        return Response(
-            {"status": False, "message": "Unauthorized"},
-            status=401
-        )
-
-    # Optional: fetch user details
-    user = (
-        VoterUserMaster.objects
-        .filter(user_id=user_id)
-        .values("user_id", "first_name", "last_name", "mobile_no", "role__role_name")
-        .first()
-    )
-
+    user = request.user
+    user_id = user.user_id
     # ---------------- BASIC COUNTS ----------------
 
     assigned_count = VoterList.objects.filter(user_id=user_id).count()
@@ -110,7 +90,7 @@ def volunteer_dashboard(request):
     red_color_tags = VoterList.objects.filter(user_id=user_id, tag_id=3).count()
 
     # ---------------- RESPONSE ----------------
-
+    logger.info(f"volunteer_dashboard_api: Dashboard data prepared for volunteer {user_id}")
     return Response({
         "SUCCESS": True,
         "data": {
@@ -132,31 +112,17 @@ def volunteer_dashboard(request):
     })
 
 
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.response import Response
-
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def volunteer_voters_page(request):
+    logger.info("volunteer_voters_page_api: Volunteer voters page request received")
     page = int(request.GET.get("page", 1))
     size = int(request.GET.get("size", 100))
 
     user_id = None
 
-    auth_header = request.headers.get("Authorization")
-    if auth_header and auth_header.startswith("Bearer "):
-        try:
-            token = AccessToken(auth_header.split(" ")[1])
-            user_id = token["user_id"]
-        except Exception:
-            pass
-
-    if not user_id:
-        return Response(
-            {"status": False, "message": "Unauthorized"},
-            status=401
-        )
+    user = request.user
+    user_id = user.user_id
         
 
     qs = (
@@ -199,7 +165,7 @@ def volunteer_voters_page(request):
             tagged_data.append(voter_obj)
         else:
             untagged_data.append(voter_obj)
-
+    logger.info(f"volunteer_voters_page_api: Retrieved page {page} with {len(data)} voters")
     return Response({
         "SUCCESS": True,
         "page": page,
@@ -213,34 +179,15 @@ def volunteer_voters_page(request):
     })
 
 
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.response import Response
-
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def volunteer_voters_page_filter(request):
+    logger.info("volunteer_voters_page_filter_api: Volunteer voters page filter request received")
     page = int(request.GET.get("page", 1))
     size = int(request.GET.get("size", 100))
 
-    # -------- AUTH --------
-    user_id = None
-    auth_header = request.headers.get("Authorization")
-
-    if auth_header and auth_header.startswith("Bearer "):
-        try:
-            token = AccessToken(auth_header.split(" ")[1])
-            user_id = token["user_id"]
-        except Exception:
-            pass
-
-    if not user_id:
-        return Response(
-            {"status": False, "message": "Unauthorized"},
-            status=401
-        )
-
-    # -------- BASE QUERY (logged-in user only) --------
+    user = request.user
+    user_id = user.user_id
     qs = (
         VoterList.objects
         .select_related("tag_id")
@@ -283,11 +230,6 @@ def volunteer_voters_page_filter(request):
     # Apply advanced search (name + voter_id)
     if search:
         qs = apply_dynamic_initial_search(qs, search)
-
-    # If Python converted to list → sort manually
-    if isinstance(qs, list):
-        qs.sort(key=lambda x: x.voter_list_id)
-
   
     if voter_id:
         qs = qs.filter(voter_id__icontains=voter_id)
@@ -325,27 +267,13 @@ def volunteer_voters_page_filter(request):
                     age_eng__lte=int(max_age.strip())
                 )
             except ValueError:
-                continue  # skip invalid ranges
+                continue  
 
         qs = qs.filter(age_q)
 
-    # if age_max:
-    #     qs = qs.filter(age_eng__lte=age_max)
-
-    # if age_min:
-    #     qs = qs.filter(age_eng__gte=age_min)
 
     if location:
         qs = qs.filter(location__icontains=location)
-     
-    
-    # if sort:
-    #     qs = qs.order_by(sort)
-    # else:
-    #     qs = qs.order_by(voter)
-
-    # if gender:
-    #     qs = qs.filter(gender_eng__iexact=gender)
 
     # Apply ENDS WITH filters
     if first_ends:
@@ -383,7 +311,7 @@ def volunteer_voters_page_filter(request):
             "ward_id": v.ward_no,
             "assigned": True if v.check_progress_date else False
         })
-
+    logger.info(f"volunteer_voters_page_filter_api: Retrieved page {page} with {len(data)} voters")
     return Response({
         "status": True,
         "page": page,

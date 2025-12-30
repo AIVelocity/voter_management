@@ -8,8 +8,7 @@ from rest_framework.response import Response
 from django.conf import settings
 import os
 import base64
-from django.http import FileResponse
-
+from logger import logger
 
 BASE_DIR = settings.BASE_DIR
 # print(BASE_DIR)
@@ -19,31 +18,10 @@ BASE_DIR = settings.BASE_DIR
 def voters_info_photo(request): 
     # data = request.body
     try:
-        auth_header = request.headers.get("Authorization")
+        logger.info("photo_api: Voter photo request received")
         data = request.GET
-        
         # user_id = None
         voter_list_id =data.get("voter_list_id")
-
-        # # Extract user_id from Bearer token
-        # # user = None
-        # if auth_header and auth_header.startswith("Bearer "):
-        #     token_str = auth_header.split(" ")[1]
-        #     try:
-        #         token = AccessToken(token_str)
-        #         user_id = token["user_id"]
-        #         # user = VoterUserMaster.objects.get(user_id=user_id)
-        #     except Exception:
-        #         pass
-
-
-        # # Get logged-in user
-        # user = None
-        # if user_id:
-        #     try:
-        #         user = VoterUserMaster.objects.get(user_id=user_id)
-        #     except VoterUserMaster.DoesNotExist:
-        #         user = None
 
         try:
             voter = VoterList.objects.get(voter_list_id=voter_list_id)
@@ -57,7 +35,8 @@ def voters_info_photo(request):
         
         with open(image_full_path, "rb") as img_file:
             encoded_image = base64.b64encode(img_file.read()).decode("utf-8")
-        
+            
+        logger.info(f"photo_api: Photo for voter {voter.voter_list_id} retrieved successfully")
         # ---------- RESPONSE ----------
         return Response({
             "status": True,

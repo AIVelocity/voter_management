@@ -3,11 +3,12 @@ from .single_voters_api import format_indian_datetime
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from logger import logger
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def all_comments(request):
-
+    logger.info("super_admin_comments_api: All comments request received")
     logs = (
         ActivityLog.objects
         .filter(new_data__has_key="comments")
@@ -47,7 +48,7 @@ def all_comments(request):
                 if voter and voter.tag_id else None
             )
         })
-
+    logger.info(f"super_admin_comments_api: Retrieved {len(data)} comments")
     return Response({
         "status": True,
         "count": len(data),

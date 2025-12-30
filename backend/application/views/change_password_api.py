@@ -1,10 +1,9 @@
-
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.hashers import check_password, make_password
 from rest_framework_simplejwt.tokens import AccessToken
 from ..models import VoterUserMaster
 import json
-
+from logger import logger
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -13,41 +12,10 @@ from rest_framework.response import Response
 @permission_classes([IsAuthenticated])
 def password_change(request):
 
-    if request.method != "POST":
-        return Response({
-            "status": False,
-            "message": "POST method required"
-        }, status=405)
-
     try:
+        logger.info("change_password_api: Change password request received")
         # ---------- JWT AUTH ----------
-        auth_header = request.headers.get("Authorization")
-
-        if not auth_header or not auth_header.startswith("Bearer "):
-            return Response({
-                "status": False,
-                "message": "Authorization token missing"
-            }, status=401)
-
-        token_str = auth_header.split(" ")[1]
-
-        try:
-            token = AccessToken(token_str)
-            user_id = token.get("user_id")
-        except Exception:
-            return Response({
-                "status": False,
-                "message": "Invalid or expired token"
-            }, status=401)
-
-        try:
-            user = VoterUserMaster.objects.get(user_id=user_id)
-        except VoterUserMaster.DoesNotExist:
-            return Response({
-                "status": False,
-                "message": "User not found"
-            }, status=404)
-
+        user = request.user
         # ---------- PAYLOAD ----------
         body = request.data
 
@@ -81,6 +49,7 @@ def password_change(request):
         # ---------- UPDATE PASSWORD ----------
         user.password = make_password(new_password)
         user.save(update_fields=["password"])
+        logger.info("change_password_api: Password changed successfully")
 
         return Response({
             "status": True,

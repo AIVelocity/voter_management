@@ -8,11 +8,12 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from .filter_api import apply_dynamic_initial_search
-
+from logger import logger
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def voters_search(request):
+    logger.info("voters_search_api: Voter search request received")
     lang = request.headers.get("Accept-Language", "en")
     is_marathi = lang.lower() in ["mr", "mr-in", "marathi"]
 
@@ -90,7 +91,8 @@ def voters_search(request):
                 v.mobile_no or v.alternate_mobile1 or v.alternate_mobile2
             ),
         })
-
+    logger.info(f"voters_search_api: Returning {len(data)} records for search query '{search}'")
+    
     return Response({
         "status": True,
         "query": search,
@@ -105,6 +107,7 @@ def voters_search(request):
 @api_view(["GET"])
 @permission_classes([IsAuthenticated]) 
 def family_dropdown_search(request):
+    logger.info("family_dropdown_search_api: Family dropdown search request received")
     search = request.GET.get("search", "").strip()
     # print(search)
     
@@ -174,6 +177,7 @@ def family_dropdown_search(request):
                 v.mobile_no or v.alternate_mobile1 or v.alternate_mobile2 or None
             ),
         })
+    logger.info(f"family_dropdown_search_api: Returning {len(data)} records for search query '{search}' excluding voter_list_id '{exclude_id}'")
     return Response({
         "status": True,
         "query": search,

@@ -1,8 +1,8 @@
-
+from django.db import IntegrityError
 from django.views.decorators.csrf import csrf_exempt
 from django.db import transaction
 from ..models import VoterUserMaster, Roles,VoterList
-import json
+from logger import logger
 from django.utils import timezone
 from rest_framework_simplejwt.tokens import AccessToken
 from django.db.models import Count
@@ -13,7 +13,7 @@ from rest_framework.response import Response
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def list_volunteers(request):
-
+    logger.info("super_admin_dashboard_api: List volunteers request received")
     volunteers = (
         VoterUserMaster.objects
         .filter(role__role_name="Volunteer")
@@ -26,49 +26,20 @@ def list_volunteers(request):
         )
         .order_by("created_date")
     )
-
+    logger.info(f"super_admin_dashboard_api: Retrieved {volunteers.count()} volunteers")
     return Response({
         "status": True,
         "count": volunteers.count(),
         "volunteers": list(volunteers)
     })
 
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.response import Response
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def single_volunteer(request, user_id):
 
-    if request.method != "GET":
-        return Response({
-            "status": False,
-            "message": "GET method required"
-        }, status=405)
-        
-    # print("AUTH HEADER:", request.headers.get("Authorization"))
-
-    auth_header = request.headers.get("Authorization")
-    logged_in_user_id = None
-
-    if auth_header and auth_header.startswith("Bearer "):
-        try:
-            token = AccessToken(auth_header.split(" ")[1])
-            logged_in_user_id = token["user_id"]
-        except Exception:
-            return Response(
-                {"status": False, "message": "Invalid or expired token"},
-                status=401
-            )
-
-    if not logged_in_user_id:
-        return Response(
-            {"status": False, "message": "Unauthorized"},
-            status=401
-        )
-
     try:
+        logger.info(f"super_admin_dashboard_api: Single volunteer request received for user_id {user_id}")
         user = (
             VoterUserMaster.objects
             .select_related("role")
@@ -128,7 +99,7 @@ def single_volunteer(request, user_id):
                 .filter(user=user)
                 .count()
             )
-
+        logger.info(f"super_admin_dashboard_api: Retrieved data for volunteer {user_id}")
         return Response({
             "status": True,
             "data": response
@@ -149,22 +120,12 @@ ROLE_LEVELS = {
     "Volunteer": 3,
 }
 
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.response import Response
-
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def promote_user(request):
 
-    if request.method != "POST":
-        return Response({
-            "status": False,
-            "message": "POST method required"
-        }, status=405)
-
     try:
-        # auth_header = request.headers.get("Authorization")
+        logger.info("super_admin_dashboard_api: Promote user request received")
         body = request.data
 
         target_user_id = body.get("target_user_id")
@@ -196,7 +157,7 @@ def promote_user(request):
             # target_user.updated_by = logged_in_user.user_id
             target_user.updated_date = timezone.now()
             target_user.save()
-
+        logger.info(f"super_admin_dashboard_api: User {target_user_id} promoted to {new_role_name}")
         return Response({
             "status": True,
             "message": f"User promoted to {new_role_name}",
@@ -209,38 +170,16 @@ def promote_user(request):
             "error": str(e)
         }, status=500)
 
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.response import Response
 
 @api_view(["DELETE"])
 @permission_classes([IsAuthenticated])
 def delete_user(request, user_id):
 
-    # ---------------- AUTH ----------------
-    auth_header = request.headers.get("Authorization")
-    logged_in_user_id = None
-
-    if auth_header and auth_header.startswith("Bearer "):
-        try:
-            token = AccessToken(auth_header.split(" ")[1])
-            logged_in_user_id = token["user_id"]
-        except Exception:
-            return Response(
-                {"status": False, "message": "Invalid or expired token"},
-                status=401
-            )
-
-    if not logged_in_user_id:
-        return Response(
-            {"status": False, "message": "Unauthorized"},
-            status=401
-        )
-    # ---------------- DELETE USER ----------------
     try:
+        logger.info(f"super_admin_dashboard_api: Delete user request received for user_id {user_id}")
         target_user = VoterUserMaster.objects.get(user_id=user_id)
         target_user.delete()
-
+        logger.info(f"super_admin_dashboard_api: User {user_id} deleted successfully")
         return Response({
             "status": True,
             "message": "User deleted successfully"
@@ -250,5 +189,14 @@ def delete_user(request, user_id):
         return Response(
             {"status": False, "message": "User not found"},
             status=404
+        )
+
+    except IntegrityError:
+        return Response(
+            {
+                "status": False,
+                "message": "User cannot be deleted because related records exist"
+            },
+            status=409
         )
 
