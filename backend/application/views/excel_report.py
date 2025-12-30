@@ -215,7 +215,7 @@ def voters_export(request):
         user_id=user.user_id
     )
 
-    if user.role.role_name in ["SuperAdmin", "Admin"]:
+    if user.role.role_name in ["SuperAdmin"]:
         qs = build_voter_queryset(request, user)
     else:
         qs = build_voter_queryset(request, user).filter(user=user)
