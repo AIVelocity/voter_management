@@ -1,4 +1,4 @@
-from backend import logger
+from logger import logger
 from ..models import VoterList, VoterUserMaster
 from django.db.models import Count
 from rest_framework_simplejwt.tokens import AccessToken
