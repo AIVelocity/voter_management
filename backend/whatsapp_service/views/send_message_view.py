@@ -10,9 +10,12 @@ from ..models import VoterChatMessage, TemplateName
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from logger import logger
 
 url = settings.MESSAGE_URL
 token = settings.ACCESS_TOKEN
+logger.info("WhatsApp Service URL: %s", url)
+logger.info("WhatsApp Service Token: %s", token[:5] + "..." if token else "None")
 # --- CONFIG: provider limit ---
 PROVIDER_MAX_PER_SECOND = 50  # provider limit (messages / sec)
 DEFAULT_CHUNK_SIZE = PROVIDER_MAX_PER_SECOND  # how many messages to send per second
@@ -25,6 +28,7 @@ country_code = "91"
 def send_template(request):
     if request.method != "POST":
         return JsonResponse({"status": False, "message": "Only POST allowed"}, status=405)
+    logger.info("Send template request received")
 
     recipients, errors= get_recipients_from_request(request)
     if not recipients:
@@ -82,9 +86,10 @@ def send_template(request):
             "template": template_payload
         }
         tasks.append((payload, v))
-
+        
     results = []
     total = len(tasks)
+    logger.info("Total tasks to process: %d", total)
     if total == 0:
         return JsonResponse({"status": False, "message": "No valid recipients after validation", "errors": errors}, status=400)
 

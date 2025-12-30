@@ -1,13 +1,11 @@
-# utils/download_whatsapp_media.py
 import requests
 from io import BytesIO
 from django.conf import settings
-import logging
+from logger import logger
 from requests.exceptions import RequestException
 
-logger = logging.getLogger(__name__)
 
-def download_whatsapp_media(media_id: str, access_token: str | None = None, api_version: str = "v22.0"):
+def download_whatsapp_media(media_id: str, access_token: str | None = None, api_version: str = "v24.0"):
     """
     Download media from WhatsApp Graph API and return (BytesIO, mime_type)
     Raises RuntimeError on failure.
@@ -15,7 +13,7 @@ def download_whatsapp_media(media_id: str, access_token: str | None = None, api_
     access_token = settings.ACCESS_TOKEN
     if not access_token:
         raise RuntimeError("WhatsApp access token is not configured in settings")
-
+    logger.error("access_token", access_token)
     # Step 1: get metadata (which contains the download URL)
     metadata_url = f"https://graph.facebook.com/{api_version}/{media_id}"
     headers = {"Authorization": f"Bearer {access_token}"}

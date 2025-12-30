@@ -1,12 +1,11 @@
 import json
-import logging
 from django.conf import settings
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from ..utils.webhook_handler import handle_incoming_messages, handle_statuses, parse_whatsapp_error
+from logger import logger
 
-logger = logging.getLogger(__name__)
 VERIFY_TOKEN = settings.VERIFY_TOKEN
 
 
@@ -28,19 +27,19 @@ def verify_webhook(request):
     expected = VERIFY_TOKEN
 
     if hub_mode == "subscribe" and hub_token == expected:
-        # print("Webhook verified")
+        logger.info("Webhook verified successfully")
         return HttpResponse(hub_challenge, status=200)
 
     return error_resp("Invalid verification token", status=403)
 
 
 # ------------------------------
-# POST HANDLER (unchanged)
+# POST HANDLER
 # ------------------------------
 def receive_webhook(request):
     try:
         body = json.loads(request.body.decode("utf-8") or "{}")
-        logger.debug("Webhook body: %s", body)
+        logger.info("Webhook body: %s", body)
     except json.JSONDecodeError:
         logger.error("Bad JSON in webhook payload")
         return error_resp("Invalid JSON", status=400)
@@ -96,8 +95,8 @@ def whatsapp_webhook(request):
     """
     if request.method == "GET":
         return verify_webhook(request)
-
+    logger.info("Received %s request on webhook", request.method)
     if request.method == "POST":
         return receive_webhook(request)
-
+    logger.info("Received %s on webhook", request.method)
     return error_resp("Invalid method", status=405)

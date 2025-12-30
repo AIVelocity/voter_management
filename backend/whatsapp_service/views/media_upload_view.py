@@ -10,10 +10,13 @@ from ..utils.s3_integration import upload_to_s3
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from logger import logger
 
 Upload_Url = getattr(settings, "UPLOAD_URL", None)
 token = getattr(settings, "ACCESS_TOKEN", None)
 ALLOWED_MEDIA_TYPES = {"image", "audio", "video", "document"}
+logger.info("WhatsApp Upload URL: %s", Upload_Url)
+logger.info("WhatsApp Access Token: %s", token[:5] + "..." if token else "None")
 
 # Limits (bytes)
 MB = 1024 * 1024

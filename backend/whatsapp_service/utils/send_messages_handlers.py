@@ -9,10 +9,13 @@ from typing import List, Tuple, Any, Dict, Optional
 from datetime import timedelta
 from application.models import VoterList
 from ..models import VoterChatMessage
+from logger import logger
 
 url = settings.MESSAGE_URL
 token = settings.ACCESS_TOKEN
 
+logger.info("WhatsApp Service URL: %s", url)
+logger.info("WhatsApp Service Token: %s", token[:5] + "..." if token else "None")
 # --- CONFIG: provider limit ---
 PROVIDER_MAX_PER_SECOND = 50  # provider limit (messages / sec)
 DEFAULT_CHUNK_SIZE = PROVIDER_MAX_PER_SECOND  # how many messages to send per second
