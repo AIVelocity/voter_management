@@ -93,7 +93,7 @@ def volunteer_dashboard(request):
     return Response({
         "SUCCESS": True,
         "data": {
-            "user": user.user_id,
+            "user": user.first_name + ' ' +user.last_name,
             "assigned": assigned_count,
             "visited": visited_count,
             "pending": pending_count,
