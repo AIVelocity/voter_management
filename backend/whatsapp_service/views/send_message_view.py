@@ -305,7 +305,7 @@ def send_audio(request):
     media_id = data.get("media_id")
     if not media_id:
         return JsonResponse({"status": False, "message": "media_id required for audio"}, status=400)
-
+    media_url=data.get("media_url")
     sender_type = data.get("sender_type")
     sender_id = data.get("sender_id")
     reply_to = data.get("reply_to_message_id")
@@ -342,7 +342,7 @@ def send_audio(request):
                                         sender_type=sender_type,
                                         sender_id=sender_id,
                                         media_id=media_id,
-                                        media_url=data.get("media_url"),
+                                        media_url=media_url,
                                         reply_to_message_id=reply_to)
             results.append({
                 "recipient_voter_list_id": getattr(voter, "voter_list_id", None),
@@ -448,7 +448,7 @@ def send_video(request):
     media_id = data.get("media_id")
     if not media_id:
         return JsonResponse({"status": False, "message": "media_id required for video"}, status=400)
-
+    media_url=data.get("media_url")
     caption = data.get("caption")
     sender_type = data.get("sender_type")
     sender_id = data.get("sender_id")
@@ -488,7 +488,7 @@ def send_video(request):
                                         sender_type=sender_type,
                                         sender_id=sender_id,
                                         media_id=media_id,
-                                        media_url=data.get("media_url"),
+                                        media_url=media_url,
                                         reply_to_message_id=reply_to)
             results.append({
                 "recipient_voter_list_id": getattr(voter, "voter_list_id", None),
