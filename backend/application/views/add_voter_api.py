@@ -3,9 +3,13 @@ from ..models import VoterList,VoterTag
 from django.views.decorators.csrf import csrf_exempt
 import json
 from django.db import IntegrityError
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from logger import logger
 
-#  add a new voter
-@csrf_exempt
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
 def add_voter(request):
 
     if request.method != "POST":

@@ -4,7 +4,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import AccessToken
-
+from logger import logger
 from ..models import (
     VoterList,
     VoterTag,
@@ -21,6 +21,7 @@ from .view_utils import rematch_contacts_for_voter, log_user_update
 def update_voter(request, voter_list_id):
 
     try:
+        logger.info(f"update_api: Update voter request received for voter_list_id {voter_list_id}")
         body = request.data
         # auth_header = request.headers.get("Authorization")
         ip = request.META.get("REMOTE_ADDR")
@@ -173,7 +174,7 @@ def update_voter(request, voter_list_id):
                 ip=ip,
                 voter_list_id=voter_list_id
             )
-
+        logger.info(f"update_api: Voter {voter_list_id} updated successfully with changes: {changed_fields}")
         return Response({
             "status": True,
             "message": "Voter updated successfully",

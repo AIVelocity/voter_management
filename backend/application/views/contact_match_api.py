@@ -9,7 +9,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import AccessToken
 from ..models import VoterList, UserVoterContact,UserContactPayload
-
+from logger import logger
 
 # ------------------ NORMALIZATION ------------------
 
@@ -143,22 +143,10 @@ def canonicalize_contacts(payload) -> list[dict]:
 def match_contacts_with_users(request):
 
     # -------- AUTH --------
-    auth_header = request.headers.get("Authorization")
-    user_id = None
-
-    if auth_header and auth_header.startswith("Bearer "):
-        try:
-            token = AccessToken(auth_header.split(" ")[1])
-            user_id = token.get("user_id")
-        except Exception:
-            pass
-
-    if not user_id:
-        return Response(
-            {"status": False, "message": "Unauthorized"},
-            status=401
-        )
+    user = request.user
+    user_id = user.user_id
     body = request.data
+    logger.info(f"contact_match_api: Match contacts request received from user_id={user_id}")
     # -------- CANONICALIZE INPUT --------
     
     canonical_contacts = canonicalize_contacts(body)
@@ -260,7 +248,7 @@ def match_contacts_with_users(request):
             ignore_conflicts=True,
             batch_size=1000   # IMPORTANT for performance
         )
-    
+    logger.info(f"contact_match_api: Matched {len(matched)} contacts for user_id={user_id}")
     return Response({
         "status": True,
         "count": len(matched),

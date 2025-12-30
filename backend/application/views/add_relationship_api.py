@@ -4,6 +4,8 @@ import json
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from logger import logger
+
 from .view_utils import log_user_update
 def parse_json(request):
     try:
@@ -27,6 +29,7 @@ REVERSE_MAP = {
 def add_relation(request):
 
     try:
+        logger.info("add_relationship_api: Add relation request received")
         body = request.data
 
         voter_id = body.get("voter_list_id")
@@ -71,7 +74,7 @@ def add_relation(request):
                 status=409
             )
 
-
+        logger.info(f"Adding relation: {voter_name} ({voter_id}) - {relation} -> {related_voter_name} ({related_id})")
         # -------- CREATE RELATIONS --------
         VoterRelationshipDetails.objects.create(
             voter_id=voter_id,
@@ -102,7 +105,7 @@ def add_relation(request):
             old_data=None,
             new_data=new_data,
         )
-
+        logger.info("Relation added successfully")
         return Response({
             "status": True,
             "message": "Relation added successfully"

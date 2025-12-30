@@ -1,6 +1,11 @@
 from django.http import JsonResponse
 from ..models import Religion,Caste
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
 def religion_dropdown(request):
     data = list(Religion.objects.all()
                 .values("religion_id","religion_name")
@@ -10,7 +15,9 @@ def religion_dropdown(request):
         "status":True,
         "data" : data
     })
-    
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
 def caste_dropdown(request):
     
     religion_id = request.GET.get("religion_id")

@@ -13,6 +13,7 @@ from application.models import VoterUserMaster
 import io
 from rest_framework.decorators import api_view, permission_classes, parser_classes
 from rest_framework.response import Response
+from logger import logger
 
 def is_valid_mobile(mobile):
     # Allows only exactly 10 digits
@@ -41,7 +42,7 @@ def normalize_mobile(mobile):
 @permission_classes([AllowAny])
 def registration(request):
     data = request.data
-
+    logger.info("registration_api: Registration request received")
     first_name = data.get("first_name")
     last_name = data.get("last_name")
     mobile_no = data.get("mobile_no")
@@ -88,7 +89,7 @@ def registration(request):
         
         role_id=role_id
     )
-
+    logger.info(f"registration_api: User {user.user_id} registered successfully with role ID {role_id}")
     # ---------- RESPONSE ----------
     return Response({
         "status": True,
@@ -109,13 +110,8 @@ def registration(request):
 @parser_classes([MultiPartParser, FormParser])
 def upload_login_credentials_excel(request):
 
-    if request.method != "POST":
-        return Response(
-            {"status": False, "message": "POST required"},
-            status=405
-        )
-
     try:
+        logger.info("upload_login_credentials_excel_api: Upload login credentials Excel request received")
         excel_file = request.FILES.get("file")
 
         if not excel_file:
@@ -216,7 +212,7 @@ def upload_login_credentials_excel(request):
         uploaded_excel.created_count = created
         uploaded_excel.skipped_count = skipped
         uploaded_excel.save()
-
+        logger.info(f"upload_login_credentials_excel_api: Excel imported successfully with {created} created users and {skipped} skipped rows")
         return Response({
             "status": True,
             "message": "Excel imported successfully",
@@ -237,7 +233,7 @@ def upload_login_credentials_excel(request):
 @permission_classes([IsAuthenticated])
 def list_uploaded_login_excels(request):
     excels = UploadedLoginExcel.objects.order_by("-uploaded_at")
-
+    logger.info("list_uploaded_login_excels_api: List uploaded login excels request received")
     data = []
     for e in excels:
         data.append({
@@ -247,7 +243,7 @@ def list_uploaded_login_excels(request):
             "created_users": e.created_count,
             "skipped_rows": e.skipped_count
         })
-
+    logger.info(f"list_uploaded_login_excels_api: Retrieved {len(data)} uploaded login excels")
     return Response({
         "status": True,
         "count": len(data),
@@ -259,6 +255,7 @@ def list_uploaded_login_excels(request):
 def delete_uploaded_login_excel(request, excel_id):
 
     try:
+        logger.info(f"delete_uploaded_login_excel_api: Delete uploaded login excel request received for excel_id={excel_id}")
         excel = UploadedLoginExcel.objects.get(id=excel_id)
     except UploadedLoginExcel.DoesNotExist:
         return Response(
@@ -270,7 +267,7 @@ def delete_uploaded_login_excel(request, excel_id):
         )
 
     excel.delete()
-
+    logger.info(f"delete_uploaded_login_excel_api: Excel record with excel_id={excel_id} deleted successfully")
     return Response(
         {
             "status": True,

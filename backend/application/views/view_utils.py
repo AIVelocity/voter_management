@@ -4,8 +4,7 @@ from ..models import VoterList, VoterRelationshipDetails, ActivityLog, UserConta
 from deep_translator import GoogleTranslator
 from .contact_match_api import canonicalize_contacts, normalize_phone
 from django.db.models import Q
-import re
-from collections import Counter
+from logger import logger
 from django.conf import settings
 import os
 import csv
@@ -72,7 +71,7 @@ def format_change_data(data):
 
 def build_voter_queryset(request, user):
     qs = VoterList.objects.select_related("tag_id")
-
+    logger.info(f"Building voter queryset for user {user.user_id} with role {user.role.role_name}")
     # ---- ROLE BASED ----
     if user.role.role_name not in ["SuperAdmin", "Admin"]:
         qs = qs.filter(user_id=user.user_id)
@@ -121,7 +120,7 @@ def build_voter_queryset(request, user):
     # ---- LOCATION ----
     if request.GET.get("location"):
         qs = qs.filter(location__icontains=request.GET["location"])
-
+    logger.info(f"Voter queryset built with {qs.count()} records")
     return qs
 
 class Translator:

@@ -1,3 +1,4 @@
+from django.utils import timezone
 from django.contrib.auth.hashers import check_password, make_password
 import os
 from rest_framework.decorators import api_view, permission_classes
@@ -163,13 +164,6 @@ def reset_password(request):
     new_password = data.get("new_password")
     confirm_password = data.get("confirm_password")
 
-    # # ---------- VALIDATIONS ----------
-    # if not _require_e164(phone):
-    #     return JsonResponse(
-    #         {"detail": "Invalid phone number"},
-    #         status=status.HTTP_400_BAD_REQUEST
-    #     )
-
     if not new_password or not confirm_password:
         return JsonResponse(
             {"detail": "Password fields are required"},
@@ -201,7 +195,8 @@ def reset_password(request):
             )
             
         user.set_password(new_password)
-        user.save(update_fields=["password"])
+        user.updated_at = timezone.now()
+        user.save(update_fields=["password","updated_at"])
 
         return JsonResponse(
             {"status": True, "message": "Password reset successful"},

@@ -42,15 +42,7 @@ LOCALE_PATHS = [
     BASE_DIR / 'locale',
 ]
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
-
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-w^w75v0)bmgunxwhmmagl0bp*1rf$p^u9q-ca$2!%+q%(8f7=&'
-
-# SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
-# PASSWORD_ENCRYPTION_KEY = "0mqmJvbV5rsJJ_M4iaXsZfsor_BNUGwFB24-WE4LK80="
 
 ALLOWED_HOSTS = ["172.20.1.116","vms.rntsecops.com","172.25.240.1","172.20.1.101","59.95.99.182","127.0.0.1", "localhost", "172.20.1.155", ".ngrok-free.app", ".ngrok-free.dev"]
 
@@ -69,18 +61,6 @@ REST_FRAMEWORK = {
         "rest_framework_simplejwt.authentication.JWTAuthentication",
     )
 }
-
-# # settings.py
-# CACHES = {
-#     "default": {
-#         "BACKEND": "django_redis.cache.RedisCache",
-#         "LOCATION": "redis://127.0.0.1:6379/1",
-#         "OPTIONS": {
-#             "CLIENT_CLASS": "django_redis.client.DefaultClient",
-#         }
-#     }
-# }
-
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -109,7 +89,6 @@ CORS_ALLOWED_ORIGINS = [
 ] 
 
 AUTH_USER_MODEL = "application.VoterUserMaster"
-
 
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware', 
@@ -235,7 +214,5 @@ USE_X_FORWARDED_HOST = True
 
 STATIC_URL = 'static/'
 STATIC_ROOT = '/root/voter_management/backend/staticfiles'
-# Default primary key field type
-# https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'

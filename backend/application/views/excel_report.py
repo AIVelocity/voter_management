@@ -11,11 +11,10 @@ from django.utils.timezone import make_aware, get_current_timezone, now
 from django.http import StreamingHttpResponse
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.decorators import api_view, permission_classes, renderer_classes
-from rest_framework.renderers import BaseRenderer
+from rest_framework.decorators import api_view, permission_classes
 from .view_utils import build_voter_queryset,format_change_data
 from collections import defaultdict
-
+from logger import logger
 class Echo:
     def write(self, value):
         return value
@@ -25,6 +24,7 @@ class Echo:
 def export_voters_excel(request):
 
     try:
+        logger.info("excel_report: Export voters excel request received")
         # ------------------ USER ------------------
         user = request.user
         user = VoterUserMaster.objects.select_related("role").get(
@@ -76,7 +76,7 @@ def export_voters_excel(request):
 
         # THIS LINE FIXES MARATHI IN EXCEL
         response.write("\ufeff")
-
+        logger.info("excel_report: Writing CSV data")
         writer = csv.writer(response)
 
         # ==========================================================
@@ -135,6 +135,7 @@ def export_voters_excel(request):
         # ==========================================================
         # =============== SECTION 2 : CHANGE LOGS ===================
         # ==========================================================
+        logger.info("excel_report: Writing Change Logs data")
         writer.writerow([])
         writer.writerow([])
         writer.writerow(["CHANGE LOGS"])
@@ -193,7 +194,7 @@ def export_voters_excel(request):
                 format_change_data(new_data),   
                 created_at,
             ])
-
+        logger.info("excel_report: Completed writing CSV data")
 
         return response
 
@@ -207,7 +208,7 @@ def export_voters_excel(request):
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def voters_export(request):
-
+    logger.info("excel_report: Voters export request received")
     # ------------------ USER & ROLE ------------------
     user = request.user
     user = VoterUserMaster.objects.select_related("role").get(
@@ -323,5 +324,5 @@ def voters_export(request):
             ", ".join(rel.get("sibling", [])) or None,
             ", ".join(rel.get("child", [])) or None,
         ])
-
+    logger.info("excel_report: Completed writing CSV data")
     return response

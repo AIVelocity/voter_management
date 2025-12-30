@@ -1,4 +1,3 @@
-
 from collections import defaultdict
 from django.db import transaction
 from ..models import (
@@ -9,11 +8,12 @@ from ..models import (
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from logger import logger
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def get_all_roles_permissions(request):
-
+    logger.info("module_api: Get all roles permissions request received")
     permissions_qs = (
         RoleModulePermission.objects
         .select_related("role", "module")
@@ -39,7 +39,7 @@ def get_all_roles_permissions(request):
             "edit": rp.can_edit,
             "delete": rp.can_delete
         })
-
+    logger.info(f"module_api: Retrieved permissions for {len(role_map)} roles")
     return Response({
         "status": True,
         "count": len(role_map),
@@ -50,8 +50,7 @@ def get_all_roles_permissions(request):
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def get_roles_permissions(request):
-
-
+    logger.info("module_api: Get role permissions request received")
     role_id = request.query_params.get("role_id")
 
     qs = (
@@ -86,7 +85,7 @@ def get_roles_permissions(request):
             "edit": rp.can_edit,
             "delete": rp.can_delete
         })
-
+    logger.info(f"module_api: Retrieved permissions for role {role.role_id}")
     return Response({
         "status": True,
         "data": data
@@ -97,13 +96,8 @@ def get_roles_permissions(request):
 @permission_classes([IsAuthenticated])
 def bulk_update_permissions(request):
 
-    if request.method != "POST":
-        return Response(
-            {"status": False, "message": "POST method required"},
-            status=405
-        )
-
     try:
+        logger.info("module_api: Bulk update permissions request received")
         body = request.data
         data = body.get("data")
 
@@ -152,7 +146,7 @@ def bulk_update_permissions(request):
                     )
 
                     updated_rows += updated
-
+        logger.info(f"module_api: Updated permissions for {len(data)} roles, total rows updated: {updated_rows}")
         return Response({
             "status": True,
             "message": "Permissions updated successfully",

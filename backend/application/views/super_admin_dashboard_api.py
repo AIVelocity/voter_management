@@ -13,11 +13,13 @@ from .search_api import apply_dynamic_initial_search
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from logger import logger 
+
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def dashboard(request):
-
+    logger.info("super_admin_dashboard_api: Dashboard request received")
     today = timezone.now().date()
 
     # Sunday start
@@ -136,7 +138,7 @@ def dashboard(request):
 
     # total_visited = VoterList.objects.filter(check_progress_date__isnull=False).count()
     total_visited = red_color_tags + orange_color_tags + green_color_tags + golden_color_tags
-    
+    logger.info("super_admin_dashboard_api: Dashboard data compiled successfully")
     return Response({
         "SUCCESS": True,
         "data" : { 
@@ -155,14 +157,11 @@ def dashboard(request):
         }
     })
 
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.response import Response
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def admin_allocation_panel(request):
-
+    logger.info("super_admin_dashboard_api: Admin allocation panel request received")
     total_voters = VoterList.objects.count()
 
     admins = (
@@ -284,6 +283,7 @@ def admin_allocation_panel(request):
     total_admins_karyakarta = total_admins + total_karyakartas
     total_assigned_admins_karyakarta = assigned_admins + assigned_karyakartas
     total_unassigned_admins_karyakarta = unassigned_admins + unassigned_karyakartas
+    logger.info("super_admin_dashboard_api: Admin allocation panel data compiled successfully")
     return Response({
         "SUCCESS" :True,
         "data":{ 
@@ -323,6 +323,7 @@ def admin_allocation_panel(request):
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def unassigned_voters(request):
+    logger.info("super_admin_dashboard_api: Unassigned voters request received")
     lang = request.headers.get("Accept-Language", "en")
     is_marathi = lang.lower().startswith("mr")
     page = int(request.GET.get("page", 1))
@@ -432,6 +433,9 @@ def unassigned_voters(request):
             voter_name_eng = v.voter_name_marathi
             age_eng = v.age
             gender_eng = v.gender
+            tag = v.tag_id.tag_name_mar if v.tag_id else None
+            location = "रिमोट" if v.location == "Remote" else 'स्थानिक'
+            
         else:
             first_name = v.first_name
             middle_name = v.middle_name
@@ -440,6 +444,8 @@ def unassigned_voters(request):
             voter_name_eng = v.voter_name_eng
             age_eng = v.age_eng
             gender_eng = v.gender_eng
+            tag = v.tag_id.tag_name if v.tag_id else None
+            location = v.location
             
         data.append({
             "sr_no" : v.sr_no,
@@ -447,14 +453,14 @@ def unassigned_voters(request):
             "voter_name_eng": voter_name_eng,
             "voter_id": v.voter_id,
             "gender": gender_eng,
-            "location": v.location,
+            "location": location,
             "badge": v.badge,
-            "tag": v.tag_id.tag_name if v.tag_id else None,
+            "tag": tag,
             "kramank": v.kramank,
             "age":age_eng,
             "ward_id": v.ward_no
         })
-
+    logger.info(f"super_admin_dashboard_api: Retrieved {len(data)} unassigned voters")
     return Response({
         "status": True,
         "page": page,
@@ -469,15 +475,9 @@ def unassigned_voters(request):
 @permission_classes([IsAuthenticated])
 def assign_voters_to_karyakarta(request):
 
-    if request.method != "POST":
-        return Response({
-            "status": False,
-            "message": "POST method required"
-        }, status=405)
-
     try:
         body = request.data
-
+        logger.info("super_admin_dashboard_api: Assign voters to karyakarta request received")
         karyakarta_user_id = body.get("karyakarta_user_id")
         voter_ids = body.get("voter_ids", [])
 
@@ -507,7 +507,7 @@ def assign_voters_to_karyakarta(request):
                 )
                 .update(user=karyakarta)
             )
-
+        logger.info(f"super_admin_dashboard_api: Assigned {updated_count} voters to karyakarta {karyakarta_user_id}")
         return Response({
             "status": True,
             "assigned_count": updated_count,
@@ -525,13 +525,8 @@ def assign_voters_to_karyakarta(request):
 @permission_classes([IsAuthenticated])
 def auto_select_unassigned_voters(request):
 
-    if request.method != "POST":
-        return Response({
-            "status": False,
-            "message": "POST method required"
-        }, status=405)
-
     try:
+        logger.info("super_admin_dashboard_api: Auto select unassigned voters request received")
         body = request.data
 
         karyakarta_user_id = body.get("karyakarta_user_id")
@@ -583,7 +578,7 @@ def auto_select_unassigned_voters(request):
                 .filter(voter_list_id__in=voters, user__isnull=True)
                 .update(user=karyakarta)
             )
-
+        logger.info(f"super_admin_dashboard_api: Auto-assigned {updated} voters to karyakarta {karyakarta_user_id}")
         return Response({
             "status": True,
             "assigned_count": updated,
@@ -601,13 +596,8 @@ def auto_select_unassigned_voters(request):
 @permission_classes([IsAuthenticated])
 def auto_unassign_voters(request):
 
-    if request.method != "POST":
-        return Response({
-            "status": False,
-            "message": "POST method required"
-        }, status=405)
-
     try:
+        logger.info("super_admin_dashboard_api: Auto unassign voters request received")
         body = request.data
 
         karyakarta_user_id = body.get("karyakarta_user_id")
@@ -659,7 +649,7 @@ def auto_unassign_voters(request):
                 .filter(voter_list_id__in=voters, user=karyakarta)
                 .update(user=None)
             )
-
+        logger.info(f"super_admin_dashboard_api: Auto-unassigned {updated} voters from karyakarta {karyakarta_user_id}")    
         return Response({
             "status": True,
             "unassigned_count": updated,
@@ -677,13 +667,8 @@ def auto_unassign_voters(request):
 @permission_classes([IsAuthenticated])
 def unassign_voters(request):
 
-    if request.method != "POST":
-        return Response({
-            "status": False,
-            "message": "POST method required"
-        }, status=405)
-
     try:
+        logger.info("super_admin_dashboard_api: Unassign voters request received")
         body = request.data
 
         voter_ids = body.get("voter_ids", [])
@@ -703,7 +688,7 @@ def unassign_voters(request):
                 )
                 .update(user=None)
             )
-
+        logger.info(f"super_admin_dashboard_api: Unassigned {updated_count} voters")
         return Response({
             "status": True,
             "unassigned_count": updated_count,

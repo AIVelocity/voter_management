@@ -12,36 +12,18 @@ from .voters_info_api import split_marathi_name
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from logger import logger
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def admin_dashboard(request):
-
-    user = None
-    user_id = None
-    
-    try:
-        auth_header = request.headers.get("Authorization")
-        lang = request.headers.get("lang", "en")
-    
-        if auth_header and auth_header.startswith("Bearer "):
-            token_str = auth_header.split(" ")[1]
-            token = AccessToken(token_str)
-            user_id = token.get("user_id")
-    except Exception:
-        pass
-    
-    # user = None
-    if user_id:
-        try:
-            user = VoterUserMaster.objects.get(user_id=user_id)
-        except VoterUserMaster.DoesNotExist:
-            user = None
+    logger.info("admin_dashboard_api: Admin dashboard request received")
+    user = request.user
     
     assigned_count = VoterList.objects.filter(user=user).count()
 
     visited_count = VoterList.objects.filter(
-        user=user_id,
+        user=user,
         check_progress_date__isnull=False
     ).count()
 
@@ -149,7 +131,7 @@ def admin_dashboard(request):
         })
 
     total_visited = VoterList.objects.filter(check_progress_date__isnull=False).count()
-    
+    logger.info("admin_dashboard_api: Admin dashboard data prepared successfully")
     return Response({
         "SUCCESS": True,
         "data" : { 

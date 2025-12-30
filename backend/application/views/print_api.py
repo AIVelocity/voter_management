@@ -7,35 +7,13 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from django.db.models import Q
 from django.core.paginator import Paginator
+from logger import logger
 
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def print_voters_by_ids(request):
-    pass
-
-    if request.method != "POST":
-        return Response(
-            {"status": False, "message": "POST method required"},
-            status=405
-        )
-
-    # ---------- AUTH ----------
-    user_id = None
-    auth_header = request.headers.get("Authorization")
-
-    if auth_header and auth_header.startswith("Bearer "):
-        try:
-            token = AccessToken(auth_header.split(" ")[1])
-            user_id = token["user_id"]
-        except Exception:
-            pass
-
-    if not user_id:
-        return Response(
-            {"status": False, "message": "Unauthorized"},
-            status=401
-        )
-
+    logger.info("print_api: Print voters by IDs request received")
+    user = request.user
     # ---------- READ BODY ----------
     try:
         body = request.data
@@ -91,38 +69,19 @@ def print_voters_by_ids(request):
             "age_eng": v["age_eng"],
             "gender_eng": v["gender_eng"]
         })
-
+    logger.info(f"print_api: Retrieved {len(voters)} voters for printing")
     return Response({
         "status": True,
         "count": len(voters),
         "voters": voters
     })
-    
-
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def list_voters_for_print(request):
-
+    logger.info("print_api: List voters for print request received")
     # ---------- AUTH ----------
     user = request.user
-    if not user or not user.is_authenticated:
-        return Response(
-            {"status": False, "message": "Unauthorized"},
-            status=401
-        )
-
-    try:
-        user = (
-            VoterUserMaster.objects
-            .select_related("role")
-            .get(user_id=user.user_id)
-        )
-    except VoterUserMaster.DoesNotExist:
-        return Response(
-            {"status": False, "message": "User not found"},
-            status=404
-        )
 
     # ---------- PAGINATION ----------
     page = int(request.GET.get("page", 1))
@@ -182,7 +141,7 @@ def list_voters_for_print(request):
             "age_eng": v["age_eng"],
             "gender_eng": v["gender_eng"]
         })
-
+    logger.info(f"print_api: Retrieved page {page} with {len(voters)} voters for printing")
     return Response({
         "status": True,
         "page": page,
@@ -196,23 +155,9 @@ def list_voters_for_print(request):
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def matched_contacts_list(request):
-    # user = request.user
-    user_id = None
-    auth_header = request.headers.get("Authorization")
-
-    if auth_header and auth_header.startswith("Bearer "):
-        try:
-            token = AccessToken(auth_header.split(" ")[1])
-            user_id = token["user_id"]
-        except Exception:
-            pass
-        
-    if not user_id:
-        return Response(
-            {"status": False, "message": "Unauthorized"},
-            status=401
-        )
-    
+    logger.info("print_api: Matched contacts list request received")
+    user = request.user
+    user_id = user.user_id 
 
     # -------- GET USER & ROLE --------
     try:
@@ -227,14 +172,6 @@ def matched_contacts_list(request):
             status=404
         )
 
-    # -------- ROLE-BASED QUERY --------
-    # if user.role.role_name in ["SuperAdmin", "Admin"]:
-    #     qs = (
-    #     UserVoterContact.objects
-    #     .select_related("user", "voter")
-    #     # .filter(user=user)
-    #     .order_by("-created_at")
-    # :
     qs = (
         UserVoterContact.objects
         .select_related("user", "voter")
@@ -254,14 +191,10 @@ def matched_contacts_list(request):
             "mobile_no": obj.mobile_no,
             "created_at": obj.created_at,
         })
+    logger.info(f"print_api: Retrieved {len(data)} matched contacts for user {user.user_id}")
     return Response({
         "status": True,
         "message": ("Matched voter contacts fetched successfully"),
         "count": qs.count(),
         "data": data
     })
-    # else:
-        # return Response(
-        #     {"status": False, "message": "Volunteer access not allowed"},
-        #     status=403
-        # )

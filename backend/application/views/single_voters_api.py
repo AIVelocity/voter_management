@@ -9,6 +9,7 @@ from django.utils import timezone
 import pytz
 from django.utils.translation import gettext as _
 from .voters_info_api import split_marathi_name
+from logger import logger
 
 ist = pytz.timezone("Asia/Kolkata")
 
@@ -42,14 +43,9 @@ def format_indian_datetime(dt):
 @permission_classes([IsAuthenticated])
 def single_voters_info(request, voter_list_id):
 
-    if request.method != "GET":
-        return Response({
-            "status": False,
-            "message":  _("GET method required")
-        }, status=405)
-
     # ---------- FETCH VOTER ----------
     try:
+        logger.info(f"single_voters_info_api: Single voter info request received for voter_list_id={voter_list_id}")
         lang = request.headers.get("Accept-Language", "en")
         # print(lang)
         is_marathi = lang in ["mr", "mr-in", "marathi"]
@@ -64,17 +60,7 @@ def single_voters_info(request, voter_list_id):
             "message": "Voter not found"
         }, status=404)
 
-    # ---------- AUTH USER ----------
-    user = None
-    try:
-        auth_header = request.headers.get("Authorization")
-        if auth_header and auth_header.startswith("Bearer "):
-            token = AccessToken(auth_header.split(" ")[1])
-            user = VoterUserMaster.objects.filter(
-                user_id=token.get("user_id")
-            ).select_related("role").first()
-    except Exception:
-        pass
+    user = request.user
 
     # ---------- HELPERS ----------
     def safe_age(v):
@@ -271,7 +257,7 @@ def single_voters_info(request, voter_list_id):
             "children": children,
             "BloodRelatedFam": BloodRelatedFam
         }
-
+    logger.info("single_voters_info_api: Calculating family relationships if missing")
     # ---------- FAMILY FROM DB (SOURCE OF TRUTH) ----------
     family = get_family_from_db(voter, is_marathi)
     
@@ -284,7 +270,7 @@ def single_voters_info(request, voter_list_id):
 
     father = family.get("father")
     mother = family.get("mother")
-    spouse = family.get("spouse")   # DIRECT FROM DB
+    spouse = family.get("spouse")  
     siblings = family.get("siblings", [])
     children = family.get("children", [])
 
@@ -450,7 +436,7 @@ def single_voters_info(request, voter_list_id):
 
         "check_progress": voter.check_progress
     }
-
+    logger.info("single_voters_info_api: Returning single voter info response")
     return Response({
         "status": True,
         "data": data

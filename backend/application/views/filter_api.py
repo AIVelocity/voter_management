@@ -4,6 +4,7 @@ from django.core.paginator import Paginator
 from .voters_info_api import format_mobile_with_country_code, split_marathi_name
 import re
 from collections import Counter
+from logger import logger
 
 def apply_dynamic_initial_search(qs, search):
 
@@ -83,6 +84,7 @@ from rest_framework.response import Response
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def filter(request):
+    logger.info("filter_api: Filter request received")
     lang = request.headers.get("Accept-Language", "en")
     is_marathi = lang.lower().startswith("mr")
     page = int(request.GET.get("page", 1))
@@ -256,7 +258,7 @@ def filter(request):
                 v.mobile_no or v.alternate_mobile1 or v.alternate_mobile2 or None
             ),
         })
-
+    logger.info(f"filter_api: Returning page {page} with {len(data)} records")
     return Response({
         "status": True,
         "page": page,

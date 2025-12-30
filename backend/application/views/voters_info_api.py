@@ -4,6 +4,7 @@ from django.core.paginator import Paginator
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from logger import logger
 
 def split_marathi_name(full_name):
     if not full_name:
@@ -26,10 +27,10 @@ def format_mobile_with_country_code(mobile: str) -> str:
         return f"91{mobile}"
     return mobile
 
-
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def voters_info(request):
+    logger.info("voters_info_api: Voters info request received")
     lang = request.headers.get("Accept-Language", "en")
     # print(lang)
     page = int(request.GET.get("page", 1))
@@ -134,7 +135,7 @@ def voters_info(request):
                 v.mobile_no or v.alternate_mobile1 or v.alternate_mobile2 or None
             ),
         })
-
+    logger.info(f"voters_info_api: Retrieved page {page} with {len(data)} voters")
     response_data = {
         "page": page,
         "page_size": size,
@@ -144,7 +145,7 @@ def voters_info(request):
         "data": data
     }
 
-    # 🔹 Save to Redis (10 minutes)
+    #  Save to Redis (10 minutes)
     # cache.set(cache_key, response_data, timeout=600)
 
     return Response({
