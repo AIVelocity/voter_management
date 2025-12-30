@@ -1,12 +1,9 @@
-# utils/s3_integration.py
 import boto3
 import mimetypes
 import uuid
 from io import BytesIO
 from django.conf import settings
-import logging
-
-logger = logging.getLogger(__name__)
+from logger import logger
 
 # Lazy-create client for thread-safety in Django workers
 def get_s3_client():

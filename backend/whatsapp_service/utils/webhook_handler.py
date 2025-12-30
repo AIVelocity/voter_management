@@ -1,10 +1,6 @@
-import logging
 import mimetypes
-import os
-from io import BytesIO
 import re
-from django.apps import apps
-from django.conf import settings
+from io import BytesIO
 from django.db import transaction
 from django.utils import timezone
 from application.models import VoterList
@@ -12,8 +8,7 @@ from ..models import VoterChatMessage
 from .download_whatsapp_media import download_whatsapp_media
 from .s3_integration import upload_to_s3
 from notifications.utils import broadcast_to_admins, send_to_user
-
-logger = logging.getLogger(__name__)
+from logger import logger
 
 
 
@@ -237,7 +232,7 @@ def handle_incoming_messages(messages, contacts=None):
                     # build s3 filename (we pass a filename to upload_to_s3 so it uses it in returned key)
                     voter_part = str(voter_id) if voter_id else "unknown"
                     s3_folder = "voter_chat_media"
-                    s3_key_filename = f"{wa_message_id or media_id}_{file_name}"
+                    s3_key_filename = f"{wa_message_id or media_id}_{file_name}_{voter_part}"
                     # upload (upload_to_s3 will create key using folder + uuid if you didn't want the exact name; we pass filename)
                     media_url = upload_to_s3(buf, folder=s3_folder, filename=s3_key_filename, acl= "public-read")
 
