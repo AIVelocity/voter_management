@@ -1,5 +1,6 @@
 import json
 from datetime import datetime, timezone
+from django.core.serializers.json import DjangoJSONEncoder
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
 from .models import Notification
@@ -39,7 +40,7 @@ class NotificationConsumer(AsyncWebsocketConsumer):
             await self.send(text_data=json.dumps({
                 "event": "initial_sync",
                 "payload": unread_data
-            }))
+            }, cls=DjangoJSONEncoder))
 
     async def disconnect(self, close_code):
         for group in self.groups_joined:
@@ -60,7 +61,7 @@ class NotificationConsumer(AsyncWebsocketConsumer):
                 await self.send(text_data=json.dumps({
                     "type": "pong", 
                     "timestamp": datetime.now(timezone.utc).isoformat()
-                }))
+                }, cls=DjangoJSONEncoder))
             
             elif msg_type == "mark_read":
                 notif_id = data.get("id")
@@ -74,7 +75,7 @@ class NotificationConsumer(AsyncWebsocketConsumer):
         await self.send(text_data=json.dumps({
             "event": "notify",
             "payload": event.get("payload", {})
-        }))
+        }, cls=DjangoJSONEncoder))
 
     @database_sync_to_async
     def _get_unread_notifications(self):
