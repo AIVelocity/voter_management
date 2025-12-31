@@ -7,10 +7,11 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "voter_mang_sys.settings")
 django.setup()
 
 from notifications.routing import websocket_urlpatterns
-
-django_app = get_asgi_application()
+from notifications.middleware import JWTAuthMiddleware
 
 application = ProtocolTypeRouter({
-    "http": django_app,
-    "websocket": URLRouter(websocket_urlpatterns),
+    "http": get_asgi_application(),
+    "websocket": JWTAuthMiddleware(
+        URLRouter(websocket_urlpatterns)
+    ),
 })
