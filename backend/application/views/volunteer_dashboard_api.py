@@ -10,6 +10,8 @@ from .filter_api import apply_dynamic_initial_search, apply_multi_filter, apply_
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from voters_info_api import split_marathi_name
+from voters_info_api import format_mobile_with_country_code
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
@@ -122,6 +124,8 @@ def volunteer_dashboard(request):
 @permission_classes([IsAuthenticated])
 def volunteer_voters_page(request):
     logger.info("volunteer_voters_page_api: Volunteer voters page request received")
+    lang = request.headers.get("Accept-Language", "en")
+    is_marathi = lang in ["mr", "mr-in", "marathi"]
     page = int(request.GET.get("page", 1))
     size = int(request.GET.get("size", 100))
 
@@ -129,7 +133,6 @@ def volunteer_voters_page(request):
 
     user = request.user
     user_id = user.user_id
-        
 
     qs = (
         VoterList.objects
@@ -146,32 +149,62 @@ def volunteer_voters_page(request):
     untagged_data = []
 
     for v in page_obj:
-        voter_obj = {
+        if is_marathi:
+            first_name, middle_name, last_name = split_marathi_name(
+                v.voter_name_marathi
+            )
+
+            voter_name_eng = v.voter_name_marathi
+            age_eng = v.age
+            gender_eng = v.gender
+            tag = v.tag_id.tag_name_mar if v.tag_id else None
+            location = "रिमोट" if v.location == "Remote" else 'स्थानिक'
+            
+        else:
+            first_name = v.first_name
+            middle_name = v.middle_name
+            last_name = v.last_name
+
+            voter_name_eng = v.voter_name_eng
+            age_eng = v.age_eng
+            gender_eng = v.gender_eng
+            tag = v.tag_id.tag_name if v.tag_id else None
+            location = v.location
+            
+        has_whatsapp = any([
+        bool(v.mobile_no),
+        bool(v.alternate_mobile1),
+        bool(v.alternate_mobile2),
+    ])
+        data.append({
             "sr_no" : v.sr_no,
             "voter_list_id": v.voter_list_id,
             "voter_id": v.voter_id,
-            "first_name":v.first_name,
-            "last_name" : v.last_name,
-            "voter_name_marathi": v.voter_name_marathi,
-            "voter_name_eng": v.voter_name_eng,
+            "first_name": first_name,
+            "last_name": last_name,
+            # "voter_name_marathi": translator.translate(v.voter_name_marathi, lang),
+            "voter_name_eng": voter_name_eng,
             "kramank": v.kramank,
-            "age": v.age_eng,
-            "gender": v.gender_eng,
+            "age": age_eng,
+            "gender": gender_eng,
             "ward_id": v.ward_no,
-            "tag": v.tag_id.tag_name if v.tag_id else None,
+            "tag": tag,
             "badge": v.badge,
-            "location": v.location,
-            "assigned": True if v.check_progress_date else False
-        }
+            "location": location,
+            "show_whatsapp": has_whatsapp,
+            "mobile_no": format_mobile_with_country_code(
+                v.mobile_no or v.alternate_mobile1 or v.alternate_mobile2 or None
+            ),
+        })
         
-        data.append(voter_obj)
         
         # Separate into tagged and untagged based on check_progress_date
         if v.check_progress_date:
-            tagged_data.append(voter_obj)
+            tagged_data.append(data)
         else:
-            untagged_data.append(voter_obj)
+            untagged_data.append(data)
     logger.info(f"volunteer_voters_page_api: Retrieved page {page} with {len(data)} voters")
+    
     return Response({
         "SUCCESS": True,
         "page": page,

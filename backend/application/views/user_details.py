@@ -17,7 +17,7 @@ def list_all_users(request):
     qs = (
         VoterUserMaster.objects
         .select_related("role")
-        .order_by("user_id")
+        .order_by("-created_date")
     )
 
     if role:
