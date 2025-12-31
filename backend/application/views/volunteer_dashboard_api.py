@@ -10,8 +10,8 @@ from .filter_api import apply_dynamic_initial_search, apply_multi_filter, apply_
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from voters_info_api import split_marathi_name
-from voters_info_api import format_mobile_with_country_code
+from .voters_info_api import split_marathi_name
+from .voters_info_api import format_mobile_with_country_code
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
