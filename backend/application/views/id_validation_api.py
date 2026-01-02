@@ -8,9 +8,12 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
 from logger import logger
+from rest_framework.decorators import throttle_classes
+from .rate_limiter import LoginRateThrottle
 
 @api_view(["POST"])
 @permission_classes([AllowAny])
+@throttle_classes([LoginRateThrottle])
 def id_validation(request):
 
     try:
