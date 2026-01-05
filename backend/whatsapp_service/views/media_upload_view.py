@@ -61,10 +61,8 @@ def _bytes_human(n: int) -> str:
         return f"{round(n / MB)} MB"
     return f"{n} bytes"
 
-# @api_view(["POST"])
-# @permission_classes([IsAuthenticated])
-@csrf_exempt
-@require_http_methods(["POST"])
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
 def upload_media(request):
     """
     Upload media file to WhatsApp Cloud and optionally mirror to S3.
