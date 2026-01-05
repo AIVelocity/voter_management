@@ -8,9 +8,16 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
 from logger import logger
+from rest_framework.decorators import throttle_classes
+from .rate_limiter import LoginRateThrottle,verify_captcha
+from django.core.cache import cache
+
+MAX_FAILED_ATTEMPTS = 3
+CAPTCHA_TTL = 300  
 
 @api_view(["POST"])
 @permission_classes([AllowAny])
+@throttle_classes([LoginRateThrottle])
 def id_validation(request):
 
     try:
@@ -30,10 +37,37 @@ def id_validation(request):
 
         if not user:
             return Response({"status": False, "message": "User not found"}, status=404)
+        
+        ip = request.META.get("REMOTE_ADDR")
+        key = f"login_fail:{ip}:{mobile_no}"
 
+        fail_count = cache.get(key, 0)
+
+        # Require captcha after N failures
+        if fail_count >= MAX_FAILED_ATTEMPTS:
+            captcha_token = body.get("captcha_token")
+
+            if not captcha_token:
+                return Response({
+                    "status": False,
+                    "captcha_required": True,
+                    "message": "Captcha required"
+                }, status=403)
+
+            if not verify_captcha(captcha_token):
+                return Response({
+                    "status": False,
+                    "message": "Invalid captcha"
+                }, status=403)
+                
         # -------- PASSWORD CHECK --------
         if not check_password(password, user.password):
-            return Response({"status": False, "message": "Invalid mobile number or password"}, status=401)
+            cache.set(key, fail_count + 1, CAPTCHA_TTL)
+
+            return Response({
+                "status": False,
+                "message": "Invalid mobile number or password"
+            }, status=401)
 
         # -------- GENERATE ACCESS TOKEN --------
         access_token = str(AccessToken.for_user(user))

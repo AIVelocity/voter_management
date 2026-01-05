@@ -188,7 +188,7 @@ def volunteer_voters_page(request):
             "age": age_eng,
             "gender": gender_eng,
             "ward_id": v.ward_no,
-            "tag": tag,
+            "tag": v.tag_id.tag_name if v.tag_id else None,
             "badge": v.badge,
             "location": location,
             "show_whatsapp": has_whatsapp,

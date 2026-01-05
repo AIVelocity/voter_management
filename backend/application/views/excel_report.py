@@ -62,7 +62,7 @@ def export_voters_excel(request):
         #     )
         qs = (
                 build_voter_queryset(request, user)
-                .filter(user=user, check_progress_date=report_date)
+                .filter( check_progress_date=report_date)
                 .order_by("sr_no")
             )
 
@@ -82,6 +82,37 @@ def export_voters_excel(request):
         # ==========================================================
         # =============== SECTION 1 : VOTERS DATA ==================
         # ==========================================================
+            # ------------------ RELATION MAP ------------------
+        relation_map = defaultdict(lambda: {
+            "father": None,
+            "mother": None,
+            "sibling": [],
+            "child": [],
+        })
+
+        relations_qs = (
+            VoterRelationshipDetails.objects
+            .select_related("related_voter")
+            .filter(
+                voter_id__in=qs.values_list("voter_list_id", flat=True)
+            )
+        )
+
+        for r in relations_qs:
+            rel = (r.relation_with_voter or "").lower()
+            name = r.related_voter.voter_name_eng if r.related_voter else None
+            if not name:
+                continue
+
+            if rel == "father":
+                relation_map[r.voter_id]["father"] = name
+            elif rel == "mother":
+                relation_map[r.voter_id]["mother"] = name
+            elif rel in ("sibling"):
+                relation_map[r.voter_id]["sibling"].append(name)
+            elif rel in ("child"):
+                relation_map[r.voter_id]["child"].append(name)
+                
         writer.writerow(["VOTERS DATA"])
         writer.writerow([
             "Voter ID",
@@ -105,7 +136,11 @@ def export_voters_excel(request):
             "Religion",
             "Comments",
             "Check Progress Date",
-        ])
+            "Father",
+            "Mother",
+            "Sibling",
+            "Child",
+    ])
 
         for row in qs.values_list(
             "voter_id",
@@ -129,15 +164,21 @@ def export_voters_excel(request):
             "religion__religion_name",
             "comments",
             "check_progress_date",
+            "voter_list_id",
         ).iterator(chunk_size=5000):
-            writer.writerow(row)
+            *data, voter_list_id = row
+            rel = relation_map.get(voter_list_id, {})
 
+            writer.writerow(list(data) + [
+                rel.get("father"),
+                rel.get("mother"),
+                ", ".join(rel.get("sibling", [])) or None,
+                ", ".join(rel.get("child", [])) or None,
+            ])
         # ==========================================================
         # =============== SECTION 2 : CHANGE LOGS ===================
         # ==========================================================
         logger.info("excel_report: Writing Change Logs data")
-        writer.writerow([])
-        writer.writerow([])
         writer.writerow(["CHANGE LOGS"])
 
         writer.writerow([
@@ -284,9 +325,9 @@ def voters_export(request):
             relation_map[r.voter_id]["father"] = name
         elif rel == "mother":
             relation_map[r.voter_id]["mother"] = name
-        elif rel in ("brother", "sister"):
+        elif rel in ("sibling"):
             relation_map[r.voter_id]["sibling"].append(name)
-        elif rel in ("son", "daughter"):
+        elif rel in ("child"):
             relation_map[r.voter_id]["child"].append(name)
 
     # ------------------ WRITE ROWS (FAST STREAMING) ------------------

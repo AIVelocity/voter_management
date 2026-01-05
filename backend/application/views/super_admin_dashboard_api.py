@@ -455,7 +455,7 @@ def unassigned_voters(request):
             "gender": gender_eng,
             "location": location,
             "badge": v.badge,
-            "tag": tag,
+            "tag":v.tag_id.tag_name if v.tag_id else None,
             "kramank": v.kramank,
             "age":age_eng,
             "ward_id": v.ward_no
