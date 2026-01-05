@@ -27,6 +27,7 @@ RATE_LIMIT_PER_PHONE_PER_HOUR = int(
     os.getenv("RATE_LIMIT_PER_PHONE_PER_HOUR", "5")
 )
 
+RECAPTCHA_SECRET_KEY = os.getenv("RECAPTCHA_SECRET_KEY")
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 USE_I18N = True
