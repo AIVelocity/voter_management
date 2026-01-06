@@ -1,4 +1,5 @@
 from rest_framework.throttling import SimpleRateThrottle
+from rest_framework.exceptions import Throttled
 from django.conf import settings
 
 import requests
@@ -18,6 +19,17 @@ class LoginRateThrottle(SimpleRateThrottle):
             "scope": self.scope,
             "ident": ident
         }
+        
+    def throttle_failure(self):
+        wait = self.wait()
+        raise Throttled(
+            detail={
+                "status": False,
+                "message": "Too many login attempts. Please try again later.",
+                "retry_after_seconds": int(wait) if wait else None,
+                "show_captcha": True
+            }
+        )
 
 def verify_captcha(token):
     response = requests.post(
