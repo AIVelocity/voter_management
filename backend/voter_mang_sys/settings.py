@@ -137,7 +137,7 @@ CHANNEL_LAYERS = {
         "BACKEND": "channels_redis.core.RedisChannelLayer",
         "CONFIG": {
             "hosts": [
-                "redis://:Amit%40123@172.20.1.155:6379/0"
+                "redis://:Amit%40123@172.20.1.140:6379/0"
             ],
         },
     },
@@ -146,7 +146,7 @@ CHANNEL_LAYERS = {
 CACHES = {
     "default": {
         "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": "redis://:Amit%40123@172.20.1.155:6379/1",
+        "LOCATION": "redis://:Amit%40123@172.20.1.140:6379/1",
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
             "IGNORE_EXCEPTIONS": True,  # VERY IMPORTANT
