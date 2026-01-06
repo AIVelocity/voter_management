@@ -7,6 +7,40 @@ mobile_validator = RegexValidator(
     message="Enter a valid mobile number"
 )
 
+
+from django.db import models
+
+class LoginAttempt(models.Model):
+    KEY_IP = "ip"
+    KEY_MOBILE = "mobile"
+    KEY_IP_MOBILE = "ip_mobile"
+
+    KEY_TYPE_CHOICES = (
+        (KEY_IP, "IP"),
+        (KEY_MOBILE, "Mobile"),
+        (KEY_IP_MOBILE, "IP + Mobile"),
+    )
+
+    key_type = models.CharField(max_length=20, choices=KEY_TYPE_CHOICES)
+    key_value = models.CharField(max_length=100)
+
+    failed_count = models.IntegerField(default=0)
+    last_failed_at = models.DateTimeField(null=True, blank=True)
+    captcha_required = models.BooleanField(default=False)
+    blocked_until = models.DateTimeField(null=True, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ("key_type", "key_value")
+        db_table = "voter_login_attempts"
+        managed = False
+
+    def __str__(self):
+        return f"{self.key_type}:{self.key_value}"
+
+
 class Occupation(models.Model):
 
     occupation_id = models.AutoField(primary_key=True)

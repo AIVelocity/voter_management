@@ -24,7 +24,7 @@ from .photo_api import voters_info_photo
 from .user_details import list_all_users
 from .twilio_api import otp_start,otp_verify,health,reset_password
 from .print_api import list_voters_for_print
-# from .lanaguage_api import set_language
+from .captcha import get_captcha
 
 __all__ = [
     "tags",
@@ -83,5 +83,6 @@ __all__ = [
     "health",
     "reset_password",
     "list_voters_for_print",
-    "voters_export"
+    "voters_export",
+    "get_captcha",
 ]

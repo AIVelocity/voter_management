@@ -1,6 +1,6 @@
 from .filter_api import apply_multi_filter, apply_tag_filter
 from .filter_api import apply_dynamic_initial_search
-from ..models import VoterList, VoterRelationshipDetails, ActivityLog, UserContactPayload, UserVoterContact, VoterUserMaster
+from ..models import VoterList, VoterRelationshipDetails, ActivityLog, UserContactPayload, UserVoterContact, VoterUserMaster,LoginAttempt
 from deep_translator import GoogleTranslator
 from .contact_match_api import canonicalize_contacts, normalize_phone
 from django.db.models import Q
@@ -12,6 +12,11 @@ import json
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.exceptions import AuthenticationFailed
 from django.utils import timezone
+import random
+import string
+import base64
+from io import BytesIO
+from PIL import Image, ImageDraw, ImageFont
 
 class CustomJWTAuthentication(JWTAuthentication):
 
@@ -246,6 +251,7 @@ def build_member(p, is_marathi):
         "name": p.voter_name_eng,
         "voter_list_id": p.voter_list_id,
     }
+    
 def get_family_from_db(voter, is_marathi=False):
 
     relations = (
@@ -344,3 +350,28 @@ def rematch_contacts_for_voter(voter, user):
             ignore_conflicts=True,
             batch_size=500
         )
+
+
+CAPTCHA_LENGTH = 5
+
+def generate_captcha():
+    text = ''.join(
+        random.choices(string.ascii_uppercase + string.digits, k=CAPTCHA_LENGTH)
+    )
+
+    img = Image.new("RGB", (160, 60), (255, 255, 255))
+    draw = ImageDraw.Draw(img)
+
+    try:
+        font = ImageFont.truetype("arial.ttf", 36)
+    except:
+        font = ImageFont.load_default()
+
+    draw.text((25, 10), text, fill=(0, 0, 0), font=font)
+
+    buffer = BytesIO()
+    img.save(buffer, format="PNG")
+
+    image_base64 = base64.b64encode(buffer.getvalue()).decode()
+
+    return text, image_base64

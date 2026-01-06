@@ -20,3 +20,4 @@ pandas
 openpyxl
 twilio
 dotenv
+pillow

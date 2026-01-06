@@ -20,6 +20,8 @@ urlpatterns = [
     path("dropdown/occupation/",views.occupation_dropdown,name="occupation_dropdown"),
     path('registration/',views.registration,name="registration"),
     path("registration/login/",views.id_validation,name="id_validation"),
+    path("registration/login/captcha/",views.get_captcha,name="get_captcha"),
+    
     path("registration/change_password/",views.password_change,name="password_change"),
     
     path("admin/dashboard/",views.dashboard,name="dashboard"),# dashboard 

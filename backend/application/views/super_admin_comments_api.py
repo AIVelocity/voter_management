@@ -4,11 +4,30 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from logger import logger
+from ..models import VoterUserMaster
+
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def all_comments(request):
     logger.info("super_admin_comments_api: All comments request received")
+    user = request.user
+    user_id = user.user_id
+
+    # -------- GET USER & ROLE --------
+    try:
+        user = (
+            VoterUserMaster.objects
+            .select_related("role")
+            .get(user_id=user_id)
+        )
+    except VoterUserMaster.DoesNotExist:
+        return Response(
+            {"status": False, "message": "User not found"},
+            status=404
+        )
+        
+    
     logs = (
         ActivityLog.objects
         .filter(new_data__has_key="comments")
