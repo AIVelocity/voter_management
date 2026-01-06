@@ -21,10 +21,12 @@ PROVIDER_MAX_PER_SECOND = 50  # provider limit (messages / sec)
 DEFAULT_CHUNK_SIZE = PROVIDER_MAX_PER_SECOND  # how many messages to send per second
 country_code = "91"
 
+def safe_text(val):
+    return "no value" if val in (None, "None") else str(val)
+
 # --- Views that use chunking to obey provider rate limits ---
-# @api_view(["POST"])
-# @permission_classes([IsAuthenticated])
-@csrf_exempt
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
 def send_template(request):
     if request.method != "POST":
         return JsonResponse({"status": False, "message": "Only POST allowed"}, status=405)
@@ -68,12 +70,12 @@ def send_template(request):
                 {
                     "type": "body",
                     "parameters": [
-                        {"type": "text", "text": v.voter_name_marathi},
-                        {"type": "text", "text": v.anukramank},
-                        {"type": "text", "text": v.voter_id},
-                        {"type": "text", "text": v.age_eng},
-                        {"type": "text", "text": v.ward_no},
-                        {"type": "text", "text": v.kramank},
+                        {"type": "text", "text": safe_text(v.voter_name_marathi)},
+                        {"type": "text", "text": safe_text(v.anukramank)},
+                        {"type": "text", "text": safe_text(v.voter_id)},
+                        {"type": "text", "text": safe_text(v.age_eng)},
+                        {"type": "text", "text": safe_text(v.ward_no)},
+                        {"type": "text", "text": safe_text(v.kramank)},
                     ][:template.body_param_count]
                 }
             ]
@@ -146,10 +148,8 @@ def send_template(request):
     )
 
 
-
-# @api_view(["POST"])
-# @permission_classes([IsAuthenticated])
-@csrf_exempt
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
 def send_text(request):
     if request.method != "POST":
         return JsonResponse({"status": False, "message": "Only POST allowed"}, status=405)
@@ -214,12 +214,8 @@ def send_text(request):
     return JsonResponse({"status": True, "message_text": message, "errors": errors, "results": results, "sent_count": len(results)}, status=200)
 
 
-# --- Media send endpoints (image/audio/video/document) --
-
-# @api_view(["POST"])
-# @permission_classes([IsAuthenticated])
-# --- Media send endpoints (image/audio/video/document) ---
-@csrf_exempt
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
 def send_image(request):
     if request.method != "POST":
         return JsonResponse({"status": False, "message": "Only POST allowed"}, status=405)
@@ -289,10 +285,8 @@ def send_image(request):
     return JsonResponse({"status": True, "message_type": "image", "errors": errors, "results": results, "sent_count": len(results)}, status=200)
 
 
-
-# @api_view(["POST"])
-# @permission_classes([IsAuthenticated])
-@csrf_exempt
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
 def send_audio(request):
     if request.method != "POST":
         return JsonResponse({"status": False, "message": "Only POST allowed"}, status=405)
@@ -357,10 +351,8 @@ def send_audio(request):
     return JsonResponse({"status": True, "message_type": "audio", "errors": errors, "results": results, "sent_count": len(results)}, status=200)
 
 
-
-# @api_view(["POST"])
-# @permission_classes([IsAuthenticated])
-@csrf_exempt
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
 def send_document(request):
     if request.method != "POST":
         return JsonResponse({"status": False, "message": "Only POST allowed"}, status=405)
@@ -432,10 +424,8 @@ def send_document(request):
     return JsonResponse({"status": True, "message_type": "document", "errors": errors, "results": results, "sent_count": len(results)}, status=200)
 
 
-
-# @api_view(["POST"])
-# @permission_classes([IsAuthenticated])
-@csrf_exempt
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
 def send_video(request):
     if request.method != "POST":
         return JsonResponse({"status": False, "message": "Only POST allowed"}, status=405)
@@ -503,70 +493,76 @@ def send_video(request):
     return JsonResponse({"status": True, "message_type": "video", "errors": errors, "results": results, "sent_count": len(results)}, status=200)
 
 
-
-# @api_view(["GET"])
-# @permission_classes([IsAuthenticated])
-@require_http_methods(["GET"])
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
 def get_messages_for_voter(request):
     voter_list_id = request.GET.get("voter_list_id")
+    before_id = request.GET.get("before_id")
+    since_id = request.GET.get("since_id")
+    limit = int(request.GET.get("limit", 50))
+
     if not voter_list_id:
         return JsonResponse({"status": False, "message": "voter_list_id required"}, status=400)
 
-    # get voter
     try:
         voter = VoterList.objects.get(voter_list_id=voter_list_id)
     except VoterList.DoesNotExist:
         return JsonResponse({"status": False, "message": "Voter not found"}, status=404)
 
-    # get messages
-    messages_qs = (
-        VoterChatMessage.objects
-        .filter(voter_id=voter.voter_list_id)
-        .order_by("sent_at")
-    )
+    qs = VoterChatMessage.objects.filter(voter_id=voter.voter_list_id)
 
-    user_ids = (
-        messages_qs
-        .filter(sender="user")
-        .values_list("sender_user_id", flat=True)
-        .distinct()
-    )
+    # 1️⃣ Load new messages after the last loaded message
+    if since_id:
+        qs = qs.filter(id__gt=since_id).order_by("sent_at")
+
+    # 2️⃣ Load older messages for infinite scroll
+    elif before_id:
+        qs = qs.filter(id__lt=before_id).order_by("-sent_at")[:limit]
+        qs = reversed(qs)  # correct chronological order
+
+    # 3️⃣ First load → last 50 messages
+    else:
+        qs = qs.order_by("-sent_at")[:limit]
+        qs = reversed(qs)
+
+    messages_list = list(qs)
+
+    # Fetch users in batch
+    user_ids = {m.sender_user_id for m in messages_list if m.sender == "user" and m.sender_user_id}
 
     users_map = {
         u.user_id: f"{u.first_name} {u.last_name}".strip()
         for u in VoterUserMaster.objects.filter(user_id__in=user_ids)
     }
 
-
-    messages = []
-    for m in messages_qs:
-        sender_name = users_map.get(m.sender_user_id, "Unknown") if m.sender == "user" else "voter"
-        messages.append({
+    # Build response
+    messages = [
+        {
             "id": m.id,
             "message_id": m.message_id,
             "sender": m.sender,
-            "sender_name": sender_name,
+            "sender_name": users_map.get(m.sender_user_id, "Unknown") if m.sender == "user" else "voter",
             "status": m.status,
             "message": m.message,
             "type": m.type,
-            "media_id": m.media_id,
             "media_url": m.media_url,
             "file_name": m.file_name,
             "reply_to_id": m.reply_to_id,
             "sent_at": m.sent_at.isoformat() if m.sent_at else None,
             "read_at": m.read_at.isoformat() if m.read_at else None,
-        })
+        }
+        for m in messages_list
+    ]
 
     return JsonResponse({
         "status": True,
+        "count": len(messages),
         "messages": messages
-    }, safe=False)
+    })
 
 
-
-# @api_view(["POST"])
-# @permission_classes([IsAuthenticated])
-@csrf_exempt
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
 def get_all_templates(request):
     if request.method != "GET":
         return JsonResponse({"status": False, "message": "Only GET method allowed"}, status=405)

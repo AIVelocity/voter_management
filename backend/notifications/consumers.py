@@ -8,6 +8,7 @@ from logger import logger
 
 class NotificationConsumer(AsyncWebsocketConsumer):
     async def connect(self):
+        logger.info("WebSocket: New connection attempt.")
         self.user = self.scope.get("user")
         self.groups_joined = []
 
