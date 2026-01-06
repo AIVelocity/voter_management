@@ -8,12 +8,13 @@ from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.permissions import AllowAny,IsAuthenticated
-from django.contrib.auth.hashers import make_password
 from application.models import VoterUserMaster
 import io
 from rest_framework.decorators import api_view, permission_classes, parser_classes
 from rest_framework.response import Response
 from logger import logger
+from rest_framework import status
+from .view_utils import validate_password
 
 def is_valid_mobile(mobile):
     # Allows only exactly 10 digits
@@ -38,21 +39,22 @@ def normalize_mobile(mobile):
 
     return mobile
 
+
+
 @api_view(["POST"])
 @permission_classes([AllowAny])
 def registration(request):
     data = request.data
     logger.info("registration_api: Registration request received")
+
     first_name = data.get("first_name")
     last_name = data.get("last_name")
     mobile_no = data.get("mobile_no")
     password = data.get("password")
     confirm_password = data.get("confirm_password")
-
-    # role will come as string: superadmin / admin / volunteer
     role_str = data.get("role")  # optional
 
-    # ---------- VALIDATIONS ----------
+    # ---------- BASIC VALIDATIONS ----------
     if not first_name:
         return Response({"status": False, "message": "First Name is required"}, status=400)
 
@@ -62,11 +64,22 @@ def registration(request):
     if not mobile_no or not is_valid_mobile(mobile_no):
         return Response({"status": False, "message": "Invalid mobile number"}, status=400)
 
-    if not password or password != confirm_password:
-        return Response({"status": False, "message": "Passwords do not match"}, status=400)
-
     if VoterUserMaster.objects.filter(mobile_no=mobile_no).exists():
         return Response({"status": False, "message": "Mobile already registered"}, status=400)
+
+    # ---------- PASSWORD VALIDATION ----------
+    try:
+        validate_password(
+            new_password=password,
+            confirm_password=confirm_password,
+            phone=mobile_no,
+            user=None        # registration = no existing user
+        )
+    except ValueError as e:
+        return Response(
+            {"status": False, "message": str(e)},
+            status=status.HTTP_400_BAD_REQUEST
+        )
 
     # ---------- ROLE LOGIC ----------
     ROLE_MAP = {
@@ -75,10 +88,7 @@ def registration(request):
         "volunteer": 3,
     }
 
-    # default role = volunteer (3)
-    role_id = ROLE_MAP.get(
-        role_str.lower(), 3
-    ) if role_str else 3
+    role_id = ROLE_MAP.get(role_str.lower(), 3) if role_str else 3
 
     # ---------- CREATE USER ----------
     user = VoterUserMaster.objects.create(
@@ -86,24 +96,29 @@ def registration(request):
         last_name=last_name,
         mobile_no=mobile_no,
         password=make_password(password),
-        
         role_id=role_id
     )
-    logger.info(f"registration_api: User {user.user_id} registered successfully with role ID {role_id}")
+
+    logger.info(
+        f"registration_api: User {user.user_id} registered successfully with role ID {role_id}"
+    )
+
     # ---------- RESPONSE ----------
-    return Response({
-        "status": True,
-        "message": "Registration successful",
-        "data": {
-            "user_id": user.user_id,
-            "first_name": user.first_name,
-            "last_name": user.last_name,
-            "mobile_no": user.mobile_no,
-            "role_id": role_id
-        }
-    }, status=201)
-    
-        
+    return Response(
+        {
+            "status": True,
+            "message": "Registration successful",
+            "data": {
+                "user_id": user.user_id,
+                "first_name": user.first_name,
+                "last_name": user.last_name,
+                "mobile_no": user.mobile_no,
+                "role_id": role_id
+            }
+        },
+        status=status.HTTP_201_CREATED
+    )
+  
 
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])

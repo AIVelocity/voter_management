@@ -18,6 +18,9 @@ import base64
 from io import BytesIO
 from PIL import Image, ImageDraw, ImageFont
 
+import re
+from django.contrib.auth.hashers import check_password
+
 class CustomJWTAuthentication(JWTAuthentication):
 
     def get_user(self, validated_token):
@@ -375,3 +378,47 @@ def generate_captcha():
     image_base64 = base64.b64encode(buffer.getvalue()).decode()
 
     return text, image_base64
+
+
+def validate_password(
+    new_password: str,
+    confirm_password: str = None,
+    phone: str = None,
+    user=None
+):
+    """
+    Validate password based on security rules.
+    Raises ValueError with clear message if validation fails.
+    """
+
+    # ---------- REQUIRED ----------
+    if not new_password:
+        raise ValueError("Password is required")
+
+    if confirm_password is not None and new_password != confirm_password:
+        raise ValueError("Passwords do not match")
+
+    # ---------- LENGTH ----------
+    if len(new_password) < 8:
+        raise ValueError("Password must be at least 8 characters long")
+
+    # ---------- COMPLEXITY ----------
+    rules = {
+        "uppercase letter": r"[A-Z]",
+        "lowercase letter": r"[a-z]",
+        "number": r"\d",
+        "special character": r"[!@#$%^&*()_+\-=\[\]{};':\"\\|,.<>/?]"
+    }
+
+    for rule, pattern in rules.items():
+        if not re.search(pattern, new_password):
+            raise ValueError(f"Password must contain at least one {rule}")
+
+    # ---------- SECURITY ----------
+    if phone and phone in new_password:
+        raise ValueError("Password should not contain phone number")
+
+    if user and check_password(new_password, user.password):
+        raise ValueError("New password cannot be the same as old password")
+
+    return True

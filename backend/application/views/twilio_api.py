@@ -10,6 +10,8 @@ from typing import Dict, Tuple
 from django.http import JsonResponse
 from rest_framework import status
 from twilio.rest import Client
+from .view_utils import validate_password
+from ..models import VoterUserMaster
 
 sid = os.getenv("TWILIO_ACCOUNT_SID")
 token = os.getenv("TWILIO_AUTH_TOKEN")
@@ -164,47 +166,42 @@ def reset_password(request):
     new_password = data.get("new_password")
     confirm_password = data.get("confirm_password")
 
-    if not new_password or not confirm_password:
+    # ---------- BASIC CHECK ----------
+    if not phone:
         return JsonResponse(
-            {"detail": "Password fields are required"},
+            {"detail": "Phone number is required"},
             status=status.HTTP_400_BAD_REQUEST
         )
 
-    if new_password != confirm_password:
+    # ---------- FETCH USER ----------
+    user = VoterUserMaster.objects.filter(mobile_no=phone[-10:]).first()
+
+    if not user:
         return JsonResponse(
-            {"detail": "Passwords do not match"},
+            {"detail": "User not found"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    # ---------- VALIDATE PASSWORD ----------
+    try:
+        validate_password(
+            new_password=new_password,
+            confirm_password=confirm_password,
+            phone=phone,
+            user=user            # correct user
+        )
+    except ValueError as e:
+        return JsonResponse(
+            {"detail": str(e)},
             status=status.HTTP_400_BAD_REQUEST
         )
 
     # ---------- UPDATE PASSWORD ----------
-    try:
-        from ..models import VoterUserMaster
+    user.set_password(new_password)
+    user.updated_at = timezone.now()
+    user.save(update_fields=["password", "updated_at"])
 
-        user = VoterUserMaster.objects.filter(mobile_no=phone[-10:]).first()
-
-        if not user:
-            return JsonResponse(
-                {"detail": "User not found"},
-                status=status.HTTP_404_NOT_FOUND
-            )
-            
-        if check_password(new_password, user.password):
-            return JsonResponse(
-            {"status": False, "message": "New password must be different from old password"},
-            status=400
-            )
-            
-        user.set_password(new_password)
-        user.updated_at = timezone.now()
-        user.save(update_fields=["password","updated_at"])
-
-        return JsonResponse(
-            {"status": True, "message": "Password reset successful"},
-            status=status.HTTP_200_OK
-        )
-
-    except Exception as e:
-        return JsonResponse(
-            {"status": False, "message": "Failed to reset password", "error": str(e)},
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR
-        )
+    return JsonResponse(
+        {"status": True, "message": "Password reset successful"},
+        status=status.HTTP_200_OK
+    )
