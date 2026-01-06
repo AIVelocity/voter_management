@@ -1,8 +1,15 @@
 from rest_framework.throttling import SimpleRateThrottle
 from rest_framework.exceptions import Throttled
 from django.conf import settings
-
 import requests
+
+def get_client_ip(request):
+    xff = request.META.get("HTTP_X_FORWARDED_FOR")
+    if xff:
+        return xff.split(",")[0].strip()
+    return request.META.get("REMOTE_ADDR")
+
+
 class LoginRateThrottle(SimpleRateThrottle):
     scope = "login"
 
@@ -10,16 +17,13 @@ class LoginRateThrottle(SimpleRateThrottle):
         ip = self.get_ident(request)
         mobile = request.data.get("mobile_no")
 
-        if not mobile:
-            ident = ip
-        else:
-            ident = f"{ip}:{mobile}"
+        ident = f"{ip}:{mobile}" if mobile else ip
 
         return self.cache_format % {
             "scope": self.scope,
             "ident": ident
         }
-        
+
     def throttle_failure(self):
         wait = self.wait()
         raise Throttled(

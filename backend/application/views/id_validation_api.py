@@ -9,10 +9,11 @@ from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
 from logger import logger
 from rest_framework.decorators import throttle_classes
-from .rate_limiter import LoginRateThrottle,verify_captcha
+from .rate_limiter import LoginRateThrottle,verify_captcha,get_client_ip
 from django.core.cache import cache
 
-MAX_FAILED_ATTEMPTS = 3
+
+MAX_FAILED_ATTEMPTS = 5
 CAPTCHA_TTL = 300  
 
 @api_view(["POST"])
@@ -38,31 +39,41 @@ def id_validation(request):
         if not user:
             return Response({"status": False, "message": "User not found"}, status=404)
         
-        ip = request.META.get("REMOTE_ADDR")
+        ip = get_client_ip(request)
         key = f"login_fail:{ip}:{mobile_no}"
 
         fail_count = cache.get(key, 0)
 
-        # Require captcha after N failures
         if fail_count >= MAX_FAILED_ATTEMPTS:
             captcha_token = body.get("captcha_token")
 
             if not captcha_token:
-                return Response({
-                    "status": False,
-                    "captcha_required": True,
-                    "message": "Captcha required"
-                }, status=403)
+                return Response(
+                    {
+                        "status": False,
+                        "captcha_required": True,
+                        "message": "Captcha required"
+                    },
+                    status=403
+                )
 
             if not verify_captcha(captcha_token):
-                return Response({
-                    "status": False,
-                    "message": "Invalid captcha"
-                }, status=403)
+                return Response(
+                    {
+                        "status": False,
+                        "message": "Invalid captcha"
+                    },
+                    status=403
+                )
+
                 
         # -------- PASSWORD CHECK --------
         if not check_password(password, user.password):
-            cache.set(key, fail_count + 1, CAPTCHA_TTL)
+            if cache.get(key) is None:
+                cache.set(key, 1, CAPTCHA_TTL)
+            else:
+                cache.incr(key)
+                cache.expire(key, CAPTCHA_TTL)
 
             return Response({
                 "status": False,
@@ -84,6 +95,7 @@ def id_validation(request):
         else:
             role_name = None
             role_id = None
+        cache.delete(key)
 
         logger.info(f"id_validation_api: User {user.user_id} authenticated successfully")    
         # -------- SUCCESS --------

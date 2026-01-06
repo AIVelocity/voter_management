@@ -176,13 +176,12 @@ def volunteer_voters_page(request):
         bool(v.alternate_mobile1),
         bool(v.alternate_mobile2),
     ])
-        data.append({
-            "sr_no" : v.sr_no,
+        voter_dict = {
+            "sr_no": v.sr_no,
             "voter_list_id": v.voter_list_id,
             "voter_id": v.voter_id,
             "first_name": first_name,
             "last_name": last_name,
-            # "voter_name_marathi": translator.translate(v.voter_name_marathi, lang),
             "voter_name_eng": voter_name_eng,
             "kramank": v.kramank,
             "age": age_eng,
@@ -195,14 +194,14 @@ def volunteer_voters_page(request):
             "mobile_no": format_mobile_with_country_code(
                 v.mobile_no or v.alternate_mobile1 or v.alternate_mobile2 or None
             ),
-        })
+        }
         
-        
+        data.append(voter_dict)
         # Separate into tagged and untagged based on check_progress_date
         if v.check_progress_date:
-            tagged_data.append(data)
+            tagged_data.append(voter_dict)
         else:
-            untagged_data.append(data)
+            untagged_data.append(voter_dict)
     logger.info(f"volunteer_voters_page_api: Retrieved page {page} with {len(data)} voters")
     
     return Response({
