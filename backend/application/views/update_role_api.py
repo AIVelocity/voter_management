@@ -161,7 +161,7 @@ def promote_user(request):
         log_action_user(
             request=request,
             user=request.user,
-            action="USER_ROLE_PROMOTED",
+            action="USER_ROLE_CHANGE",
             module="USER",
             object_type="VoterUserMaster",
             object_id=target_user.user_id,
