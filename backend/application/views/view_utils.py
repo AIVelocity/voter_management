@@ -1,6 +1,6 @@
 from .filter_api import apply_multi_filter, apply_tag_filter
 from .filter_api import apply_dynamic_initial_search
-from ..models import VoterList, VoterRelationshipDetails, ActivityLog, UserContactPayload, UserVoterContact, VoterUserMaster,LoginAttempt
+from ..models import VoterList, VoterRelationshipDetails, ActivityLog, UserContactPayload, UserVoterContact, VoterUserMaster,UserActivityLog
 from deep_translator import GoogleTranslator
 from .contact_match_api import canonicalize_contacts, normalize_phone
 from django.db.models import Q
@@ -20,6 +20,45 @@ from PIL import Image, ImageDraw, ImageFont
 
 import re
 from django.contrib.auth.hashers import check_password
+
+
+def log_user_action(
+    *,
+    request=None,
+    user=None,
+    action,
+    module=None,
+    object_type=None,
+    object_id=None,
+    status="SUCCESS",
+    metadata=None
+):
+    ip = None
+    agent = None
+    user_name = None
+
+    if request:
+        ip = request.META.get("REMOTE_ADDR")
+        agent = request.META.get("HTTP_USER_AGENT")
+
+    if user:
+        # adjust field names as per your model
+        user_name = f"{user.first_name} {user.last_name}".strip() \
+            if hasattr(user, "first_name") else str(user)
+
+    UserActivityLog.objects.create(
+        user=user,
+        user_name=user_name,
+        action=action,
+        module=module,
+        object_type=object_type,
+        object_id=str(object_id) if object_id else None,
+        status=status,
+        ip_address=ip,
+        user_agent=agent,
+        metadata=metadata
+    )
+
 
 class CustomJWTAuthentication(JWTAuthentication):
 

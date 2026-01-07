@@ -1,6 +1,12 @@
 from django.db import models
 from django.core.validators import RegexValidator
 from django.utils import timezone
+from django.db import models
+from django.contrib.auth.models import (
+    AbstractBaseUser,
+    PermissionsMixin,
+    BaseUserManager
+)
 
 mobile_validator = RegexValidator(
     regex=r'^[679]\d{9}$',
@@ -143,12 +149,7 @@ class Caste(models.Model):
         db_table = "voter_caste_master"
         managed = False
 
-from django.db import models
-from django.contrib.auth.models import (
-    AbstractBaseUser,
-    PermissionsMixin,
-    BaseUserManager
-)
+
 
 class VoterUserManager(BaseUserManager):
     def create_user(self, mobile_no, password=None, **extra_fields):
@@ -218,6 +219,40 @@ class VoterUserMaster(AbstractBaseUser):
 
     def __str__(self):
         return f"{self.first_name or ''} {self.last_name or ''} - {self.mobile_no}"
+
+
+class UserActivityLog(models.Model):
+    log_id = models.BigAutoField(primary_key=True)
+
+    user = models.ForeignKey(
+        "VoterUserMaster",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL
+    )
+    user_name = models.CharField(max_length=100)
+    action = models.CharField(max_length=100)
+    module = models.CharField(max_length=100, null=True, blank=True)
+
+    object_type = models.CharField(max_length=100, null=True, blank=True)
+    object_id = models.CharField(max_length=100, null=True, blank=True)
+
+    status = models.CharField(max_length=20, default="SUCCESS")
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    user_agent = models.TextField(null=True, blank=True)
+
+    metadata = models.JSONField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "voter_user_activity_log"
+        indexes = [
+            models.Index(fields=["user"]),
+            models.Index(fields=["action"]),
+            models.Index(fields=["created_at"]),
+        ]
+        managed = False
+
 
 class VoterList(models.Model):
 
