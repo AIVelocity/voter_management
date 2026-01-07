@@ -12,6 +12,7 @@ from rest_framework import status
 from twilio.rest import Client
 from .view_utils import validate_password
 from ..models import VoterUserMaster
+from .view_utils import log_action_user
 
 sid = os.getenv("TWILIO_ACCOUNT_SID")
 token = os.getenv("TWILIO_AUTH_TOKEN")
@@ -160,48 +161,74 @@ def otp_verify(request):
 @api_view(["POST"])
 @permission_classes([AllowAny])
 def reset_password(request):
-
-    data = request.data
-    phone = (data.get("phone") or "").strip()
-    new_password = data.get("new_password")
-    confirm_password = data.get("confirm_password")
-
-    # ---------- BASIC CHECK ----------
-    if not phone:
-        return JsonResponse(
-            {"detail": "Phone number is required"},
-            status=status.HTTP_400_BAD_REQUEST
-        )
-
-    # ---------- FETCH USER ----------
-    user = VoterUserMaster.objects.filter(mobile_no=phone[-10:]).first()
-
-    if not user:
-        return JsonResponse(
-            {"detail": "User not found"},
-            status=status.HTTP_404_NOT_FOUND
-        )
-
-    # ---------- VALIDATE PASSWORD ----------
     try:
-        validate_password(
-            new_password=new_password,
-            confirm_password=confirm_password,
-            phone=phone,
-            user=user            # correct user
+        data = request.data
+        phone = (data.get("phone") or "").strip()
+        new_password = data.get("new_password")
+        confirm_password = data.get("confirm_password")
+
+        # ---------- BASIC CHECK ----------
+        if not phone:
+            return JsonResponse(
+                {"detail": "Phone number is required"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # ---------- FETCH USER ----------
+        user = VoterUserMaster.objects.filter(mobile_no=phone[-10:]).first()
+
+        if not user:
+            return JsonResponse(
+                {"detail": "User not found"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        # ---------- VALIDATE PASSWORD ----------
+        try:
+            validate_password(
+                new_password=new_password,
+                confirm_password=confirm_password,
+                phone=phone,
+                user=user            # correct user
+            )
+        except ValueError as e:
+            return JsonResponse(
+                {"detail": str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # ---------- UPDATE PASSWORD ----------
+        user.set_password(new_password)
+        user.updated_at = timezone.now()
+        user.save(update_fields=["password", "updated_at"])
+        log_action_user(
+            request=request,
+            user=user,
+            action="PASSWORD_RESET_SUCCESS",
+            module="AUTH",
+            object_type="VoterUserMaster",
+            object_id=user.user_id,
+            metadata={
+                "reset_method": "phone",
+            }
         )
-    except ValueError as e:
+
         return JsonResponse(
-            {"detail": str(e)},
-            status=status.HTTP_400_BAD_REQUEST
+            {"status": True, "message": "Password reset successful"},
+            status=status.HTTP_200_OK
         )
-
-    # ---------- UPDATE PASSWORD ----------
-    user.set_password(new_password)
-    user.updated_at = timezone.now()
-    user.save(update_fields=["password", "updated_at"])
-
-    return JsonResponse(
-        {"status": True, "message": "Password reset successful"},
-        status=status.HTTP_200_OK
-    )
+    except Exception as e:
+        log_action_user(
+            request=request,
+            user=user if 'user' in locals() else None,
+            action="PASSWORD_RESET_ERROR",
+            module="AUTH",
+            status="FAILED",
+            metadata={
+                "error": str(e)
+            }
+        )
+        return JsonResponse(
+            {"detail": "Internal server error"},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )

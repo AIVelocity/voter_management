@@ -14,7 +14,7 @@ from rest_framework.decorators import api_view, permission_classes, parser_class
 from rest_framework.response import Response
 from logger import logger
 from rest_framework import status
-from .view_utils import validate_password
+from .view_utils import validate_password,log_action_user
 
 def is_valid_mobile(mobile):
     # Allows only exactly 10 digits
@@ -73,7 +73,7 @@ def registration(request):
             new_password=password,
             confirm_password=confirm_password,
             phone=mobile_no,
-            user=None        # registration = no existing user
+            user=None        
         )
     except ValueError as e:
         return Response(
@@ -102,7 +102,18 @@ def registration(request):
     logger.info(
         f"registration_api: User {user.user_id} registered successfully with role ID {role_id}"
     )
-
+    log_action_user(
+            request=request,
+            user=user,
+            action="REGISTRATION_SUCCESS",
+            module="AUTH",
+            object_type="VoterUserMaster",
+            object_id=user.user_id,
+            metadata={
+                "role_id": role_id,
+                "role_name": user.role.role_name
+            }
+        )
     # ---------- RESPONSE ----------
     return Response(
         {

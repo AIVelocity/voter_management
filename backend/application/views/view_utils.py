@@ -17,12 +17,10 @@ import string
 import base64
 from io import BytesIO
 from PIL import Image, ImageDraw, ImageFont
-
 import re
 from django.contrib.auth.hashers import check_password
 
-
-def log_user_action(
+def log_action_user(
     *,
     request=None,
     user=None,

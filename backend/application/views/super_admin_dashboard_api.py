@@ -14,7 +14,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from logger import logger 
-
+from .view_utils import log_action_user
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
@@ -343,7 +343,7 @@ def admin_allocation_panel(request):
 
                 # ---------- UNASSIGNED ----------
                 "allocated_unassigned_members": allocated_third_screen
-    }
+            }
         }
     )
 
@@ -535,6 +535,20 @@ def assign_voters_to_karyakarta(request):
                 .update(user=karyakarta)
             )
         logger.info(f"super_admin_dashboard_api: Assigned {updated_count} voters to karyakarta {karyakarta_user_id}")
+        log_action_user(
+            request=request,
+            user=request.user,
+            action="VOTERS_ASSIGN_MANUAL",
+            module="VOTER",
+            object_type="VoterUserMaster",
+            object_id=karyakarta.user_id,
+            metadata={
+                "assigned_count": updated_count,
+                "assigned_to_user_id": karyakarta.user_id,
+                "assigned_by_user_id": request.user.user_id
+            }
+        )
+
         return Response({
             "status": True,
             "assigned_count": updated_count,
@@ -542,6 +556,15 @@ def assign_voters_to_karyakarta(request):
         })
 
     except Exception as e:
+        log_action_user(
+            request=request,
+            user=request.user,
+            action="VOTERS_ASSIGN_MANUAL_FAILED",
+            module="VOTER",
+            status="FAILED",
+            metadata={"error": str(e)}
+        )
+
         return Response({
             "status": False,
             "error": str(e)
@@ -606,6 +629,20 @@ def auto_select_unassigned_voters(request):
                 .update(user=karyakarta)
             )
         logger.info(f"super_admin_dashboard_api: Auto-assigned {updated} voters to karyakarta {karyakarta_user_id}")
+        log_action_user(
+            request=request,
+            user=request.user,
+            action="VOTERS_AUTO_ASSIGN",
+            module="VOTER",
+            object_type="VoterUserMaster",
+            object_id=karyakarta.user_id,
+            metadata={
+                "requested_count": count,
+                "assigned_count": updated,
+                "assigned_to_user_id": karyakarta.user_id
+            }
+        )
+
         return Response({
             "status": True,
             "assigned_count": updated,
@@ -614,6 +651,15 @@ def auto_select_unassigned_voters(request):
         })
 
     except Exception as e:
+        log_action_user(
+            request=request,
+            user=request.user,
+            action="VOTERS_AUTO_ASSIGN_FAILED",
+            module="VOTER",
+            status="FAILED",
+            metadata={"error": str(e)}
+        )
+
         return Response({
             "status": False,
             "error": str(e)
@@ -676,7 +722,20 @@ def auto_unassign_voters(request):
                 .filter(voter_list_id__in=voters, user=karyakarta)
                 .update(user=None)
             )
-        logger.info(f"super_admin_dashboard_api: Auto-unassigned {updated} voters from karyakarta {karyakarta_user_id}")    
+        logger.info(f"super_admin_dashboard_api: Auto-unassigned {updated} voters from karyakarta {karyakarta_user_id}") 
+        log_action_user(
+            request=request,
+            user=request.user,
+            action="VOTERS_AUTO_UNASSIGN",
+            module="VOTER",
+            object_type="VoterUserMaster",
+            object_id=karyakarta.user_id,
+            metadata={
+                "requested_count": count,
+                "unassigned_count": updated
+            }
+        )          
+   
         return Response({
             "status": True,
             "unassigned_count": updated,

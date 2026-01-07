@@ -34,10 +34,10 @@ from logger import logger
 
 def get_client_ip(request):
     xff = request.META.get("HTTP_X_FORWARDED_FOR")
-    print("-------------->>>xff :",xff)
+    # print("-------------->>>xff :",xff)
     if xff:
         return xff.split(",")[0].strip()
-    print("--------IP--->>:",request.META.get("REMOTE_ADDR"))
+    # print("--------IP--->>:",request.META.get("REMOTE_ADDR"))
     return request.META.get("REMOTE_ADDR")
 
 def verify_captcha(captcha_id, user_value):

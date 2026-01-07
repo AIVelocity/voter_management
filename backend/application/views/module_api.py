@@ -9,6 +9,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from logger import logger
+from .view_utils import log_action_user
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
@@ -40,6 +41,16 @@ def get_all_roles_permissions(request):
             "delete": rp.can_delete
         })
     logger.info(f"module_api: Retrieved permissions for {len(role_map)} roles")
+    log_action_user(
+        request=request,
+        user=request.user,
+        action="PERMISSIONS_VIEW_ALL",
+        module="PERMISSION",
+        metadata={
+            "roles_count": len(role_map)
+        }
+    )
+
     return Response({
         "status": True,
         "count": len(role_map),
@@ -86,6 +97,17 @@ def get_roles_permissions(request):
             "delete": rp.can_delete
         })
     logger.info(f"module_api: Retrieved permissions for role {role.role_id}")
+    log_action_user(
+        request=request,
+        user=request.user,
+        action="PERMISSIONS_VIEW_ROLE",
+        module="PERMISSION",
+        metadata={
+            "role_id": role.role_id,
+            "role_name": role.role_name
+        }
+    )
+
     return Response({
         "status": True,
         "data": data
@@ -147,6 +169,19 @@ def bulk_update_permissions(request):
 
                     updated_rows += updated
         logger.info(f"module_api: Updated permissions for {len(data)} roles, total rows updated: {updated_rows}")
+        log_action_user(
+            request=request,
+            user=request.user,
+            action="PERMISSIONS_BULK_UPDATE_SUCCESS",
+            module="PERMISSION",
+            object_type="Roles",
+            metadata={
+                "roles_processed": len(data),
+                "rows_updated": updated_rows,
+                "updated_by_user_id": request.user.user_id
+            }
+        )
+
         return Response({
             "status": True,
             "message": "Permissions updated successfully",

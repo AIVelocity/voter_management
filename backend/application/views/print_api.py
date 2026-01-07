@@ -8,6 +8,7 @@ from rest_framework.response import Response
 from django.db.models import Q
 from django.core.paginator import Paginator
 from logger import logger
+from .view_utils import log_action_user
 
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
@@ -50,6 +51,17 @@ def print_voters_by_ids(request):
 
 
     if not voters_qs.exists():
+        log_action_user(
+    request=request,
+    user=user,
+    action="PRINT_VOTERS_BY_IDS_NOT_FOUND",
+    module="PRINT",
+    status="FAILED",
+    metadata={
+        "requested_ids_count": len(voter_list_ids)
+    }
+)
+
         return Response(
             {"status": False, "message": "No voters found"},
             status=404
@@ -70,6 +82,17 @@ def print_voters_by_ids(request):
             "gender_eng": v["gender_eng"]
         })
     logger.info(f"print_api: Retrieved {len(voters)} voters for printing")
+    log_action_user(
+        request=request,
+        user=user,
+        action="PRINT_VOTERS_BY_IDS",
+        module="PRINT",
+        metadata={
+            "requested_ids_count": len(voter_list_ids),
+            "returned_count": len(voters)
+        }
+    )
+
     return Response({
         "status": True,
         "count": len(voters),
@@ -142,6 +165,19 @@ def list_voters_for_print(request):
             "gender_eng": v["gender_eng"]
         })
     logger.info(f"print_api: Retrieved page {page} with {len(voters)} voters for printing")
+    log_action_user(
+        request=request,
+        user=user,
+        action="LIST_VOTERS_FOR_PRINT",
+        module="PRINT",
+        metadata={
+            "page": page,
+            "page_size": size,
+            "records_returned": len(voters),
+            "total_records": paginator.count
+        }
+    )
+
     return Response({
         "status": True,
         "page": page,

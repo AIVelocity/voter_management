@@ -1,7 +1,4 @@
-from ..models import VoterList,VoterUserMaster
-from django.core.cache import cache
-from django.core.paginator import Paginator
-from rest_framework_simplejwt.tokens import AccessToken
+from ..models import VoterList
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -9,6 +6,7 @@ from django.conf import settings
 import os
 import base64
 from logger import logger
+
 
 BASE_DIR = settings.BASE_DIR
 # print(BASE_DIR)

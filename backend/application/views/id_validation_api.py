@@ -10,6 +10,7 @@ from ..models import VoterUserMaster, VoterList,LoginAttempt
 from logger import logger
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
+from .view_utils import log_action_user
 
 
 # ---------------- CONFIG ----------------
@@ -73,6 +74,18 @@ def id_validation(request):
         # -------- BLOCK CHECK --------
         for a in attempts:
             if a.blocked_until and a.blocked_until > now:
+                log_action_user(
+                        request=request,
+                        user=None,  
+                        action="LOGIN_BLOCKED",
+                        module="AUTH",
+                        status="FAILED",
+                        metadata={
+                            "mobile_no": mobile_no,
+                            "blocked_until": str(a.blocked_until)
+                        }
+                    )
+
                 return Response({
                     "status": False,
                     "message": "Too many attempts. Please try again later.",
@@ -152,6 +165,18 @@ def id_validation(request):
         role_name = user.role.role_name if user.role else None
 
         logger.info(f"id_validation_api: User {user.user_id} authenticated successfully")
+        log_action_user(
+            request=request,
+            user=user,
+            action="LOGIN_SUCCESS",
+            module="AUTH",
+            object_type="VoterUserMaster",
+            object_id=user.user_id,
+            metadata={
+                "role_id": role_id,
+                "role_name": role_name
+            }
+        )
 
         return Response({
             "status": True,

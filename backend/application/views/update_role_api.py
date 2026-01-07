@@ -9,6 +9,7 @@ from django.db.models import Count
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from .view_utils import log_action_user
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
@@ -111,9 +112,6 @@ def single_volunteer(request, user_id):
             "error": str(e)
         }, status=500)
 
-
-
-
 ROLE_LEVELS = {
     "SuperAdmin": 1,
     "Admin": 2,
@@ -151,13 +149,29 @@ def promote_user(request):
             }, status=400)
 
         new_role = Roles.objects.get(role_name=new_role_name)
+        old_role = target_user.role.role_name if target_user.role else None
 
         with transaction.atomic():
             target_user.role = new_role
             # target_user.updated_by = logged_in_user.user_id
             target_user.updated_date = timezone.now()
             target_user.save()
+            
         logger.info(f"super_admin_dashboard_api: User {target_user_id} promoted to {new_role_name}")
+        log_action_user(
+            request=request,
+            user=request.user,
+            action="USER_ROLE_PROMOTED",
+            module="USER",
+            object_type="VoterUserMaster",
+            object_id=target_user.user_id,
+            metadata={
+                "old_role": old_role,
+                "new_role": new_role_name,
+                "promoted_by_user_id": request.user.user_id
+            }
+        )
+
         return Response({
             "status": True,
             "message": f"User promoted to {new_role_name}",
@@ -165,6 +179,19 @@ def promote_user(request):
         })
 
     except Exception as e:
+        log_action_user(
+            request=request,
+            user=request.user,
+            action="USER_ROLE_PROMOTION_FAILED",
+            module="USER",
+            status="FAILED",
+            metadata={
+                "target_user_id": target_user_id,
+                "requested_role": new_role_name,
+                "error": str(e)
+            }
+        )
+
         return Response({
             "status": False,
             "error": str(e)
@@ -180,12 +207,35 @@ def delete_user(request, user_id):
         target_user = VoterUserMaster.objects.get(user_id=user_id)
         target_user.delete()
         logger.info(f"super_admin_dashboard_api: User {user_id} deleted successfully")
+        log_action_user(
+            request=request,
+            user=request.user,
+            action="USER_DELETED",
+            module="USER",
+            object_type="VoterUserMaster",
+            object_id=user_id,
+            metadata={
+                "deleted_by_user_id": request.user.user_id
+            }
+        )
+
         return Response({
             "status": True,
             "message": "User deleted successfully"
         })
 
     except VoterUserMaster.DoesNotExist:
+        log_action_user(
+        request=request,
+        user=request.user,
+        action="USER_DELETE_NOT_FOUND",
+        module="USER",
+        status="FAILED",
+        metadata={
+            "requested_user_id": user_id
+        }
+    )
+
         return Response(
             {"status": False, "message": "User not found"},
             status=404

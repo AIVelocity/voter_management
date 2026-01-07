@@ -15,6 +15,8 @@ from rest_framework.decorators import api_view, permission_classes
 from .view_utils import build_voter_queryset,format_change_data
 from collections import defaultdict
 from logger import logger
+from .view_utils import log_action_user
+
 class Echo:
     def write(self, value):
         return value
@@ -46,6 +48,16 @@ def export_voters_excel(request):
                 {"status": False, "message": "Invalid report_date format"},
                 status=400
             )
+        log_action_user(
+            request=request,
+            user=user,
+            action="VOTER_EXPORT_STARTED",
+            module="EXPORT",
+            metadata={
+                "report_date": str(report_date)
+            }
+        )
+
 
         # # ------------------ QUERYSET ------------------
         # if user.role.role_name in ["SuperAdmin"]:
@@ -236,10 +248,34 @@ def export_voters_excel(request):
                 created_at,
             ])
         logger.info("excel_report: Completed writing CSV data")
+        export_count = qs.count()
+
+        log_action_user(
+            request=request,
+            user=user,
+            action="VOTER_EXPORT_SUCCESS",
+            module="EXPORT",
+            metadata={
+                "report_date": str(report_date),
+                "exported_count": export_count,
+                "file_type": "CSV"
+            }
+        )
 
         return response
 
     except Exception as e:
+        log_action_user(
+            request=request,
+            user=user if request.user.is_authenticated else None,
+            action="VOTER_EXPORT_FAILED",
+            module="EXPORT",
+            status="FAILED",
+            metadata={
+                "error": str(e),
+                "report_date": request.GET.get("report_date")
+            }
+        )
         return Response(
             {"status": False, "error": str(e)},
             status=400
@@ -249,121 +285,151 @@ def export_voters_excel(request):
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def voters_export(request):
-    logger.info("excel_report: Voters export request received")
-    # ------------------ USER & ROLE ------------------
-    user = request.user
-    user = VoterUserMaster.objects.select_related("role").get(
-        user_id=user.user_id
-    )
-
-    if user.role.role_name in ["SuperAdmin"]:
-        qs = build_voter_queryset(request, user)
-    else:
-        qs = build_voter_queryset(request, user).filter(user=user)
-
-    qs = qs.order_by("sr_no")
-
-    # ------------------ RESPONSE (STREAMING CSV) ------------------
-    response = HttpResponse(content_type="text/csv; charset=utf-8-sig")
-    filename = f"voter_report_{user.first_name}{user.last_name}_{now().strftime('%Y%m%d_%H%M%S')}.csv"
-    response["Content-Disposition"] = f'attachment; filename="{filename}"'
-    response.write("\ufeff")
-    writer = csv.writer(response)
-
-    # ------------------ HEADERS ------------------
-    writer.writerow([
-        "Voter ID",
-        "Serial No",
-        "Voter Name (English)",
-        "Voter Name (Marathi)",
-        "Current Address",
-        "Mobile",
-        "Alternate Mobile 1",
-        "Alternate Mobile 2",
-        "Kramank",
-        "Address Line 1",
-        "Age",
-        "Gender",
-        "Ward No",
-        "Location",
-        "Badge",
-        "Tag",
-        "Occupation",
-        "Caste",
-        "Religion",
-        "Comments",
-        "Check Progress Date",
-        "Father",
-        "Mother",
-        "Sibling",
-        "Child",
-    ])
-
-    # ------------------ RELATION MAP ------------------
-    relation_map = defaultdict(lambda: {
-        "father": None,
-        "mother": None,
-        "sibling": [],
-        "child": [],
-    })
-
-    relations_qs = (
-        VoterRelationshipDetails.objects
-        .select_related("related_voter")
-        .filter(
-            voter_id__in=qs.values_list("voter_list_id", flat=True)
+    try:
+        logger.info("excel_report: Voters export request received")
+        # ------------------ USER & ROLE ------------------
+        user = request.user
+        user = VoterUserMaster.objects.select_related("role").get(
+            user_id=user.user_id
         )
-    )
 
-    for r in relations_qs:
-        rel = (r.relation_with_voter or "").lower()
-        name = r.related_voter.voter_name_eng if r.related_voter else None
-        if not name:
-            continue
+        if user.role.role_name in ["SuperAdmin"]:
+            qs = build_voter_queryset(request, user)
+        else:
+            qs = build_voter_queryset(request, user).filter(user=user)
 
-        if rel == "father":
-            relation_map[r.voter_id]["father"] = name
-        elif rel == "mother":
-            relation_map[r.voter_id]["mother"] = name
-        elif rel in ("sibling"):
-            relation_map[r.voter_id]["sibling"].append(name)
-        elif rel in ("child"):
-            relation_map[r.voter_id]["child"].append(name)
+        qs = qs.order_by("sr_no")
 
-    # ------------------ WRITE ROWS (FAST STREAMING) ------------------
-    for row in qs.values_list(
-        "voter_id",
-        "sr_no",
-        "voter_name_eng",
-        "voter_name_marathi",
-        "current_address",
-        "mobile_no",
-        "alternate_mobile1",
-        "alternate_mobile2",
-        "kramank",
-        "address_line1",
-        "age_eng",
-        "gender_eng",
-        "ward_no",
-        "location",
-        "badge",
-        "tag_id__tag_name",
-        "occupation__occupation_name",
-        "cast__caste_name",
-        "religion__religion_name",
-        "comments",
-        "check_progress_date",
-        "voter_list_id",
-    ).iterator(chunk_size=5000):
+        # ------------------ RESPONSE (STREAMING CSV) ------------------
+        response = HttpResponse(content_type="text/csv; charset=utf-8-sig")
+        filename = f"voter_report_{user.first_name}{user.last_name}_{now().strftime('%Y%m%d_%H%M%S')}.csv"
+        response["Content-Disposition"] = f'attachment; filename="{filename}"'
+        response.write("\ufeff")
+        writer = csv.writer(response)
 
-        *data, voter_list_id = row
-        rel = relation_map.get(voter_list_id, {})
-
-        writer.writerow(list(data) + [
-            rel.get("father"),
-            rel.get("mother"),
-            ", ".join(rel.get("sibling", [])) or None,
-            ", ".join(rel.get("child", [])) or None,
+        # ------------------ HEADERS ------------------
+        writer.writerow([
+            "Voter ID",
+            "Serial No",
+            "Voter Name (English)",
+            "Voter Name (Marathi)",
+            "Current Address",
+            "Mobile",
+            "Alternate Mobile 1",
+            "Alternate Mobile 2",
+            "Kramank",
+            "Address Line 1",
+            "Age",
+            "Gender",
+            "Ward No",
+            "Location",
+            "Badge",
+            "Tag",
+            "Occupation",
+            "Caste",
+            "Religion",
+            "Comments",
+            "Check Progress Date",
+            "Father",
+            "Mother",
+            "Sibling",
+            "Child",
         ])
-    logger.info("excel_report: Completed writing CSV data")
-    return response
+
+        # ------------------ RELATION MAP ------------------
+        relation_map = defaultdict(lambda: {
+            "father": None,
+            "mother": None,
+            "sibling": [],
+            "child": [],
+        })
+
+        relations_qs = (
+            VoterRelationshipDetails.objects
+            .select_related("related_voter")
+            .filter(
+                voter_id__in=qs.values_list("voter_list_id", flat=True)
+            )
+        )
+
+        for r in relations_qs:
+            rel = (r.relation_with_voter or "").lower()
+            name = r.related_voter.voter_name_eng if r.related_voter else None
+            if not name:
+                continue
+
+            if rel == "father":
+                relation_map[r.voter_id]["father"] = name
+            elif rel == "mother":
+                relation_map[r.voter_id]["mother"] = name
+            elif rel in ("sibling"):
+                relation_map[r.voter_id]["sibling"].append(name)
+            elif rel in ("child"):
+                relation_map[r.voter_id]["child"].append(name)
+
+        # ------------------ WRITE ROWS (FAST STREAMING) ------------------
+        for row in qs.values_list(
+            "voter_id",
+            "sr_no",
+            "voter_name_eng",
+            "voter_name_marathi",
+            "current_address",
+            "mobile_no",
+            "alternate_mobile1",
+            "alternate_mobile2",
+            "kramank",
+            "address_line1",
+            "age_eng",
+            "gender_eng",
+            "ward_no",
+            "location",
+            "badge",
+            "tag_id__tag_name",
+            "occupation__occupation_name",
+            "cast__caste_name",
+            "religion__religion_name",
+            "comments",
+            "check_progress_date",
+            "voter_list_id",
+        ).iterator(chunk_size=5000):
+
+            *data, voter_list_id = row
+            rel = relation_map.get(voter_list_id, {})
+
+            writer.writerow(list(data) + [
+                rel.get("father"),
+                rel.get("mother"),
+                ", ".join(rel.get("sibling", [])) or None,
+                ", ".join(rel.get("child", [])) or None,
+            ])
+        logger.info("excel_report: Completed writing CSV data")
+        export_count = qs.count()
+
+        log_action_user(
+            request=request,
+            user=user,
+            action="VOTER_EXPORT_ALL_SUCCESS",
+            module="EXPORT",
+            metadata={
+                "exported_count": export_count,
+                "file_type": "CSV",
+                "role": user.role.role_name
+            }
+        )
+
+        return response
+    except Exception as e:
+        log_action_user(
+            request=request,
+            user=user,
+            action="VOTER_EXPORT_ALL_FAILED",
+            module="EXPORT",
+            status="FAILED",
+            metadata={
+                "error": str(e)
+            }
+        )
+        return Response(
+            {"status": False, "error": str(e)},
+            status=400
+        )

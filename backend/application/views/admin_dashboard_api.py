@@ -7,12 +7,12 @@ from django.db import transaction
 import json
 from django.core.paginator import Paginator, EmptyPage
 from collections import defaultdict
-from rest_framework_simplejwt.tokens import AccessToken
 from .voters_info_api import split_marathi_name
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from logger import logger
+from .view_utils import log_action_user
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
@@ -406,7 +406,7 @@ def unassigned_voters(request):
 def assign_voters_to_karyakarta(request):
     try:
         body = request.data
-
+        user = request.user
         karyakarta_user_id = body.get("karyakarta_user_id")
         voter_ids = body.get("voter_ids", [])
 
@@ -436,6 +436,20 @@ def assign_voters_to_karyakarta(request):
                 )
                 .update(user=karyakarta)
             )
+        log_action_user(
+            request=request,
+            user=user,
+            action="VOTERS_ASSIGN_SUCCESS",
+            module="AUTH",
+            object_type="VoterUserMaster",
+            object_id=karyakarta.user_id,
+            metadata={
+                "assigned_by_user_id": user.user_id,
+                "assigned_to_user_id": karyakarta.user_id,
+                "assigned_count": updated_count,
+                "voter_ids": voter_ids
+            }
+        )
 
         return Response({
             "SUCCESS": True,
@@ -492,6 +506,7 @@ def assign_voters_to_karyakarta(request):
 #         "voters": list(voters),
 #         "voter_ids": [v["voter_list_id"] for v in voters]
 #     })
+
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def auto_assign_unassigned_voters(request):
@@ -532,10 +547,9 @@ def auto_assign_unassigned_voters(request):
 
         with transaction.atomic():
 
-            # fetch first N unassigned voters
             voters = list(
                 VoterList.objects
-                .select_for_update()               # prevents race condition
+                .select_for_update()              
                 .filter(user__isnull=True)
                 .order_by("sr_no")
                 .values_list("voter_list_id", flat=True)[:count]
@@ -553,6 +567,21 @@ def auto_assign_unassigned_voters(request):
                 VoterList.objects
                 .filter(voter_list_id__in=voters, user__isnull=True)
                 .update(user=karyakarta)
+            )
+            log_action_user(
+                request=request,
+                user=request.user,
+                action="AUTO_ASSIGN_SUCCESS",
+                module="VOTER",
+                object_type="VoterUserMaster",
+                object_id=karyakarta.user_id,
+                metadata={
+                    "requested_count": count,
+                    "assigned_count": updated,
+                    "assigned_voter_ids": voters,
+                    "assigned_by_user_id": request.user.user_id,
+                    "assigned_to_user_id": karyakarta.user_id
+                }
             )
 
         return Response({
