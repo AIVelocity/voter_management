@@ -41,7 +41,7 @@ class LoginAttempt(models.Model):
     captcha_required = models.BooleanField(default=False)
     blocked_until = models.DateTimeField(null=True, blank=True)
 
-    created_at = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(default=timezone.now)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
