@@ -8,6 +8,8 @@ import json
 from .rate_limiter import get_client_ip,verify_captcha
 from ..models import VoterUserMaster, VoterList,LoginAttempt
 from logger import logger
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
 
 
 # ---------------- CONFIG ----------------
@@ -36,6 +38,7 @@ def reset_attempts(attempts):
 
 
 @api_view(["POST"])
+@permission_classes([AllowAny])
 def id_validation(request):
     try:
         body = request.data

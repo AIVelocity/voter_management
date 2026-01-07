@@ -26,50 +26,60 @@ def all_comments(request):
             {"status": False, "message": "User not found"},
             status=404
         )
-        
-    
-    logs = (
-        ActivityLog.objects
-        .filter(new_data__has_key="comments")
-        .select_related(
-            "user",
-            "voter",
-            "voter__tag_id"   # for tag
-        )
-        .order_by("-created_at")
-    )
 
-    data = []
-    for log in logs:
-        voter = log.voter
-        user = log.user
+    # -------- ROLE-BASED QUERY --------
+    from django.db.models import Q
 
-        data.append({
-            # comment info
-            "comment": log.new_data.get("comments"),
-            "commented_at": format_indian_datetime(log.created_at),
+    privileged_roles = ["SuperAdmin"]
 
-            # user info
-            "commented_by": (
-                f"{user.first_name} {user.last_name}".strip()
-                if user else None
-            ),
-            "commented_by_user_id": user.user_id if user else None,
-            "commented_by_mobile": user.mobile_no if user else None,
-
-            # voter info
-            "voter_sr_no" : voter.sr_no if voter else None,
-            "voter_list_id": voter.voter_list_id if voter else None,
-            "voter_id": voter.voter_id if voter else None,
-            "voter_name": voter.voter_name_eng if voter else None,
-            "voter_tag": (
-                voter.tag_id.tag_name
-                if voter and voter.tag_id else None
+    if user.role.role_name in privileged_roles:   
+        logs = (
+            ActivityLog.objects
+            .filter(new_data__has_key="comments")
+            .select_related(
+                "user",
+                "voter",
+                "voter__tag_id"   # for tag
             )
+            .order_by("-created_at")
+        )
+
+        data = []
+        for log in logs:
+            voter = log.voter
+            user = log.user
+
+            data.append({
+                # comment info
+                "comment": log.new_data.get("comments"),
+                "commented_at": format_indian_datetime(log.created_at),
+
+                # user info
+                "commented_by": (
+                    f"{user.first_name} {user.last_name}".strip()
+                    if user else None
+                ),
+                "commented_by_user_id": user.user_id if user else None,
+                "commented_by_mobile": user.mobile_no if user else None,
+
+                # voter info
+                "voter_sr_no" : voter.sr_no if voter else None,
+                "voter_list_id": voter.voter_list_id if voter else None,
+                "voter_id": voter.voter_id if voter else None,
+                "voter_name": voter.voter_name_eng if voter else None,
+                "voter_tag": (
+                    voter.tag_id.tag_name
+                    if voter and voter.tag_id else None
+                )
+            })
+        logger.info(f"super_admin_comments_api: Retrieved {len(data)} comments")
+        return Response({
+            "status": True,
+            "count": len(data),
+            "data": data
         })
-    logger.info(f"super_admin_comments_api: Retrieved {len(data)} comments")
-    return Response({
-        "status": True,
-        "count": len(data),
-        "data": data
-    })
+    else:
+        return Response(
+            {"status": False, "message": "Not Authorized"},
+            status=403
+        )

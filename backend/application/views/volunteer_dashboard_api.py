@@ -133,88 +133,110 @@ def volunteer_voters_page(request):
 
     user = request.user
     user_id = user.user_id
+    try:
+        user = (
+            VoterUserMaster.objects
+            .select_related("role")
+            .get(user_id=user_id)
+        )
+    except VoterUserMaster.DoesNotExist:
+        return Response(
+            {"status": False, "message": "User not found"},
+            status=404
+        )
 
-    qs = (
-        VoterList.objects
-        .select_related("tag_id")
-        .filter(user_id=user_id)
-        .order_by("sr_no")
-    )
-    
-    paginator = Paginator(qs, size)
-    page_obj = paginator.get_page(page)
+    # -------- ROLE-BASED QUERY --------
+    from django.db.models import Q
 
-    data = []
-    tagged_data = []
-    untagged_data = []
+    privileged_roles = ["Volunteer"]
 
-    for v in page_obj:
-        if is_marathi:
-            first_name, middle_name, last_name = split_marathi_name(
-                v.voter_name_marathi
-            )
-
-            voter_name_eng = v.voter_name_marathi
-            age_eng = v.age
-            gender_eng = v.gender
-            tag = v.tag_id.tag_name_mar if v.tag_id else None
-            location = "रिमोट" if v.location == "Remote" else 'स्थानिक'
-            
-        else:
-            first_name = v.first_name
-            middle_name = v.middle_name
-            last_name = v.last_name
-
-            voter_name_eng = v.voter_name_eng
-            age_eng = v.age_eng
-            gender_eng = v.gender_eng
-            tag = v.tag_id.tag_name if v.tag_id else None
-            location = v.location
-            
-        has_whatsapp = any([
-        bool(v.mobile_no),
-        bool(v.alternate_mobile1),
-        bool(v.alternate_mobile2),
-    ])
-        voter_dict = {
-            "sr_no": v.sr_no,
-            "voter_list_id": v.voter_list_id,
-            "voter_id": v.voter_id,
-            "first_name": first_name,
-            "last_name": last_name,
-            "voter_name_eng": voter_name_eng,
-            "kramank": v.kramank,
-            "age": age_eng,
-            "gender": gender_eng,
-            "ward_id": v.ward_no,
-            "tag": v.tag_id.tag_name if v.tag_id else None,
-            "badge": v.badge,
-            "location": location,
-            "show_whatsapp": has_whatsapp,
-            "mobile_no": format_mobile_with_country_code(
-                v.mobile_no or v.alternate_mobile1 or v.alternate_mobile2 or None
-            ),
-        }
+    if user.role.role_name in privileged_roles:
+        qs = (
+            VoterList.objects
+            .select_related("tag_id")
+            .filter(user_id=user_id)
+            .order_by("sr_no")
+        )
         
-        data.append(voter_dict)
-        # Separate into tagged and untagged based on check_progress_date
-        if v.check_progress_date:
-            tagged_data.append(voter_dict)
-        else:
-            untagged_data.append(voter_dict)
-    logger.info(f"volunteer_voters_page_api: Retrieved page {page} with {len(data)} voters")
-    
-    return Response({
-        "SUCCESS": True,
-        "page": page,
-        "page_size": size,
-        "total_pages": paginator.num_pages,
-        "total_records": paginator.count,
-        "records_returned": len(data),
-        "all": data,
-        "visited": tagged_data,
-        "pending": untagged_data
-    })
+        paginator = Paginator(qs, size)
+        page_obj = paginator.get_page(page)
+
+        data = []
+        tagged_data = []
+        untagged_data = []
+
+        for v in page_obj:
+            if is_marathi:
+                first_name, middle_name, last_name = split_marathi_name(
+                    v.voter_name_marathi
+                )
+
+                voter_name_eng = v.voter_name_marathi
+                age_eng = v.age
+                gender_eng = v.gender
+                tag = v.tag_id.tag_name_mar if v.tag_id else None
+                location = "रिमोट" if v.location == "Remote" else 'स्थानिक'
+                
+            else:
+                first_name = v.first_name
+                middle_name = v.middle_name
+                last_name = v.last_name
+
+                voter_name_eng = v.voter_name_eng
+                age_eng = v.age_eng
+                gender_eng = v.gender_eng
+                tag = v.tag_id.tag_name if v.tag_id else None
+                location = v.location
+                
+            has_whatsapp = any([
+            bool(v.mobile_no),
+            bool(v.alternate_mobile1),
+            bool(v.alternate_mobile2),
+        ])
+            voter_dict = {
+                "sr_no": v.sr_no,
+                "voter_list_id": v.voter_list_id,
+                "voter_id": v.voter_id,
+                "first_name": first_name,
+                "last_name": last_name,
+                "voter_name_eng": voter_name_eng,
+                "kramank": v.kramank,
+                "age": age_eng,
+                "gender": gender_eng,
+                "ward_id": v.ward_no,
+                "tag": v.tag_id.tag_name if v.tag_id else None,
+                "badge": v.badge,
+                "location": location,
+                "show_whatsapp": has_whatsapp,
+                "mobile_no": format_mobile_with_country_code(
+                    v.mobile_no or v.alternate_mobile1 or v.alternate_mobile2 or None
+                ),
+            }
+            
+            data.append(voter_dict)
+            # Separate into tagged and untagged based on check_progress_date
+            if v.check_progress_date:
+                tagged_data.append(voter_dict)
+            else:
+                untagged_data.append(voter_dict)
+        logger.info(f"volunteer_voters_page_api: Retrieved page {page} with {len(data)} voters")
+        
+        return Response({
+            "SUCCESS": True,
+            "page": page,
+            "page_size": size,
+            "total_pages": paginator.num_pages,
+            "total_records": paginator.count,
+            "records_returned": len(data),
+            "all": data,
+            "visited": tagged_data,
+            "pending": untagged_data
+        })
+    else:
+        return Response(
+            {"status": False, "message": "Not Authorized"},
+            status=403
+        )
 
 
 @api_view(["GET"])

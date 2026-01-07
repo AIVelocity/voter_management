@@ -8,7 +8,19 @@ mobile_validator = RegexValidator(
 )
 
 
-from django.db import models
+class BlockedIP(models.Model):
+    ip_address = models.GenericIPAddressField(unique=True)
+    reason = models.CharField(max_length=255, null=True, blank=True)
+    blocked_at = models.DateTimeField(default=timezone.now)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        db_table = "voter_blocked_ip"
+        managed= False
+
+    def __str__(self):
+        return self.ip_address
+
 
 class LoginAttempt(models.Model):
     KEY_IP = "ip"

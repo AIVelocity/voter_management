@@ -19,144 +19,171 @@ from logger import logger
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def dashboard(request):
-    logger.info("super_admin_dashboard_api: Dashboard request received")
-    today = timezone.now().date()
+    user = request.user
+    user_id = user.user_id
 
-    # Sunday start
-    start_of_week = today - timedelta(days=(today.weekday() + 1) % 7)
-    end_of_week = start_of_week + timedelta(days=6)
+    # -------- GET USER & ROLE --------
+    try:
+        user = (
+            VoterUserMaster.objects
+            .select_related("role")
+            .get(user_id=user_id)
+        )
+    except VoterUserMaster.DoesNotExist:
+        return Response(
+            {"status": False, "message": "User not found"},
+            status=404
+        )
 
-    start_of_last_week = start_of_week - timedelta(days=7)
-    end_of_last_week = start_of_week - timedelta(days=1)
+    # -------- ROLE-BASED QUERY --------
+    from django.db.models import Q
 
-    this_week_count = VoterList.objects.filter(
-        # check_progress=True,
-        check_progress_date__range=(start_of_week, end_of_week)
-    ).count()
+    privileged_roles = ["SuperAdmin"]
 
-    last_week_count = VoterList.objects.filter(
-        # check_progress=True,
-        check_progress_date__range=(start_of_last_week, end_of_last_week)
-    ).count()
-
-    difference = this_week_count - last_week_count  
+    if user.role.role_name in privileged_roles: 
     
-    total_voters = VoterList.objects.count()
-    # voter_list_count = VoterList.objects.filter(vo)
-    golden_color_tags = VoterList.objects.filter(tag_id = 4).count()
-    red_color_tags = VoterList.objects.filter(tag_id = 3).count()
-    orange_color_tags = VoterList.objects.filter(tag_id = 2).count()
-    green_color_tags = VoterList.objects.filter(tag_id = 1).count()
+        logger.info("super_admin_dashboard_api: Dashboard request received")
+        today = timezone.now().date()
 
-    created_karyakarta_count = (
-        VoterUserMaster.objects
-        .filter(created_by=OuterRef('user_id'))
-        .values('created_by')
-        .annotate(count=Count('*'))
-        .values('count')
-    )
+        # Sunday start
+        start_of_week = today - timedelta(days=(today.weekday() + 1) % 7)
+        end_of_week = start_of_week + timedelta(days=6)
 
-    # Fetch all users whose role is Admin AND count how many voters are assigned to them
-    admin_users = (
-        VoterUserMaster.objects
-        .filter(role__role_name="Admin")
-        .annotate(
-            voter_allocated_count=Count("voterlist"),
-            karyakarta_allocated_count=Coalesce(
-            Subquery(created_karyakarta_count, output_field=IntegerField()),
-            Value(0),)
-        )
-        .values(
-            "user_id",
-            "first_name",
-            "last_name",
-            "mobile_no",
-            "voter_allocated_count",
-            "karyakarta_allocated_count"
-        )
-    )
+        start_of_last_week = start_of_week - timedelta(days=7)
+        end_of_last_week = start_of_week - timedelta(days=1)
 
-    karyakarta_users = (
-        VoterUserMaster.objects
-        .filter(role__role_name="Volunteer")
-        .annotate(
-            voter_allocated_count=Count("voterlist"),
-            # karyakarta_allocated_count=Coalesce(
-            # Subquery(created_karyakarta_count, output_field=IntegerField()),
-            # Value(0),)
-        )
-        .values(
-            "user_id",
-            "first_name",
-            "last_name",
-            "mobile_no",
-            "voter_allocated_count",
-            # "karyakarta_allocated_count"
-        )
-    )
-
-    # daywise = (
-    #     VoterList.objects
-    #     .filter(check_progress=True, user__role__role_name="Admin")   # only checked voters under admin
-    #     .values("check_progress_date")                     # group by admin + date
-    #     .annotate(count=Count("voter_list_id"))                       # count checked voters
-    #     .order_by("check_progress_date")
-    # )
-    
-    today = timezone.now().date()
-    start_of_week = today - timedelta(days=(today.weekday() + 1) % 7)
-    end_of_week = start_of_week + timedelta(days=6)
-
-    daily_qs = (
-        VoterList.objects
-        .filter(
+        this_week_count = VoterList.objects.filter(
             # check_progress=True,
-            check_progress_date__range=(start_of_week, end_of_week),
-            # user__role__role_name="Admin"
+            check_progress_date__range=(start_of_week, end_of_week)
+        ).count()
+
+        last_week_count = VoterList.objects.filter(
+            # check_progress=True,
+            check_progress_date__range=(start_of_last_week, end_of_last_week)
+        ).count()
+
+        difference = this_week_count - last_week_count  
+        
+        total_voters = VoterList.objects.count()
+        # voter_list_count = VoterList.objects.filter(vo)
+        golden_color_tags = VoterList.objects.filter(tag_id = 4).count()
+        red_color_tags = VoterList.objects.filter(tag_id = 3).count()
+        orange_color_tags = VoterList.objects.filter(tag_id = 2).count()
+        green_color_tags = VoterList.objects.filter(tag_id = 1).count()
+
+        created_karyakarta_count = (
+            VoterUserMaster.objects
+            .filter(created_by=OuterRef('user_id'))
+            .values('created_by')
+            .annotate(count=Count('*'))
+            .values('count')
         )
-        .values("check_progress_date")
-        .annotate(daily_count=Count("voter_list_id"))
-    )
 
-    daily_map = defaultdict(int)
-    for row in daily_qs:
-        daily_map[row["check_progress_date"]] = row["daily_count"]
+        # Fetch all users whose role is Admin AND count how many voters are assigned to them
+        admin_users = (
+            VoterUserMaster.objects
+            .filter(role__role_name="Admin")
+            .annotate(
+                voter_allocated_count=Count("voterlist"),
+                karyakarta_allocated_count=Coalesce(
+                Subquery(created_karyakarta_count, output_field=IntegerField()),
+                Value(0),)
+            )
+            .values(
+                "user_id",
+                "first_name",
+                "last_name",
+                "mobile_no",
+                "voter_allocated_count",
+                "karyakarta_allocated_count"
+            )
+        )
 
-    daywise = []
-    running_total = 0
+        karyakarta_users = (
+            VoterUserMaster.objects
+            .filter(role__role_name="Volunteer")
+            .annotate(
+                voter_allocated_count=Count("voterlist"),
+                # karyakarta_allocated_count=Coalesce(
+                # Subquery(created_karyakarta_count, output_field=IntegerField()),
+                # Value(0),)
+            )
+            .values(
+                "user_id",
+                "first_name",
+                "last_name",
+                "mobile_no",
+                "voter_allocated_count",
+                # "karyakarta_allocated_count"
+            )
+        )
 
-    for i in range(7):
-        d = start_of_week + timedelta(days=i)
-        running_total += daily_map[d]
+        # daywise = (
+        #     VoterList.objects
+        #     .filter(check_progress=True, user__role__role_name="Admin")   # only checked voters under admin
+        #     .values("check_progress_date")                     # group by admin + date
+        #     .annotate(count=Count("voter_list_id"))                       # count checked voters
+        #     .order_by("check_progress_date")
+        # )
+        
+        today = timezone.now().date()
+        start_of_week = today - timedelta(days=(today.weekday() + 1) % 7)
+        end_of_week = start_of_week + timedelta(days=6)
 
-        daywise.append({
-            "date": d,
-            "day": d.strftime("%A"),
-            "daily_count": daily_map[d],
-            "cumulative_count": running_total
+        daily_qs = (
+            VoterList.objects
+            .filter(
+                # check_progress=True,
+                check_progress_date__range=(start_of_week, end_of_week),
+                # user__role__role_name="Admin"
+            )
+            .values("check_progress_date")
+            .annotate(daily_count=Count("voter_list_id"))
+        )
+
+        daily_map = defaultdict(int)
+        for row in daily_qs:
+            daily_map[row["check_progress_date"]] = row["daily_count"]
+
+        daywise = []
+        running_total = 0
+
+        for i in range(7):
+            d = start_of_week + timedelta(days=i)
+            running_total += daily_map[d]
+
+            daywise.append({
+                "date": d,
+                "day": d.strftime("%A"),
+                "daily_count": daily_map[d],
+                "cumulative_count": running_total
+            })
+
+        # total_visited = VoterList.objects.filter(check_progress_date__isnull=False).count()
+        total_visited = red_color_tags + orange_color_tags + green_color_tags + golden_color_tags
+        logger.info("super_admin_dashboard_api: Dashboard data compiled successfully")
+        return Response({
+            "SUCCESS": True,
+            "data" : { 
+                    "golden_voter":golden_color_tags,
+                    "guaranteed_voter" :green_color_tags,
+                    "unsure_voter" : orange_color_tags,
+                    "red_color_tags" : red_color_tags,
+                    "total_voters": total_voters,
+                    "admins": list(admin_users),  # convert queryset to list
+                    "karyakartas": list(karyakarta_users),
+                    "daywise_check_progress": list(daywise),
+                    "total_visited" : total_visited,
+                    "week_difference": difference,
+                    "this_week": this_week_count,
+                    "last_week": last_week_count 
+            }
         })
-
-    # total_visited = VoterList.objects.filter(check_progress_date__isnull=False).count()
-    total_visited = red_color_tags + orange_color_tags + green_color_tags + golden_color_tags
-    logger.info("super_admin_dashboard_api: Dashboard data compiled successfully")
-    return Response({
-        "SUCCESS": True,
-        "data" : { 
-                "golden_voter":golden_color_tags,
-                "guaranteed_voter" :green_color_tags,
-                "unsure_voter" : orange_color_tags,
-                "red_color_tags" : red_color_tags,
-                "total_voters": total_voters,
-                "admins": list(admin_users),  # convert queryset to list
-                "karyakartas": list(karyakarta_users),
-                "daywise_check_progress": list(daywise),
-                "total_visited" : total_visited,
-                "week_difference": difference,
-                "this_week": this_week_count,
-                "last_week": last_week_count 
-        }
-    })
-
+    else:
+        return Response(
+            {"status": False, "message": "Not Authorized"},
+            status=403
+        )
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])

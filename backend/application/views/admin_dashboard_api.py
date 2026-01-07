@@ -18,214 +18,259 @@ from logger import logger
 @permission_classes([IsAuthenticated])
 def admin_dashboard(request):
     logger.info("admin_dashboard_api: Admin dashboard request received")
+
     user = request.user
-    
-    assigned_count = VoterList.objects.filter(user=user).count()
+    user_id = user.user_id
 
-    visited_count = VoterList.objects.filter(
-        user=user,
-        check_progress_date__isnull=False
-    ).count()
-
-    # sr_range = VoterList.objects.filter(user=user).aggregate(
-    #     min_sr=Min("sr_no"),
-    #     max_sr=Max("sr_no")
-    # )
-
-    pending_count = assigned_count - visited_count
-    
-    today = timezone.now().date()
-
-    # Sunday start
-    start_of_week = today - timedelta(days=(today.weekday() + 1) % 7)
-    end_of_week = start_of_week + timedelta(days=6)
-
-    start_of_last_week = start_of_week - timedelta(days=7)
-    end_of_last_week = start_of_week - timedelta(days=1)
-
-    this_week_count = VoterList.objects.filter(
-        # check_progress=True,
-        check_progress_date__range=(start_of_week, end_of_week)
-    ).count()
-
-    last_week_count = VoterList.objects.filter(
-        # check_progress=True,
-        check_progress_date__range=(start_of_last_week, end_of_last_week)
-    ).count()
-
-    difference = this_week_count - last_week_count  
-    
-    total_voters = VoterList.objects.count()
-    # voter_list_count = VoterList.objects.filter(vo)
-    golden_color_tags = VoterList.objects.filter(tag_id = 4).count()
-    red_color_tags = VoterList.objects.filter(tag_id = 3).count()
-    orange_color_tags = VoterList.objects.filter(tag_id = 2).count()
-    green_color_tags = VoterList.objects.filter(tag_id = 1).count()
-
-    created_karyakarta_count = (
-        VoterUserMaster.objects
-        .filter(created_by=OuterRef('user_id'))
-        .values('created_by')
-        .annotate(count=Count('*'))
-        .values('count')
-    )
-
-    karyakarta_users = (
-        VoterUserMaster.objects
-        .filter(role__role_name="Volunteer")
-        .annotate(
-            voter_allocated_count=Count("voterlist"),
-            # karyakarta_allocated_count=Coalesce(
-            # Subquery(created_karyakarta_count, output_field=IntegerField()),
-            # Value(0),)
+    # -------- GET USER & ROLE --------
+    try:
+        user = (
+            VoterUserMaster.objects
+            .select_related("role")
+            .get(user_id=user_id)
         )
-        .values(
-            "user_id",
-            "first_name",
-            "last_name",
-            "mobile_no",
-            "voter_allocated_count",
-            # "karyakarta_allocated_count"
+    except VoterUserMaster.DoesNotExist:
+        return Response(
+            {"status": False, "message": "User not found"},
+            status=404
         )
-    )
 
-    # daywise = (
-    #     VoterList.objects
-    #     .filter(check_progress=True, user__role__role_name="Admin")   # only checked voters under admin
-    #     .values("check_progress_date")                     # group by admin + date
-    #     .annotate(count=Count("voter_list_id"))                       # count checked voters
-    #     .order_by("check_progress_date")
-    # )
-    
-    today = timezone.now().date()
-    start_of_week = today - timedelta(days=(today.weekday() + 1) % 7)
-    end_of_week = start_of_week + timedelta(days=6)
+    # -------- ROLE-BASED QUERY --------
+    from django.db.models import Q
 
-    daily_qs = (
-        VoterList.objects
-        .filter(
+    privileged_roles = ["Admin"]
+
+    if user.role.role_name in privileged_roles:   
+        assigned_count = VoterList.objects.filter(user=user).count()
+
+        visited_count = VoterList.objects.filter(
+            user=user,
+            check_progress_date__isnull=False
+        ).count()
+
+        # sr_range = VoterList.objects.filter(user=user).aggregate(
+        #     min_sr=Min("sr_no"),
+        #     max_sr=Max("sr_no")
+        # )
+
+        pending_count = assigned_count - visited_count
+        
+        today = timezone.now().date()
+
+        # Sunday start
+        start_of_week = today - timedelta(days=(today.weekday() + 1) % 7)
+        end_of_week = start_of_week + timedelta(days=6)
+
+        start_of_last_week = start_of_week - timedelta(days=7)
+        end_of_last_week = start_of_week - timedelta(days=1)
+
+        this_week_count = VoterList.objects.filter(
             # check_progress=True,
-            check_progress_date__range=(start_of_week, end_of_week),
-            # user__role__role_name="Admin"
+            check_progress_date__range=(start_of_week, end_of_week)
+        ).count()
+
+        last_week_count = VoterList.objects.filter(
+            # check_progress=True,
+            check_progress_date__range=(start_of_last_week, end_of_last_week)
+        ).count()
+
+        difference = this_week_count - last_week_count  
+        
+        total_voters = VoterList.objects.count()
+        # voter_list_count = VoterList.objects.filter(vo)
+        golden_color_tags = VoterList.objects.filter(tag_id = 4).count()
+        red_color_tags = VoterList.objects.filter(tag_id = 3).count()
+        orange_color_tags = VoterList.objects.filter(tag_id = 2).count()
+        green_color_tags = VoterList.objects.filter(tag_id = 1).count()
+
+        created_karyakarta_count = (
+            VoterUserMaster.objects
+            .filter(created_by=OuterRef('user_id'))
+            .values('created_by')
+            .annotate(count=Count('*'))
+            .values('count')
         )
-        .values("check_progress_date")
-        .annotate(daily_count=Count("voter_list_id"))
-    )
 
-    daily_map = defaultdict(int)
-    for row in daily_qs:
-        daily_map[row["check_progress_date"]] = row["daily_count"]
+        karyakarta_users = (
+            VoterUserMaster.objects
+            .filter(role__role_name="Volunteer")
+            .annotate(
+                voter_allocated_count=Count("voterlist"),
+                # karyakarta_allocated_count=Coalesce(
+                # Subquery(created_karyakarta_count, output_field=IntegerField()),
+                # Value(0),)
+            )
+            .values(
+                "user_id",
+                "first_name",
+                "last_name",
+                "mobile_no",
+                "voter_allocated_count",
+                # "karyakarta_allocated_count"
+            )
+        )
 
-    daywise = []
-    running_total = 0
+        # daywise = (
+        #     VoterList.objects
+        #     .filter(check_progress=True, user__role__role_name="Admin")   # only checked voters under admin
+        #     .values("check_progress_date")                     # group by admin + date
+        #     .annotate(count=Count("voter_list_id"))                       # count checked voters
+        #     .order_by("check_progress_date")
+        # )
+        
+        today = timezone.now().date()
+        start_of_week = today - timedelta(days=(today.weekday() + 1) % 7)
+        end_of_week = start_of_week + timedelta(days=6)
 
-    for i in range(7):
-        d = start_of_week + timedelta(days=i)
-        running_total += daily_map[d]
+        daily_qs = (
+            VoterList.objects
+            .filter(
+                # check_progress=True,
+                check_progress_date__range=(start_of_week, end_of_week),
+                # user__role__role_name="Admin"
+            )
+            .values("check_progress_date")
+            .annotate(daily_count=Count("voter_list_id"))
+        )
 
-        daywise.append({
-            "date": d,
-            "day": d.strftime("%A"),
-            "daily_count": daily_map[d],
-            "cumulative_count": running_total
+        daily_map = defaultdict(int)
+        for row in daily_qs:
+            daily_map[row["check_progress_date"]] = row["daily_count"]
+
+        daywise = []
+        running_total = 0
+
+        for i in range(7):
+            d = start_of_week + timedelta(days=i)
+            running_total += daily_map[d]
+
+            daywise.append({
+                "date": d,
+                "day": d.strftime("%A"),
+                "daily_count": daily_map[d],
+                "cumulative_count": running_total
+            })
+
+        total_visited = VoterList.objects.filter(check_progress_date__isnull=False).count()
+        logger.info("admin_dashboard_api: Admin dashboard data prepared successfully")
+        return Response({
+            "SUCCESS": True,
+            "data" : { 
+                    "user_first_name": user.first_name, 
+                    "name": f"{user.first_name} {user.last_name}",
+                    "mobile": user.mobile_no,
+                    "assigned": assigned_count,
+                    "visited": visited_count,
+                    "pending": pending_count,
+                
+                    "golden_voter":golden_color_tags,
+                    "guaranteed_voter" :green_color_tags,
+                    "unsure_voter" : orange_color_tags,
+                    "red_color_tags" : red_color_tags,
+                    "total_voters": total_voters,  # convert queryset to list
+                    "karyakartas": list(karyakarta_users),
+                    "daywise_check_progress": list(daywise),
+                    "total_visited" : total_visited,
+                    "week_difference": difference,
+                    "this_week": this_week_count,
+                    "last_week": last_week_count 
+            }
         })
-
-    total_visited = VoterList.objects.filter(check_progress_date__isnull=False).count()
-    logger.info("admin_dashboard_api: Admin dashboard data prepared successfully")
-    return Response({
-        "SUCCESS": True,
-        "data" : { 
-                "user_first_name": user.first_name, 
-                "name": f"{user.first_name} {user.last_name}",
-                "mobile": user.mobile_no,
-                "assigned": assigned_count,
-                "visited": visited_count,
-                "pending": pending_count,
-            
-                "golden_voter":golden_color_tags,
-                "guaranteed_voter" :green_color_tags,
-                "unsure_voter" : orange_color_tags,
-                "red_color_tags" : red_color_tags,
-                "total_voters": total_voters,  # convert queryset to list
-                "karyakartas": list(karyakarta_users),
-                "daywise_check_progress": list(daywise),
-                "total_visited" : total_visited,
-                "week_difference": difference,
-                "this_week": this_week_count,
-                "last_week": last_week_count 
-        }
-    })
+    else:
+        return Response(
+            {"status": False, "message": "Not Authorized"},
+            status=403
+        )
+        
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def volunteer_allocation_panel(request):
+    user = request.user
+    user_id = user.user_id
 
-    total_voters = VoterList.objects.count()
-
-    karyakarta_qs = (
-        VoterUserMaster.objects
-        .filter(role__role_name="Volunteer")
-        .annotate(
-            voter_allocated_count=Count("voterlist")
+    # -------- GET USER & ROLE --------
+    try:
+        user = (
+            VoterUserMaster.objects
+            .select_related("role")
+            .get(user_id=user_id)
         )
-        .values(
-            "user_id",
-            "first_name",
-            "last_name",
-            "mobile_no",
-            "voter_allocated_count"
+    except VoterUserMaster.DoesNotExist:
+        return Response(
+            {"status": False, "message": "User not found"},
+            status=404
         )
-    )
 
-    total_karyakartas = karyakarta_qs.count()
-    assigned_karyakartas = len([k for k in karyakarta_qs if k["voter_allocated_count"] > 0])
-    unassigned_karyakartas = total_karyakartas - assigned_karyakartas
+    # -------- ROLE-BASED QUERY --------
+    from django.db.models import Q
 
-    karyakarta_list = [
-        {
-            "user_id": k["user_id"],
-            "name": f"{k['first_name']} {k['last_name']}",
-            "mobile": k["mobile_no"],
-            "assigned_count": k["voter_allocated_count"],
-            "status": "assigned" if k["voter_allocated_count"] > 0 else "unassigned"
-        }
-        for k in karyakarta_qs
-    ]
-    
-    # ---------------- SECOND SCREEN FILTERS ----------------
+    privileged_roles = ["Admin"]
 
-    assigned_karyakarta_list = [
-        k for k in karyakarta_list if k["assigned_count"] > 0
-    ]
-
-    # ---------------- THIRD SCREEN (UNASSIGNED) ----------------
-
-    unassigned_karyakarta_list = [
-        k for k in karyakarta_list if k["assigned_count"] == 0
-    ]
-
-    return Response({
-        "SUCCESS" :True,
-        "data":{ 
-            "summary": {
-                "total_voters": total_voters,
-                "total_karyakartas": total_karyakartas,
-                "assigned_karyakartas": assigned_karyakartas,
-                "unassigned_karyakartas": unassigned_karyakartas
-                },
-                
-                # ---------- FIRST SCREEN ----------
-                "allocated_first_screen_karyakartas": karyakarta_list,
-
-                # ---------- SECOND SCREEN ----------
-                "allocated_second_screen_karyakartas": assigned_karyakarta_list,
-                
-                # ---------- THIRD SCREEN (UNASSIGNED) ---------
-                "allocated_third_screen_karyakartas": unassigned_karyakarta_list
+    if user.role.role_name in privileged_roles: 
+        total_voters = VoterList.objects.count()
+        karyakarta_qs = (
+            VoterUserMaster.objects
+            .filter(role__role_name="Volunteer")
+            .annotate(
+                voter_allocated_count=Count("voterlist")
+            )
+            .values(
+                "user_id",
+                "first_name",
+                "last_name",
+                "mobile_no",
+                "voter_allocated_count"
+            )
+        )
+        total_karyakartas = karyakarta_qs.count()
+        assigned_karyakartas = len([k for k in karyakarta_qs if k["voter_allocated_count"] > 0])
+        unassigned_karyakartas = total_karyakartas - assigned_karyakartas
+        karyakarta_list = [
+            {
+                "user_id": k["user_id"],
+                "name": f"{k['first_name']} {k['last_name']}",
+                "mobile": k["mobile_no"],
+                "assigned_count": k["voter_allocated_count"],
+                "status": "assigned" if k["voter_allocated_count"] > 0 else "unassigned"
             }
-        }
-    )
-
+            for k in karyakarta_qs
+        ]
+        
+        # ---------------- SECOND SCREEN FILTERS ----------------
+        assigned_karyakarta_list = [
+            k for k in karyakarta_list if k["assigned_count"] > 0
+        ]
+        # ---------------- THIRD SCREEN (UNASSIGNED) ----------------
+        unassigned_karyakarta_list = [
+            k for k in karyakarta_list if k["assigned_count"] == 0
+        ]
+        return Response({
+            "SUCCESS" :True,
+            "data":{ 
+                "summary": {
+                    "total_voters": total_voters,
+                    "total_karyakartas": total_karyakartas,
+                    "assigned_karyakartas": assigned_karyakartas,
+                    "unassigned_karyakartas": unassigned_karyakartas
+                    },
+                    
+                    # ---------- FIRST SCREEN ----------
+                    "allocated_first_screen_karyakartas": karyakarta_list,
+                    # ---------- SECOND SCREEN ----------
+                    "allocated_second_screen_karyakartas": assigned_karyakarta_list,
+                    
+                    # ---------- THIRD SCREEN (UNASSIGNED) ---------
+                    "allocated_third_screen_karyakartas": unassigned_karyakarta_list
+                }
+            }
+        )
+    else:
+        return Response(
+            {"status": False, "message": "Not Authorized"},
+            status=403
+        )
+    
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def unassigned_voters(request):
@@ -236,111 +281,129 @@ def unassigned_voters(request):
     page = int(request.GET.get("page", 1))
     page_size = int(request.GET.get("page_size", 50)) 
 
-    # -------- BASE QUERY --------
-    queryset = (
-        VoterList.objects
-        .filter(user__isnull=True)
-        .values(
-            "sr_no",
-            "voter_list_id",
-            # "sr_no",
-            "voter_id",
-            "voter_name_eng",
-            "voter_name_marathi",
-            "mobile_no",
-            "ward_no",
-            "age",
-            "gender_eng",
-            "badge",
-            "location"
-        )
-        .order_by("sr_no")
-    )
+    user = request.user
+    user_id = user.user_id
 
-    total_count = queryset.count()
-
-    # -------- PAGINATION --------
-    paginator = Paginator(queryset, page_size)
-
+    # -------- GET USER & ROLE --------
     try:
-        page_obj = paginator.page(page)
-        voters = []
+        user = (
+            VoterUserMaster.objects
+            .select_related("role")
+            .get(user_id=user_id)
+        )
+    except VoterUserMaster.DoesNotExist:
+        return Response(
+            {"status": False, "message": "User not found"},
+            status=404
+        )
 
-        for v in page_obj.object_list:
-            if is_marathi:
-                first_name, middle_name, last_name = split_marathi_name(
-                    v.get("voter_name_marathi")
-                )
+    # -------- ROLE-BASED QUERY --------
+    from django.db.models import Q
 
-                voters.append({
-                    "serial_number": v["sr_no"],
-                    "voter_list_id": v["voter_list_id"],
-                    "voter_id": v["voter_id"],
+    privileged_roles = ["Admin"]
 
-                    "voter_name": v["voter_name_marathi"],
-                    "first_name": first_name,
-                    "middle_name": middle_name,
-                    "last_name": last_name,
+    if user.role.role_name in privileged_roles:
+        queryset = (
+            VoterList.objects
+            .filter(user__isnull=True)
+            .values(
+                "sr_no",
+                "voter_list_id",
+                # "sr_no",
+                "voter_id",
+                "voter_name_eng",
+                "voter_name_marathi",
+                "mobile_no",
+                "ward_no",
+                "age",
+                "gender_eng",
+                "badge",
+                "location"
+            )
+            .order_by("sr_no")
+        )
 
-                    "mobile_no": v["mobile_no"],
-                    "ward_no": v["ward_no"],
-                    "age": v["age"],
-                    "gender": v.get("gender"),   # Marathi gender
-                    "badge": v["badge"],
-                    "location": v["location"],
-                })
+        total_count = queryset.count()
 
-            else:
-                voters.append({
-                    "serial_number": v["sr_no"],
-                    "voter_list_id": v["voter_list_id"],
-                    "voter_id": v["voter_id"],
+        # -------- PAGINATION --------
+        paginator = Paginator(queryset, page_size)
 
-                    "voter_name": v["voter_name_eng"],
-                    "first_name": v["first_name"],
-                    "middle_name": v["middle_name"],
-                    "last_name": v["last_name"],
+        try:
+            page_obj = paginator.page(page)
+            voters = []
 
-                    "mobile_no": v["mobile_no"],
-                    "ward_no": v["ward_no"],
-                    "age": v["age"],
-                    "gender": v["gender_eng"],
-                    "badge": v["badge"],
-                    "location": v["location"],
-                })
+            for v in page_obj.object_list:
+                if is_marathi:
+                    first_name, middle_name, last_name = split_marathi_name(
+                        v.get("voter_name_marathi")
+                    )
 
-    except EmptyPage:
+                    voters.append({
+                        "serial_number": v["sr_no"],
+                        "voter_list_id": v["voter_list_id"],
+                        "voter_id": v["voter_id"],
+
+                        "voter_name": v["voter_name_marathi"],
+                        "first_name": first_name,
+                        "middle_name": middle_name,
+                        "last_name": last_name,
+
+                        "mobile_no": v["mobile_no"],
+                        "ward_no": v["ward_no"],
+                        "age": v["age"],
+                        "gender": v.get("gender"),   # Marathi gender
+                        "badge": v["badge"],
+                        "location": v["location"],
+                    })
+
+                else:
+                    voters.append({
+                        "serial_number": v["sr_no"],
+                        "voter_list_id": v["voter_list_id"],
+                        "voter_id": v["voter_id"],
+
+                        "voter_name": v["voter_name_eng"],
+                        "first_name": v["first_name"],
+                        "middle_name": v["middle_name"],
+                        "last_name": v["last_name"],
+
+                        "mobile_no": v["mobile_no"],
+                        "ward_no": v["ward_no"],
+                        "age": v["age"],
+                        "gender": v["gender_eng"],
+                        "badge": v["badge"],
+                        "location": v["location"],
+                    })
+
+        except EmptyPage:
+            return Response({
+                "status": True,
+                "count": total_count,
+                "page": page,
+                "page_size": page_size,
+                "total_pages": paginator.num_pages,
+                "voters": []
+            })
+
         return Response({
-            "status": True,
+            "SUCCESS": True,
             "count": total_count,
             "page": page,
             "page_size": page_size,
             "total_pages": paginator.num_pages,
-            "voters": []
+            "has_next": page_obj.has_next(),
+            "has_previous": page_obj.has_previous(),
+            "voters": voters
         })
-
-    return Response({
-        "SUCCESS": True,
-        "count": total_count,
-        "page": page,
-        "page_size": page_size,
-        "total_pages": paginator.num_pages,
-        "has_next": page_obj.has_next(),
-        "has_previous": page_obj.has_previous(),
-        "voters": voters
-    })
-
+    else:
+        return Response(
+            {"status": False, "message": "Not Authorized"},
+            status=403
+        )
 
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def assign_voters_to_karyakarta(request):
-
-    if request.method != "POST":
-        return Response({
-            "status": False,
-            "message": "POST method required"
-        }, status=405)
-
     try:
         body = request.data
 
