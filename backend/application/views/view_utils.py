@@ -91,18 +91,61 @@ def log_action_user(
         user_name = f"{user.first_name} {user.last_name}".strip() \
             if hasattr(user, "first_name") else str(user)
 
-    UserActivityLog.objects.create(
-        user=user,
-        user_name=user_name,
-        action=action,
-        module=module,
-        object_type=object_type,
-        object_id=str(object_id) if object_id else None,
-        status=status,
-        ip_address=ip,
-        user_agent=agent,
-        metadata=metadata
-    )
+    log_entry = UserActivityLog.objects.create(
+                    user=user,
+                    user_name=user_name,
+                    action=action,
+                    module=module,
+                    object_type=object_type,
+                    object_id=str(object_id) if object_id else None,
+                    status=status,
+                    ip_address=ip,
+                    user_agent=agent,
+                    metadata=metadata
+                )
+    logs_dir = os.path.join(settings.BASE_DIR, "local_logs")
+    os.makedirs(logs_dir, exist_ok=True)
+
+    csv_path = os.path.join(logs_dir, "user_actions.csv")
+    file_exists = os.path.exists(csv_path)
+
+    with open(csv_path, "a", newline="", encoding="utf-8") as f:
+        writer = csv.writer(f)
+
+        # Write CSV header once
+        if not file_exists:
+            writer.writerow([
+                "log_id",
+                "user_id",
+                "user_name",
+                "action",
+                "module",
+                "object_type",
+                "object_id",
+                "status",
+                "ip_address",
+                "user_agent",
+                "metadata",
+                "created_at"
+            ])
+
+        # Append new action row
+        writer.writerow([
+            log_entry.log_id,
+            log_entry.user.user_id if log_entry.user else None,
+            log_entry.user_name,
+            log_entry.action,
+            log_entry.module,
+            log_entry.object_type,
+            log_entry.object_id,
+            log_entry.status,
+            log_entry.ip_address,
+            log_entry.user_agent,
+            json.dumps(metadata, ensure_ascii=False) if metadata else None,
+            str(log_entry.created_at)
+        ])
+
+    return log_entry
 
 
 class CustomJWTAuthentication(JWTAuthentication):

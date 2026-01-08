@@ -1,0 +1,2 @@
+log_id,user_id,user_name,action,module,object_type,object_id,status,ip_address,user_agent,metadata,created_at
+48,2,SuperAdmin test,LOGIN_SUCCESS,AUTH,VoterUserMaster,2,SUCCESS,127.0.0.1,PostmanRuntime/7.51.0,"{""role_id"": 1, ""role_name"": ""SuperAdmin""}",2026-01-07 12:50:22.009957+00:00
