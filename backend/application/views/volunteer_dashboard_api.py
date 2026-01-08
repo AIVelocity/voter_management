@@ -148,7 +148,7 @@ def volunteer_voters_page(request):
     # -------- ROLE-BASED QUERY --------
     from django.db.models import Q
 
-    privileged_roles = ["Volunteer"]
+    privileged_roles = ["SuperAdmin","Admin","Volunteer"]
 
     if user.role.role_name in privileged_roles:
         qs = (

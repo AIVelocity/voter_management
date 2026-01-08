@@ -18,7 +18,6 @@ from dotenv import load_dotenv
 load_dotenv()
 SECRET_KEY = os.getenv("SECRET_KEY")
 
-
 TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID")
 TWILIO_AUTH_TOKEN = os.getenv("TWILIO_AUTH_TOKEN")
 TWILIO_VERIFY_SERVICE_SID = os.getenv("TWILIO_VERIFY_SERVICE_SID")
@@ -27,12 +26,16 @@ RATE_LIMIT_PER_PHONE_PER_HOUR = int(
     os.getenv("RATE_LIMIT_PER_PHONE_PER_HOUR", "5")
 )
 
+
+USE_TZ = True
+TIME_ZONE = "Asia/Kolkata"
+
+
 RECAPTCHA_SECRET_KEY = os.getenv("RECAPTCHA_SECRET_KEY")
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 USE_I18N = True
 USE_L10N = True
-USE_TZ = True
 LANGUAGE_CODE = 'en'
 LANGUAGES = [
     ('en', 'English'),
@@ -200,7 +203,6 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
 
 USE_I18N = True
 
