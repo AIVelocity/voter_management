@@ -19,6 +19,53 @@ from io import BytesIO
 from PIL import Image, ImageDraw, ImageFont
 import re
 from django.contrib.auth.hashers import check_password
+import csv
+import os
+from django.conf import settings
+from django.utils.timezone import now
+from threading import Lock
+
+CSV_LOG_PATH = getattr(
+    settings,
+    "USER_ACTIVITY_CSV_PATH",
+    r"D:\electionDOCS\logs\user_activity_log.csv"
+)
+
+_csv_lock = Lock()
+
+
+def write_activity_log_csv(row: dict):
+    """
+    Append audit log to CSV safely.
+    """
+    os.makedirs(os.path.dirname(CSV_LOG_PATH), exist_ok=True)
+
+    file_exists = os.path.isfile(CSV_LOG_PATH)
+
+    with _csv_lock:
+        with open(CSV_LOG_PATH, mode="a", newline="", encoding="utf-8") as f:
+            writer = csv.DictWriter(
+                f,
+                fieldnames=[
+                    "timestamp",
+                    "user_id",
+                    "user_name",
+                    "action",
+                    "module",
+                    "object_type",
+                    "object_id",
+                    "status",
+                    "ip_address",
+                    "user_agent",
+                    "metadata",
+                ]
+            )
+
+            if not file_exists:
+                writer.writeheader()
+
+            writer.writerow(row)
+
 
 def log_action_user(
     *,

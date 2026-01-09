@@ -65,7 +65,7 @@ def registration(request):
         return Response({"status": False, "message": "Invalid mobile number"}, status=400)
 
     if VoterUserMaster.objects.filter(mobile_no=mobile_no).exists():
-        return Response({"status": False, "message": "Mobile already registered"}, status=400)
+        return Response({"status": False, "message": "Mobile number is already registered"}, status=400)
 
     # ---------- PASSWORD VALIDATION ----------
     try:

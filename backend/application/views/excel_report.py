@@ -7,8 +7,7 @@ from ..models import (
 )
 import csv
 from datetime import date, datetime, time
-from django.utils.timezone import make_aware, get_current_timezone, now
-from django.http import StreamingHttpResponse
+from django.utils.timezone import make_aware, get_current_timezone, now,localtime,is_aware,is_naive
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
@@ -16,6 +15,10 @@ from .view_utils import build_voter_queryset,format_change_data
 from collections import defaultdict
 from logger import logger
 from .view_utils import log_action_user
+import pytz
+
+IST = pytz.timezone("Asia/Kolkata")
+
 
 class Echo:
     def write(self, value):
