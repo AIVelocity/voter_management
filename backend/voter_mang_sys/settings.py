@@ -43,7 +43,7 @@ LOCALE_PATHS = [
     BASE_DIR / 'locale',
 ]
 
-DEBUG = False
+DEBUG = True
 
 ALLOWED_HOSTS = ["172.20.1.116","vms.rntsecops.com","172.25.240.1","172.20.1.101","59.95.99.182","127.0.0.1", "localhost", "172.20.1.155", ".ngrok-free.app", ".ngrok-free.dev"]
 
@@ -82,7 +82,7 @@ CORS_ALLOW_HEADERS = [
     "authorization",
     "content-type",
 ]
-CORS_ALLOW_ALL_ORIGINS = False
+CORS_ALLOW_ALL_ORIGINS = True
 
 CORS_ALLOWED_ORIGINS = [
     "https://vms.rntsecops.com",
