@@ -22,6 +22,9 @@ def get_user_from_token(token):
     except Exception as e:
         logger.error(f"JWTAuthMiddleware: Failed to authenticate token. Error: {e}")
         return AnonymousUser()
+    except Exception as e:
+        logger.error(f"JWTAuthMiddleware: Token decode crash: {e}")
+        return AnonymousUser()
 
 class JWTAuthMiddleware:
     def __init__(self, app):

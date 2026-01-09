@@ -22,7 +22,7 @@ DEFAULT_CHUNK_SIZE = PROVIDER_MAX_PER_SECOND  # how many messages to send per se
 country_code = "91"
 
 def safe_text(val):
-    return "no value" if val in (None, "None") else str(val)
+    return "N/A" if val in (None, "None") else str(val)
 
 # --- Views that use chunking to obey provider rate limits ---
 @api_view(["POST"])
