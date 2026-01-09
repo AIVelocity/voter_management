@@ -48,7 +48,7 @@ LOCALE_PATHS = [
 
 DEBUG = False
 
-ALLOWED_HOSTS = ["172.20.1.116","172.21.160.1",'10.0.2.2',"vms.rntsecops.com","172.25.240.1","172.20.1.101","59.95.99.182","127.0.0.1", "localhost", "172.20.1.155", ".ngrok-free.app", ".ngrok-free.dev"]
+ALLOWED_HOSTS = ["172.20.1.116","172.20.1.102","vms.rntsecops.com","172.25.240.1","172.20.1.101","59.95.99.182","127.0.0.1", "localhost", "172.20.1.155", ".ngrok-free.app", ".ngrok-free.dev"]
 
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(hours=18),

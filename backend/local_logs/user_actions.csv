@@ -1,3 +1,19 @@
 log_id,user_id,user_name,action,module,object_type,object_id,status,ip_address,user_agent,metadata,created_at
 48,2,SuperAdmin test,LOGIN_SUCCESS,AUTH,VoterUserMaster,2,SUCCESS,127.0.0.1,PostmanRuntime/7.51.0,"{""role_id"": 1, ""role_name"": ""SuperAdmin""}",2026-01-07 12:50:22.009957+00:00
 277,2,SuperAdmin test,LOGIN_SUCCESS,AUTH,VoterUserMaster,2,SUCCESS,172.21.160.1,PostmanRuntime/7.51.0,"{""role_id"": 1, ""role_name"": ""SuperAdmin""}",2026-01-09 11:16:10.254882+00:00
+278,2,SuperAdmin test,LOGIN_SUCCESS,AUTH,VoterUserMaster,2,SUCCESS,172.21.160.1,PostmanRuntime/7.51.0,"{""role_id"": 1, ""role_name"": ""SuperAdmin""}",2026-01-09 12:56:42.599511+00:00
+286,2,SuperAdmin test,LOGIN_SUCCESS,AUTH,VoterUserMaster,2,SUCCESS,172.20.1.244,okhttp/4.9.2,"{""role_id"": 1, ""role_name"": ""SuperAdmin""}",2026-01-09 13:21:42.634188+00:00
+287,2,SuperAdmin test,PERMISSIONS_VIEW_ALL,PERMISSION,,,SUCCESS,172.20.1.244,okhttp/4.9.2,"{""roles_count"": 3}",2026-01-09 13:21:46.010269+00:00
+288,2,SuperAdmin test,PERMISSIONS_VIEW_ALL,PERMISSION,,,SUCCESS,172.20.1.244,okhttp/4.9.2,"{""roles_count"": 3}",2026-01-09 13:21:46.039228+00:00
+292,2,SuperAdmin test,LOGIN_SUCCESS,AUTH,VoterUserMaster,2,SUCCESS,172.20.1.244,okhttp/4.9.2,"{""role_id"": 1, ""role_name"": ""SuperAdmin""}",2026-01-09 13:26:44.539874+00:00
+293,2,SuperAdmin test,PERMISSIONS_VIEW_ALL,PERMISSION,,,SUCCESS,172.20.1.244,okhttp/4.9.2,"{""roles_count"": 3}",2026-01-09 13:26:46.895070+00:00
+294,2,SuperAdmin test,PERMISSIONS_VIEW_ALL,PERMISSION,,,SUCCESS,172.20.1.244,okhttp/4.9.2,"{""roles_count"": 3}",2026-01-09 13:26:46.890056+00:00
+298,2,SuperAdmin test,LOGIN_SUCCESS,AUTH,VoterUserMaster,2,SUCCESS,172.20.1.244,okhttp/4.9.2,"{""role_id"": 1, ""role_name"": ""SuperAdmin""}",2026-01-09 13:30:52.338968+00:00
+299,2,SuperAdmin test,PERMISSIONS_VIEW_ALL,PERMISSION,,,SUCCESS,172.20.1.244,okhttp/4.9.2,"{""roles_count"": 3}",2026-01-09 13:30:56.722481+00:00
+300,2,SuperAdmin test,PERMISSIONS_VIEW_ALL,PERMISSION,,,SUCCESS,172.20.1.244,okhttp/4.9.2,"{""roles_count"": 3}",2026-01-09 13:30:56.723480+00:00
+301,2,SuperAdmin test,LOGIN_SUCCESS,AUTH,VoterUserMaster,2,SUCCESS,172.20.1.244,okhttp/4.9.2,"{""role_id"": 1, ""role_name"": ""SuperAdmin""}",2026-01-09 13:37:11.394887+00:00
+302,2,SuperAdmin test,PERMISSIONS_VIEW_ALL,PERMISSION,,,SUCCESS,172.20.1.244,okhttp/4.9.2,"{""roles_count"": 3}",2026-01-09 13:37:16.436105+00:00
+303,2,SuperAdmin test,PERMISSIONS_VIEW_ALL,PERMISSION,,,SUCCESS,172.20.1.244,okhttp/4.9.2,"{""roles_count"": 3}",2026-01-09 13:37:16.562467+00:00
+304,2,SuperAdmin test,LOGIN_SUCCESS,AUTH,VoterUserMaster,2,SUCCESS,172.20.1.244,okhttp/4.9.2,"{""role_id"": 1, ""role_name"": ""SuperAdmin""}",2026-01-09 13:43:38.261656+00:00
+305,2,SuperAdmin test,PERMISSIONS_VIEW_ALL,PERMISSION,,,SUCCESS,172.20.1.244,okhttp/4.9.2,"{""roles_count"": 3}",2026-01-09 13:43:41.023923+00:00
+306,2,SuperAdmin test,PERMISSIONS_VIEW_ALL,PERMISSION,,,SUCCESS,172.20.1.244,okhttp/4.9.2,"{""roles_count"": 3}",2026-01-09 13:43:41.084065+00:00
